@@ -58,7 +58,7 @@ export default function RegisterPage() {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-[#222121]">Create your account</h1>
-          <p className="text-[#6c757d] text-sm mt-1">Join PG Finder to get started</p>
+          <p className="text-[#6c757d] text-sm mt-1">Join Nest Stay to get started</p>
         </div>
 
         {error && (

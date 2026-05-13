@@ -24,7 +24,7 @@ No test runner or linter is configured.
 
 ## Architecture
 
-Full-stack PG (Paying Guest accommodation) discovery and complaint management platform.
+Full-stack Nest Stay (Paying Guest accommodation) discovery and complaint management platform.
 
 - **Backend**: Node.js/Express 5 + MongoDB/Mongoose, JWT auth, EventEmitter notifications
 - **Frontend**: Single React 18 + Vite package at `frontend/` — mode-based builds for both the unified app (all three roles, port 5174) and the student PWA (port 5173)

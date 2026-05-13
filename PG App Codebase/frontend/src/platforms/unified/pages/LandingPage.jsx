@@ -122,7 +122,7 @@ function Navbar({ user }) {
           <div className="w-8 h-8 bg-coral rounded-lg flex items-center justify-center">
             <HouseIcon className="w-4 h-4 text-white" />
           </div>
-          <span className="text-white font-bold text-lg tracking-tight">PG Finder</span>
+          <span className="text-white font-bold text-lg tracking-tight">Nest Stay</span>
         </Link>
 
         <div className="hidden md:flex items-center gap-8">
@@ -653,7 +653,7 @@ function Footer() {
               <div className="w-8 h-8 bg-coral rounded-lg flex items-center justify-center flex-shrink-0">
                 <HouseIcon className="w-4 h-4 text-white" />
               </div>
-              <span className="text-white font-bold text-lg tracking-tight">PG Finder</span>
+              <span className="text-white font-bold text-lg tracking-tight">Nest Stay</span>
             </Link>
             <p className="text-white/35 text-xs leading-relaxed mb-6 max-w-[180px]">
               Verified PG accommodation discovery and management for modern India.
@@ -729,7 +729,7 @@ function Footer() {
 
         <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-white/35">
-            © {new Date().getFullYear()} PG Finder. All rights reserved.
+            © {new Date().getFullYear()} Nest Stay. All rights reserved.
           </p>
           <p className="text-xs text-white/20">
             Built for the modern paying guest experience.

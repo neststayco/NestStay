@@ -40,7 +40,7 @@ export default function RegisterPage() {
       <div className="bg-white rounded-[20px] border border-[#e0e0e0] p-8 w-full max-w-md" style={{ boxShadow: 'rgba(0,0,0,0.08) 0px 4px 10px 0px' }}>
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-[#222121]">Create account</h1>
-          <p className="text-[#6c757d] text-sm mt-1">Join PG Finder to discover and review PGs</p>
+          <p className="text-[#6c757d] text-sm mt-1">Join Nest Stay to discover and review PGs</p>
         </div>
 
         {error && (

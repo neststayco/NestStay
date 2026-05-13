@@ -558,7 +558,7 @@ function NavLogo() {
       <span className="block w-[3px] h-7 rounded-full bg-white opacity-50 flex-shrink-0" />
       {/* Wordmark — DESIGN.md: Montserrat 700, Structural Secondary on light bg but white on dark navbar */}
       <span className="font-bold text-xl text-white tracking-tight">
-        PG Finder
+        Nest Stay
       </span>
     </Link>
   )

@@ -14,7 +14,7 @@ export default function UserNavbar() {
     <nav className="bg-white border-b border-[#e0e0e0] sticky top-0 z-10" style={{ boxShadow: 'rgba(33,37,41,0.05) 0px 2px 8px' }}>
       <div className="max-w-6xl mx-auto px-4 h-[84px] flex items-center justify-between">
         <Link to="/user" className="font-bold text-action text-lg tracking-tight">
-          PG Finder
+          Nest Stay
         </Link>
         <div className="flex items-center gap-3">
           {isAdmitted && (

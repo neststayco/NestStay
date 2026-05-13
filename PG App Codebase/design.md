@@ -159,7 +159,7 @@ Montserrat is loaded via Google Fonts at weights 400, 500, 600, 700. Applied glo
 | H2 (section) | `text-3xl lg:text-4xl font-bold text-charcoal tracking-tight` | "Premium PG Spaces" |
 | H2 (dark) | `text-4xl font-bold text-white leading-tight tracking-tight` | "Discover PGs…" |
 | H3 (card) | `font-bold text-charcoal text-base` | PG card name |
-| H3 (login) | `text-2xl font-bold text-[#222121]` | "Sign in to PG Finder" |
+| H3 (login) | `text-2xl font-bold text-[#222121]` | "Sign in to Nest Stay" |
 
 ---
 
@@ -643,14 +643,14 @@ All icons are custom inline SVGs — no external icon library.
 
 ### Logo
 
-The PG Finder logo is a house SVG icon inside a colored rounded square, paired with the wordmark "PG Finder":
+The Nest Stay logo is a house SVG icon inside a colored rounded square, paired with the wordmark "Nest Stay":
 
 ```jsx
 // Landing / footer (coral)
 <div className="w-8 h-8 bg-coral rounded-lg flex items-center justify-center">
   <HouseIcon className="w-4 h-4 text-white" />
 </div>
-<span className="text-white font-bold text-lg tracking-tight">PG Finder</span>
+<span className="text-white font-bold text-lg tracking-tight">Nest Stay</span>
 
 // Admin sidebar (brand yellow)
 <div className="w-7 h-7 bg-brand rounded-[10px] flex items-center justify-center">

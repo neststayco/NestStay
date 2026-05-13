@@ -43,7 +43,7 @@ export default function LoginPage() {
                 d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-[#222121]">Sign in to PG Finder</h1>
+          <h1 className="text-2xl font-bold text-[#222121]">Sign in to Nest Stay</h1>
           <p className="text-[#6c757d] text-sm mt-1">Enter your credentials to continue</p>
         </div>
 

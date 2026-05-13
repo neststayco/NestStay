@@ -33,7 +33,7 @@ class NotificationService {
       }
 
       await twilioClient.messages.create({
-        body: `PG Finder: New complaint received for your PG. Complaint ID: ${complaint._id}. Login to review.`,
+        body: `Nest Stay: New complaint received for your PG. Complaint ID: ${complaint._id}. Login to review.`,
         from: process.env.TWILIO_FROM_NUMBER,
         to: process.env.OWNER_NOTIFICATION_PHONE,
       });
@@ -59,7 +59,7 @@ class NotificationService {
       await sgMail.send({
         to: process.env.ADMIN_NOTIFICATION_EMAIL,
         from: process.env.SENDGRID_FROM_EMAIL,
-        subject: 'PG Finder: Admission Request Escalated',
+        subject: 'Nest Stay: Admission Request Escalated',
         text: `An admission request has been pending for too long and has been escalated.\n\nAdmission ID: ${admission._id}\nPG ID: ${admission.pgId}\nUser ID: ${admission.userId}\n\nPlease log in to the admin panel to review.`,
       });
 

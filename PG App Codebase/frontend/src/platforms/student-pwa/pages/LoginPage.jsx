@@ -46,7 +46,7 @@ export default function LoginPage() {
       <div className="bg-white rounded-[20px] border border-[#e0e0e0] p-8 w-full max-w-md" style={{ boxShadow: 'rgba(0,0,0,0.08) 0px 4px 10px 0px' }}>
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-[#222121]">Welcome back</h1>
-          <p className="text-[#6c757d] text-sm mt-1">Sign in to your PG Finder account</p>
+          <p className="text-[#6c757d] text-sm mt-1">Sign in to your Nest Stay account</p>
         </div>
 
         {error && (

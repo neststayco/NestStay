@@ -57,3 +57,7 @@ venv/
 tmp/
 temp/
 .claude/
+stitch-assets/  
+docs/
+design.md
+frontend/public/nest-stay-logo.png

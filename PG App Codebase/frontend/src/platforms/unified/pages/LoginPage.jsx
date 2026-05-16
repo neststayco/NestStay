@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { flushSync } from 'react-dom'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@shared/context/AuthContext'
 import { login } from '@shared/api/auth'
+import { normalizeError } from '@shared/api/client'
+import OfflineBanner from '@shared/components/OfflineBanner'
+import { useOnline } from '@shared/hooks/useOnline'
 
 function roleRedirect(role) {
   if (role === 'admin') return '/admin'
@@ -10,100 +13,205 @@ function roleRedirect(role) {
   return '/user'
 }
 
+const EyeOpenIcon = () => (
+  <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+  </svg>
+)
+
+const EyeOffIcon = () => (
+  <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+  </svg>
+)
+
+const inputOk  = 'w-full border border-[#E5E7EB] rounded-xl px-4 py-3 text-sm text-[#1b1c1c] placeholder:text-[#73787a] focus:outline-none focus:ring-2 focus:ring-[#e98a76]/40 focus:border-[#e98a76] bg-white transition-colors'
+const inputErr = 'w-full border border-red-400 rounded-xl px-4 py-3 text-sm text-[#1b1c1c] placeholder:text-[#73787a] focus:outline-none focus:ring-2 focus:ring-red-300/50 focus:border-red-400 bg-white transition-colors'
+
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState({})
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [rateLimitSeconds, setRateLimitSeconds] = useState(0)
+  const countdownRef = useRef(null)
   const { login: authLogin } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const isOnline = useOnline()
+
+  useEffect(() => () => { if (countdownRef.current) clearInterval(countdownRef.current) }, [])
+
+  function startCountdown(seconds) {
+    setRateLimitSeconds(seconds)
+    if (countdownRef.current) clearInterval(countdownRef.current)
+    countdownRef.current = setInterval(() => {
+      setRateLimitSeconds(prev => {
+        if (prev <= 1) { clearInterval(countdownRef.current); return 0 }
+        return prev - 1
+      })
+    }, 1000)
+  }
+
+  function validateField(field, value) {
+    setFieldErrors(prev => {
+      const next = { ...prev }
+      if (field === 'email') {
+        if (!value.trim()) next.email = 'Email is required.'
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) next.email = 'Enter a valid email address.'
+        else delete next.email
+      }
+      if (field === 'password') {
+        if (!value) next.password = 'Password is required.'
+        else delete next.password
+      }
+      return next
+    })
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
+
+    const errs = {}
+    if (!email.trim()) errs.email = 'Email is required.'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = 'Enter a valid email address.'
+    if (!password) errs.password = 'Password is required.'
+    if (Object.keys(errs).length) { setFieldErrors(errs); return }
+
     setLoading(true)
     try {
-      const res = await login(email, password)
+      const res = await login(email.trim(), password)
+      const redirect = searchParams.get('redirect')
       flushSync(() => authLogin(res.token, res.data))
-      navigate(roleRedirect(res.data.role), { replace: true })
+      navigate(redirect || roleRedirect(res.data.role), { replace: true })
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.')
+      const normalized = normalizeError(err)
+      if (normalized.code === 'RATE_LIMITED') startCountdown(normalized.retryAfter || 900)
+      setError(normalized.message)
     } finally {
       setLoading(false)
     }
   }
 
+  const isRateLimited = rateLimitSeconds > 0
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f8f9fa] px-4">
-      <div className="bg-white rounded-[20px] border border-[#e0e0e0] p-8 w-full max-w-md" style={{ boxShadow: 'rgba(0,0,0,0.08) 0px 4px 10px 0px' }}>
-        <div className="mb-6 text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-brand rounded-[10px] mb-3">
-            <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-            </svg>
+    <>
+      <OfflineBanner />
+      <div className="min-h-screen flex items-center justify-center bg-[#fbf9f8] px-4 py-12">
+        <div className="w-full max-w-md">
+
+          {/* Logo */}
+          <div className="flex justify-center mb-8">
+            <Link to="/">
+              <img src="/nest-stay-logo.png" alt="Nest Stay" className="h-10 w-auto" />
+            </Link>
           </div>
-          <h1 className="text-2xl font-bold text-[#222121]">Sign in to Nest Stay</h1>
-          <p className="text-[#6c757d] text-sm mt-1">Enter your credentials to continue</p>
+
+          <div className="bg-white rounded-2xl border border-[#E5E7EB] p-8 shadow-card">
+            <div className="mb-6">
+              <h1 className="text-[28px] font-bold text-[#1b1c1c] leading-tight">Welcome back</h1>
+              <p className="text-sm text-[#434849] mt-1">Sign in to your Nest Stay account</p>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-5 text-sm">
+                {isRateLimited
+                  ? <span>{error} Retry in <strong>{rateLimitSeconds}s</strong>.</span>
+                  : error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+              <div>
+                <label className="block text-sm font-semibold text-[#1b1c1c] mb-2" htmlFor="login-email">
+                  Email address
+                </label>
+                <input
+                  id="login-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); if (fieldErrors.email) validateField('email', e.target.value) }}
+                  onBlur={(e) => validateField('email', e.target.value)}
+                  required
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  className={fieldErrors.email ? inputErr : inputOk}
+                  aria-invalid={!!fieldErrors.email}
+                  aria-describedby={fieldErrors.email ? 'login-email-err' : undefined}
+                />
+                {fieldErrors.email && (
+                  <p id="login-email-err" className="mt-1.5 text-xs text-red-600">{fieldErrors.email}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-[#1b1c1c] mb-2" htmlFor="login-password">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="login-password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); if (fieldErrors.password) validateField('password', e.target.value) }}
+                    onBlur={(e) => validateField('password', e.target.value)}
+                    required
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    className={`${fieldErrors.password ? inputErr : inputOk} pr-11`}
+                    aria-invalid={!!fieldErrors.password}
+                    aria-describedby={fieldErrors.password ? 'login-password-err' : undefined}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(v => !v)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#73787a] hover:text-[#1b1c1c] transition-colors"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOffIcon /> : <EyeOpenIcon />}
+                  </button>
+                </div>
+                {fieldErrors.password && (
+                  <p id="login-password-err" className="mt-1.5 text-xs text-red-600">{fieldErrors.password}</p>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading || !isOnline || isRateLimited}
+                className="w-full bg-[#e98a76] hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 text-white font-semibold py-3 rounded-xl transition-all text-sm"
+              >
+                {loading
+                  ? 'Signing in…'
+                  : isRateLimited
+                    ? `Try again in ${rateLimitSeconds}s`
+                    : 'Sign in'}
+              </button>
+            </form>
+
+            <p className="text-sm text-center mt-6 text-[#434849]">
+              Don&apos;t have an account?{' '}
+              <Link to="/register" className="text-[#e98a76] hover:opacity-80 font-semibold transition-opacity">
+                Create one
+              </Link>
+            </p>
+          </div>
+
+          <p className="text-center text-sm text-[#73787a] mt-6">
+            <Link to="/" className="hover:text-[#1b1c1c] transition-colors">
+              ← Back to home
+            </Link>
+          </p>
         </div>
-
-        {error && (
-          <div className="bg-red-50 border border-[#f44336]/30 text-[#f44336] px-4 py-3 rounded-[10px] mb-5 text-sm">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-[#222121] mb-2">
-              Email address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="you@example.com"
-              className="w-full border border-[#e0e0e0] rounded-[10px] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action focus:border-action bg-white h-[42px]"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[#222121] mb-2">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="••••••••"
-              className="w-full border border-[#e0e0e0] rounded-[10px] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action focus:border-action bg-white h-[42px]"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-brand hover:bg-brand-light disabled:bg-[#e0e0e0] disabled:text-[#6c757d] text-black font-semibold py-2.5 rounded-[10px] transition-colors text-sm h-[42px]"
-          >
-            {loading ? 'Signing in…' : 'Sign in'}
-          </button>
-        </form>
-
-        <p className="text-sm text-center mt-5 text-[#6c757d]">
-          Don&apos;t have an account?{' '}
-          <Link to="/register" className="text-action hover:underline font-medium">
-            Create one
-          </Link>
-        </p>
-
-        <p className="text-center text-sm text-[#6c757d] mt-3">
-          <Link to="/" className="hover:text-[#222121] transition-colors">
-            ← Back to home
-          </Link>
-        </p>
       </div>
-    </div>
+    </>
   )
 }

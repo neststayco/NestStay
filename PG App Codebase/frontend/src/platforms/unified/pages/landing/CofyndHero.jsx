@@ -5,8 +5,8 @@ import { Link } from 'react-router-dom'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const PHONE = '020 4614 0000'
-const EMAIL = 'hello@pgfinder.in'
+const PHONE = '+91 99701 14079'
+const EMAIL = 'neststayco@gmail.com'
 
 const NAV_ITEMS = [
   {
@@ -328,7 +328,7 @@ export function CofyndHeroSection() {
             {/* Mobile/tablet: banner image */}
             <div className="lg:hidden h-56 sm:h-72 overflow-hidden">
               <img
-                src="https://picsum.photos/seed/pghero-pune/900/400"
+                src="https://images.unsplash.com/photo-1758448721134-1798533ae917?w=900&h=600&fit=crop&q=80&auto=format"
                 alt="Premium PG accommodation — modern interior, Pune"
                 className="w-full h-full object-cover object-center"
               />
@@ -339,7 +339,7 @@ export function CofyndHeroSection() {
               className="hidden lg:block w-full h-full relative"
             >
               <img
-                src="https://picsum.photos/seed/pghero-pune/900/600"
+                src="https://images.unsplash.com/photo-1758448721134-1798533ae917?w=900&h=600&fit=crop&q=80&auto=format"
                 alt="Premium PG accommodation — modern interior, Pune"
                 className="w-full h-full object-cover object-center"
                 style={{ borderRadius: '0 0 0 60px' }}

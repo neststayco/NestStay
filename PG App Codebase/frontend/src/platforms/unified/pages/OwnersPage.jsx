@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { getAllOwners, createOwner, updateOwner, resetOwnerPassword } from '@shared/api/owners'
 import { getPGList } from '@shared/api/pgs'
 import { useToast } from '@shared/components/Toast'
+import RelativeTime from '@shared/components/RelativeTime'
+import CopyButton from '@shared/components/CopyButton'
 
 const inputCls = 'w-full border border-[#e0e0e0] rounded-[10px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action focus:border-action bg-gray-50'
 
@@ -14,6 +16,10 @@ function CreateOwnerModal({ pgs, onClose, onCreated }) {
   async function handleSubmit() {
     if (!form.name || !form.email || !form.password || !form.pgId) {
       setError('All fields are required')
+      return
+    }
+    if (form.password.length < 6) {
+      setError('Password must be at least 6 characters')
       return
     }
     setError('')
@@ -64,6 +70,7 @@ function CreateOwnerModal({ pgs, onClose, onCreated }) {
               ))}
             </select>
           </div>
+          <p className="text-xs text-gray-400">Share credentials with the owner out-of-band after creation.</p>
         </div>
         <div className="px-6 py-4 border-t flex gap-3">
           <button onClick={onClose} className="flex-1 border border-[#e0e0e0] text-gray-700 hover:bg-gray-50 text-sm font-medium py-2.5 rounded-[10px]">Cancel</button>
@@ -115,6 +122,7 @@ function ResetPasswordModal({ owner, onClose }) {
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">New Password</label>
             <input type="password" className={inputCls} value={password} onChange={e => setPassword(e.target.value)} placeholder="Min 6 characters" />
           </div>
+          <p className="text-xs text-gray-400">Inform the owner of their new password manually — no email is sent.</p>
         </div>
         <div className="px-6 py-4 border-t flex gap-3">
           <button onClick={onClose} className="flex-1 border border-[#e0e0e0] text-gray-700 hover:bg-gray-50 text-sm font-medium py-2.5 rounded-[10px]">Cancel</button>
@@ -186,7 +194,7 @@ function ReassignModal({ owner, pgs, onClose, onUpdated }) {
 function RowSkeleton() {
   return (
     <tr className="animate-pulse">
-      {[1,2,3,4,5].map(i => (
+      {[1, 2, 3, 4, 5].map(i => (
         <td key={i} className="px-4 py-3.5"><div className="h-4 bg-gray-200 rounded" /></td>
       ))}
     </tr>
@@ -198,6 +206,7 @@ export default function OwnersPage() {
   const [pgs, setPgs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [is403, setIs403] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [resetTarget, setResetTarget] = useState(null)
   const [reassignTarget, setReassignTarget] = useState(null)
@@ -205,6 +214,7 @@ export default function OwnersPage() {
   const load = useCallback(async () => {
     setLoading(true)
     setError('')
+    setIs403(false)
     try {
       const [ownersRes, pgsRes] = await Promise.all([
         getAllOwners(),
@@ -212,8 +222,13 @@ export default function OwnersPage() {
       ])
       setOwners(ownersRes.data)
       setPgs(pgsRes.data)
-    } catch {
-      setError('Failed to load owners')
+    } catch (err) {
+      if (err.response?.status === 403) {
+        setIs403(true)
+        setError('You don\'t have permission to view this. Contact your administrator.')
+      } else {
+        setError('Failed to load owners')
+      }
     } finally {
       setLoading(false)
     }
@@ -247,7 +262,23 @@ export default function OwnersPage() {
         </button>
       </div>
 
-      {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>}
+      {error && (
+        <div className={`border px-4 py-3 rounded-lg mb-4 text-sm flex items-start justify-between gap-4 ${
+          is403
+            ? 'bg-amber-50 border-amber-200 text-amber-800'
+            : 'bg-red-50 border-red-200 text-red-700'
+        }`}>
+          <span>{error}</span>
+          {!is403 && (
+            <button
+              onClick={load}
+              className="text-xs font-semibold underline underline-offset-2 whitespace-nowrap hover:no-underline"
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="bg-white border border-[#e0e0e0] rounded-[20px] shadow-card overflow-hidden">
         <div className="overflow-x-auto">
@@ -267,14 +298,26 @@ export default function OwnersPage() {
                 : owners.length === 0
                 ? (
                   <tr>
-                    <td colSpan={5} className="text-center py-12 text-gray-400 text-sm">No owner accounts yet</td>
+                    <td colSpan={5} className="text-center py-12">
+                      <p className="text-gray-400 text-sm font-medium">No owner accounts yet</p>
+                      <p className="text-gray-300 text-xs mt-1">Create the first owner to link them to a PG</p>
+                    </td>
                   </tr>
                 )
                 : owners.map(owner => (
                   <tr key={owner._id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3.5">
                       <div className="font-medium text-gray-900">{owner.name}</div>
-                      <div className="text-xs text-gray-400">{owner.email}</div>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <span className="text-xs text-gray-400">{owner.email}</span>
+                        <CopyButton value={owner.email} />
+                      </div>
+                      {owner._id && (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <span className="text-[10px] text-gray-300 font-mono">{owner._id}</span>
+                          <CopyButton value={owner._id} />
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3.5 text-gray-700">
                       {owner.pgId?.name || <span className="text-gray-400 italic">Unlinked</span>}
@@ -283,7 +326,9 @@ export default function OwnersPage() {
                       {owner.pgId?.location?.city || '—'}
                     </td>
                     <td className="px-4 py-3.5 text-gray-400 text-xs">
-                      {new Date(owner.createdAt).toLocaleDateString()}
+                      {owner.createdAt
+                        ? <RelativeTime timestamp={owner.createdAt} />
+                        : '—'}
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-2">

@@ -1,73 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@shared/context/AuthContext'
-
-// ─── Data ─────────────────────────────────────────────────────────────────────
-
-const FEATURED_PGS = [
-  {
-    id: 1,
-    name: 'The Collective Hub',
-    location: 'Hinjewadi, Pune',
-    price: '₹12,000',
-    rating: 4.9,
-    status: 'Available',
-    statusStyle: 'bg-green-100 text-green-700',
-    src: 'https://images.unsplash.com/photo-1721743169043-dda0212ce3d4?w=600&h=400&fit=crop&q=80&auto=format',
-  },
-  {
-    id: 2,
-    name: 'Zenith Suites',
-    location: 'Baner, Pune',
-    price: '₹18,000',
-    rating: 4.8,
-    status: 'Available',
-    statusStyle: 'bg-green-100 text-green-700',
-    src: 'https://images.unsplash.com/photo-1757344454333-cc666252e596?w=600&h=400&fit=crop&q=80&auto=format',
-  },
-  {
-    id: 3,
-    name: 'Creative Loft',
-    location: 'Kharadi, Pune',
-    price: '₹15,000',
-    rating: 5.0,
-    status: 'Filling Fast',
-    statusStyle: 'bg-yellow-100 text-yellow-700',
-    src: 'https://images.unsplash.com/photo-1750255079667-4c5591a7058b?w=600&h=400&fit=crop&q=80&auto=format',
-  },
-]
-
-const TESTIMONIALS = [
-  {
-    id: 1,
-    quote: '"Found my PG near Hinjewadi in 2 days flat. Verified listings meant no surprises — photos and pricing were exactly as shown."',
-    name: 'Priya Mehta',
-    role: 'Software Engineer, Hinjewadi',
-    initials: 'PM',
-    avatarBg: 'bg-[#ffdbd0]',
-    avatarText: 'text-[#e98a76]',
-  },
-  {
-    id: 2,
-    quote: '"Applied online, got approved by the owner, moved into my Baner PG within a week. Zero paperwork, zero follow-up calls."',
-    name: 'Arjun Singh',
-    role: 'MBA Student, Symbiosis Pune',
-    initials: 'AS',
-    avatarBg: 'bg-primary-fixed',
-    avatarText: 'text-primary',
-  },
-  {
-    id: 3,
-    quote: '"Filed an anonymous complaint about my AC — the owner never knew it was me. Resolved in 24 hours. That anonymity gave me the confidence to actually speak up."',
-    name: 'Sneha Kapoor',
-    role: 'Data Analyst, Kharadi',
-    initials: 'SK',
-    avatarBg: 'bg-tertiary-fixed',
-    avatarText: 'text-on-tertiary-fixed',
-  },
-]
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
+import { resolveUserHomeRoute } from '@shared/utils/routing'
+import { getPGList } from '@shared/api/pgs'
+import { getFeaturedTestimonials } from '@shared/api/testimonials'
 
 export default function LandingPage() {
   const { user } = useAuth()
@@ -76,15 +12,18 @@ export default function LandingPage() {
       <Navbar user={user} />
       <main className="pt-20">
         <HeroSection />
-        <TrustBar />
-        <ValuePropSection />
+        <TrustIndicators />
+        <PopularLocationsSection />
+        <CollegesSection />
         <FeaturedPGsSection />
+        <ValuePropSection />
+        <VideoTourSection />
+        <HowItWorksSection />
         <TestimonialsSection />
         <OwnerSection />
-        <CTASection />
-        <StatsSection />
       </main>
       <Footer />
+      <WhatsAppButton />
     </div>
   )
 }
@@ -96,9 +35,7 @@ function Navbar({ user }) {
 
   function dashboardPath() {
     if (!user) return '/login'
-    if (user.role === 'admin') return '/admin'
-    if (user.role === 'pg_owner') return '/pgowner'
-    return '/user'
+    return resolveUserHomeRoute(user.role)
   }
 
   return (
@@ -111,28 +48,36 @@ function Navbar({ user }) {
           <img src="/nest-stay-logo.png" alt="Nest Stay" className="h-10 w-auto" />
         </Link>
 
-        <div className="hidden md:flex items-center gap-8">
-          <a href="#" className="text-sm font-bold text-[#e98a76] border-b-2 border-[#e98a76] pb-1">Explore</a>
-          <a href="#for-owners" className="text-sm font-medium text-[#434849] hover:text-black transition-colors">List Property</a>
-          <a href="#" className="text-sm font-medium text-[#434849] hover:text-black transition-colors">About Us</a>
-          <a href="#" className="text-sm font-medium text-[#434849] hover:text-black transition-colors">Help</a>
+        <div className="hidden lg:flex items-center gap-6">
+          <a href="#home" className="text-sm font-bold text-[#e98a76] border-b-2 border-[#e98a76] pb-1">Home</a>
+          <a href="#listings" className="text-sm font-medium text-[#434849] hover:text-black transition-colors">Properties</a>
+          <a href="#colleges" className="text-sm font-medium text-[#434849] hover:text-black transition-colors">PG Near Colleges</a>
+          <a href="#for-owners" className="text-sm font-medium text-[#434849] hover:text-black transition-colors">For Property Owners</a>
+          <a href="#about" className="text-sm font-medium text-[#434849] hover:text-black transition-colors">About Us</a>
+          <a href="#contact" className="text-sm font-medium text-[#434849] hover:text-black transition-colors">Contact</a>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <Link
             to={dashboardPath()}
-            className="hidden md:block px-6 py-2.5 rounded-xl border border-[#73787a] text-black text-sm font-semibold hover:bg-[#f0eded] transition-all"
+            className="hidden md:block px-5 py-2.5 rounded-xl border border-[#73787a] text-black text-sm font-semibold hover:bg-[#f0eded] transition-all"
           >
-            {user ? 'Dashboard' : 'Sign In'}
+            {user ? 'Open App' : 'Login'}
           </Link>
           <Link
             to="/register"
-            className="bg-[#e98a76] text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 active:scale-95 transition-all"
+            className="bg-[#e98a76] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 active:scale-95 transition-all"
           >
-            Find a PG
+            Register
+          </Link>
+          <Link
+            to="/register"
+            className="hidden xl:block bg-[#101e22] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-all"
+          >
+            List Your Property
           </Link>
           <button
-            className="md:hidden text-black p-2 rounded-lg hover:bg-[#f0eded] transition-colors"
+            className="lg:hidden text-black p-2 rounded-lg hover:bg-[#f0eded] transition-colors"
             onClick={() => setOpen(!open)}
             aria-label="Toggle menu"
           >
@@ -142,15 +87,19 @@ function Navbar({ user }) {
       </div>
 
       {open && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-[#fbf9f8] border-t border-[#E5E7EB] px-6 py-4 space-y-1 shadow-lg">
-          <a href="#" className="block text-sm py-2.5 text-[#e98a76] font-bold" onClick={() => setOpen(false)}>Explore</a>
-          <a href="#for-owners" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>List Property</a>
-          <a href="#" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>About Us</a>
-          <a href="#" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>Help</a>
-          <div className="pt-3 border-t border-[#E5E7EB]">
+        <div className="lg:hidden absolute top-full left-0 right-0 bg-[#fbf9f8] border-t border-[#E5E7EB] px-6 py-4 space-y-1 shadow-lg">
+          <a href="#home" className="block text-sm py-2.5 text-[#e98a76] font-bold" onClick={() => setOpen(false)}>Home</a>
+          <a href="#listings" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>Properties</a>
+          <a href="#colleges" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>PG Near Colleges</a>
+          <a href="#for-owners" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>For Property Owners</a>
+          <a href="#about" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>About Us</a>
+          <a href="#contact" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>Contact</a>
+          <div className="pt-3 border-t border-[#E5E7EB] space-y-1">
             <Link to={dashboardPath()} className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>
-              {user ? 'Dashboard' : 'Sign In'}
+              {user ? 'Open App' : 'Login'}
             </Link>
+            <Link to="/register" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>Register</Link>
+            <Link to="/register" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>List Your Property</Link>
           </div>
         </div>
       )}
@@ -162,73 +111,116 @@ function Navbar({ user }) {
 
 function HeroSection() {
   return (
-    <section className="relative bg-[#fbf9f8] min-h-[calc(100vh-5rem)] flex items-center py-8 lg:pt-0 lg:pb-10">
+    <section id="home" className="relative bg-[#fbf9f8] py-12 lg:py-20">
       <div className="w-full max-w-[1280px] mx-auto px-6 lg:px-16 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 
         <div className="z-10">
           <span className="inline-block bg-tertiary-fixed text-on-tertiary-fixed-variant px-4 py-1.5 rounded-full text-xs font-bold tracking-wider mb-6">
-            Trusted by students &amp; working professionals
+            Trusted by 3000+ Students Across Pune
           </span>
-          <h1 className="text-[40px] lg:text-[48px] font-extrabold text-[#1b1c1c] leading-tight mb-6">
-            Find Your Perfect <br />
-            <span className="text-[#e98a76]">Paying Guest</span> Home
+          <h1 className="text-[40px] lg:text-[48px] font-extrabold text-[#1b1c1c] leading-tight mb-4">
+            Find Verified PGs &amp; Hostels<br />
+            <span className="text-[#e98a76]">Near Your College</span>
           </h1>
-          <p className="text-lg text-[#434849] max-w-lg mb-10 leading-relaxed">
-            Find verified PG accommodations across Pune — from Hinjewadi to Kharadi. Apply for residency, manage your stay, and raise complaints — all in one place.
+          <p className="text-lg text-[#434849] mb-8 leading-relaxed">
+            Safe, Affordable &amp; Fully Verified Student Accommodation.
           </p>
 
-          {/* Search bar */}
-          <div className="bg-white p-2 rounded-2xl shadow-card border border-[#E5E7EB] flex items-center gap-2 max-w-2xl">
-            <div className="flex-1 flex items-center px-4 gap-2">
-              <span className="material-symbols-outlined text-[#73787a] text-[20px]">location_on</span>
-              <input
-                type="text"
-                placeholder="Search by locality, area or landmark..."
-                className="w-full border-none focus:ring-0 bg-transparent text-sm outline-none"
-                onKeyDown={(e) => { if (e.key === 'Enter') window.location.assign('/login') }}
-              />
-            </div>
-            <Link
-              to="/login"
-              className="bg-black text-white px-8 py-3 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-[#e98a76] transition-colors flex-shrink-0"
-            >
-              <span className="material-symbols-outlined text-[20px]">search</span>
-              Search
-            </Link>
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <input
+              type="text"
+              placeholder="Search by College"
+              className="h-[52px] px-4 border border-[#E5E7EB] rounded-lg text-sm outline-none focus:border-[#e98a76] bg-white"
+            />
+            <select className="h-[52px] px-4 border border-[#E5E7EB] rounded-lg text-sm outline-none focus:border-[#e98a76] bg-white text-[#434849]">
+              <option>Select Area</option>
+              <option>Hinjewadi</option>
+              <option>Baner</option>
+              <option>Kharadi</option>
+              <option>Wakad</option>
+              <option>Kalyani Nagar</option>
+              <option>Viman Nagar</option>
+              <option>Pimpri-Chinchwad</option>
+              <option>Hadapsar</option>
+            </select>
+            <input
+              type="text"
+              placeholder="Budget (e.g. ₹8,000/mo)"
+              className="h-[52px] px-4 border border-[#E5E7EB] rounded-lg text-sm outline-none focus:border-[#e98a76] bg-white"
+            />
+            <select className="h-[52px] px-4 border border-[#E5E7EB] rounded-lg text-sm outline-none focus:border-[#e98a76] bg-white text-[#434849]">
+              <option>Boys / Girls</option>
+              <option>Boys</option>
+              <option>Girls</option>
+              <option>Any</option>
+            </select>
           </div>
 
-          {/* Trust badges */}
-          <div className="mt-8 flex flex-wrap gap-6">
-            {[
-              { icon: 'verified',        label: 'Verified Listings'       },
-              { icon: 'lock',           label: 'Anonymous Complaints'    },
-              { icon: 'bolt',           label: 'Quick Admission'         },
-            ].map(({ icon, label }) => (
-              <div key={label} className="flex items-center gap-2 text-sm font-bold text-[#434849]">
-                <span className="material-symbols-outlined text-[#e98a76] text-[18px] leading-none flex-shrink-0">{icon}</span>
-                {label}
-              </div>
-            ))}
+          <div className="flex flex-wrap gap-3 mb-8">
+            <Link
+              to="/login"
+              className="flex items-center gap-2 bg-[#e98a76] text-white px-8 h-[52px] rounded-xl text-sm font-semibold hover:opacity-90 active:scale-95 transition-all"
+            >
+              <span className="material-symbols-outlined text-[20px]">search</span>
+              Find PG
+            </Link>
+            <a
+              href="https://wa.me/919970114079"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-6 h-[52px] border border-[#E5E7EB] rounded-xl bg-white text-[#1b1c1c] text-sm font-semibold hover:bg-[#f3f4f6] transition-colors"
+            >
+              <span className="material-symbols-outlined text-[20px]" style={{ color: '#25d366' }}>chat</span>
+              Talk to Expert
+            </a>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex">
+              {[
+                { initials: 'A', bg: '#8b5cf6' },
+                { initials: 'R', bg: '#ec4899' },
+                { initials: 'P', bg: '#06b6d4' },
+              ].map(({ initials, bg }, i) => (
+                <div
+                  key={initials}
+                  className={`w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-white text-xs font-medium ${i > 0 ? '-ml-2' : ''}`}
+                  style={{ backgroundColor: bg }}
+                >
+                  {initials}
+                </div>
+              ))}
+            </div>
+            <div className="text-sm text-[#1b1c1c]">
+              <span className="font-semibold">3000+ Students</span><br />
+              Already Found Their Home
+            </div>
           </div>
         </div>
 
-        {/* Hero image + floating badge */}
-        <div className="relative hidden lg:block">
-          <div className="rounded-[2.5rem] overflow-hidden" style={{ aspectRatio: '4/5' }}>
+        <div className="relative hidden lg:block" style={{ paddingBottom: '64px' }}>
+          <div className="rounded-2xl overflow-hidden">
             <img
-              src="https://images.unsplash.com/photo-1760072513376-67a46aab0fd1?w=600&h=750&fit=crop&q=80&auto=format"
-              alt="Modern PG room"
-              className="w-full h-full object-cover"
+              src="https://images.unsplash.com/photo-1760072513376-67a46aab0fd1?w=600&h=340&fit=crop&q=80&auto=format"
+              alt="Modern PG accommodation"
+              className="w-full aspect-video object-cover"
             />
           </div>
-          <div className="absolute -bottom-6 -left-6 bg-white p-6 rounded-2xl shadow-card border border-[#E5E7EB] flex items-center gap-4">
-            <div className="w-12 h-12 bg-[#ffdbd0] flex items-center justify-center rounded-xl">
-              <span className="material-symbols-outlined text-[#e98a76]">thumb_up</span>
-            </div>
-            <div>
-              <div className="text-2xl font-bold">4.9/5</div>
-              <div className="text-xs font-bold text-[#73787a]">Guest Satisfaction Rating</div>
-            </div>
+          <div
+            className="absolute left-1/2 -translate-x-1/2 w-[90%] bg-white rounded-2xl px-6 py-4 shadow-card border border-[#E5E7EB] grid grid-cols-4 gap-4 text-center z-10"
+            style={{ bottom: '0' }}
+          >
+            {[
+              { value: '✓', label: 'Verified Properties' },
+              { value: '₹0', label: 'Zero Brokerage' },
+              { value: '24/7', label: 'Support' },
+              { value: '📄', label: 'Digital Agreement' },
+            ].map(({ value, label }) => (
+              <div key={label} className="text-xs text-[#73787a]">
+                <strong className="block text-base font-semibold text-[#e98a76] mb-1">{value}</strong>
+                {label}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -237,18 +229,24 @@ function HeroSection() {
   )
 }
 
-// ─── Trust Bar ────────────────────────────────────────────────────────────────
+// ─── Trust Indicators ─────────────────────────────────────────────────────────
 
-function TrustBar() {
+function TrustIndicators() {
   return (
-    <section className="py-12 bg-[#f6f3f2] border-y border-[#E5E7EB]">
-      <div className="max-w-[1280px] mx-auto px-6 lg:px-16 flex flex-col md:flex-row items-center justify-between gap-8">
-        <span className="text-xs font-bold text-[#73787a] uppercase tracking-widest whitespace-nowrap">
-          Trusted by Professionals From
-        </span>
-        <div className="flex flex-wrap justify-center gap-x-12 gap-y-4 opacity-50">
-          {['Infosys', 'TCS', 'Wipro', 'Persistent', 'Cognizant'].map(co => (
-            <span key={co} className="text-2xl font-bold text-[#1b1c1c]">{co}</span>
+    <section className="py-10 bg-[#f6f3f2] border-y border-[#E5E7EB]">
+      <div className="max-w-[1280px] mx-auto px-6 lg:px-16">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-6 text-center">
+          {[
+            { value: '500+',  label: 'Verified Properties' },
+            { value: '3000+', label: 'Students Placed'     },
+            { value: '₹0',    label: 'Zero Brokerage'      },
+            { value: '24×7',  label: 'Support'             },
+            { value: '100%',  label: 'Safe &amp; Secure'   },
+          ].map(({ value, label }) => (
+            <div key={label} className="text-sm text-[#73787a]">
+              <strong className="block text-xl font-bold text-[#1b1c1c] mb-1" dangerouslySetInnerHTML={{ __html: value }} />
+              <span dangerouslySetInnerHTML={{ __html: label }} />
+            </div>
           ))}
         </div>
       </div>
@@ -256,115 +254,184 @@ function TrustBar() {
   )
 }
 
-// ─── Value Prop Section ───────────────────────────────────────────────────────
+// ─── Popular Locations ────────────────────────────────────────────────────────
 
-function ValuePropSection() {
+const LOCATIONS = [
+  { name: 'Hinjewadi',   count: '80+', from: '#fbbf24', to: '#f59e0b' },
+  { name: 'Baner',       count: '60+', from: '#f87171', to: '#ef4444' },
+  { name: 'Kharadi',     count: '55+', from: '#818cf8', to: '#6366f1' },
+  { name: 'Wakad',       count: '45+', from: '#a78bfa', to: '#9333ea' },
+  { name: 'Kalyani Nagar', count: '40+', from: '#14b8a6', to: '#0d9488' },
+  { name: 'Viman Nagar', count: '35+', from: '#fb923c', to: '#ea580c' },
+]
+
+function PopularLocationsSection() {
   return (
-    <section className="py-16 lg:py-32 bg-[#101e22] text-white">
-      <div className="max-w-[1280px] mx-auto px-6 lg:px-16 grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-
-        <div className="order-2 lg:order-1">
-          <div className="relative">
-            <div className="bg-[#eae8e7] w-full aspect-square rounded-[3rem] rotate-3 absolute inset-0 opacity-10" />
-            <img
-              src="https://images.unsplash.com/photo-1759038086454-082dc45d101d?w=600&h=600&fit=crop&q=80&auto=format"
-              alt="Comfortable co-living space"
-              className="rounded-[3rem] aspect-square object-cover relative z-10 shadow-ambient"
-            />
-          </div>
+    <section className="py-12 lg:py-20">
+      <div className="max-w-[1280px] mx-auto px-6 lg:px-16">
+        <h2 className="text-[28px] font-bold text-[#1b1c1c] text-center mb-8">Popular Areas in Pune</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {LOCATIONS.map(({ name, count, from, to }) => (
+            <Link
+              key={name}
+              to="/login"
+              className="relative rounded-xl overflow-hidden cursor-pointer transition-transform duration-300 hover:-translate-y-1 hover:shadow-card"
+              style={{ aspectRatio: '16/10', background: `linear-gradient(135deg, ${from}, ${to})` }}
+            >
+              <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                <div className="text-sm font-semibold">{name}</div>
+                <div className="text-xs opacity-90">{count} Properties</div>
+              </div>
+            </Link>
+          ))}
         </div>
-
-        <div className="order-1 lg:order-2">
-          <span className="text-[#ffdbd0] text-xs font-bold tracking-widest uppercase mb-4 block">
-            For Students &amp; Guests
-          </span>
-          <h2 className="text-[32px] font-bold mb-6 leading-tight">
-            Discover PGs Designed <br /> for Comfortable Living
-          </h2>
-          <p className="text-[#bac9ce] mb-10 leading-relaxed">
-            From studio rooms to shared accommodation across Hinjewadi, Baner, Kharadi and beyond — every listing is verified so you move in with zero surprises.
-          </p>
-          <ul className="space-y-6 mb-12">
-            {[
-              'All Pune listings verified and approved before going live',
-              'Raise complaints anonymously — your identity stays protected',
-              'Online admission — apply, get approved, move in fast',
-            ].map(item => (
-              <li key={item} className="flex items-start gap-4">
-                <span className="material-symbols-outlined text-[#e98a76] mt-0.5 flex-shrink-0">check_circle</span>
-                <p className="text-sm font-semibold">{item}</p>
-              </li>
-            ))}
-          </ul>
-          <Link
-            to="/login"
-            className="inline-flex items-center gap-3 bg-white text-black px-8 py-4 rounded-2xl text-sm font-semibold hover:bg-[#ffdbd0] transition-colors"
-          >
-            Explore Listings
-            <span className="material-symbols-outlined">arrow_forward</span>
-          </Link>
-        </div>
-
       </div>
     </section>
   )
 }
 
-// ─── Featured PG Spaces ───────────────────────────────────────────────────────
+// ─── Colleges Section ─────────────────────────────────────────────────────────
+
+const COLLEGES = [
+  { name: 'Symbiosis',         abbr: 'S', from: '#3b82f6', to: '#1e40af' },
+  { name: 'MIT-WPU',           abbr: 'M', from: '#ef4444', to: '#dc2626' },
+  { name: 'DY Patil',          abbr: 'D', from: '#8b5cf6', to: '#6d28d9' },
+  { name: 'Fergusson College', abbr: 'F', from: '#14b8a6', to: '#0d9488' },
+  { name: 'COEP',              abbr: 'C', from: '#f59e0b', to: '#d97706' },
+  { name: 'VIT Pune',          abbr: 'V', from: '#e98a76', to: '#c06a58' },
+]
+
+function CollegesSection() {
+  return (
+    <section id="colleges" className="py-12 lg:py-20 bg-[#f6f3f2] border-y border-[#E5E7EB]">
+      <div className="max-w-[1280px] mx-auto px-6 lg:px-16">
+        <h2 className="text-[28px] font-bold text-[#1b1c1c] text-center mb-8">
+          Find Accommodation Near Your College
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {COLLEGES.map(({ name, abbr, from, to }) => (
+            <Link
+              key={name}
+              to="/login"
+              className="bg-white border border-[#E5E7EB] rounded-xl py-6 px-4 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-card hover:border-[#e98a76] cursor-pointer"
+            >
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-bold mx-auto mb-3"
+                style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
+              >
+                {abbr}
+              </div>
+              <p className="text-sm font-medium text-[#1b1c1c]">{name}</p>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── Featured Properties ──────────────────────────────────────────────────────
+
+function PGCardSkeleton() {
+  return (
+    <div className="bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden animate-pulse">
+      <div className="h-52 bg-gray-200" />
+      <div className="p-5 space-y-3">
+        <div className="h-5 bg-gray-200 rounded w-2/3" />
+        <div className="h-4 bg-gray-200 rounded w-1/2" />
+        <div className="h-4 bg-gray-200 rounded w-1/3 mt-4" />
+      </div>
+    </div>
+  )
+}
 
 function FeaturedPGsSection() {
+  const [pgs, setPgs] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    getPGList({ sortBy: 'trustScore', limit: 3 })
+      .then(res => setPgs(res.data || []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
   return (
-    <section id="listings" className="py-12 lg:py-24">
+    <section id="listings" className="py-12 lg:py-20">
       <div className="max-w-[1280px] mx-auto px-6 lg:px-16">
-        <div className="flex justify-between items-end mb-12">
+        <div className="flex justify-between items-end mb-10">
           <div>
             <span className="text-[#e98a76] text-xs font-bold uppercase tracking-wider mb-2 block">Featured</span>
-            <h2 className="text-[32px] font-bold text-[#1b1c1c]">Premium PG Spaces</h2>
+            <h2 className="text-[28px] font-bold text-[#1b1c1c]">Featured Properties</h2>
           </div>
           <Link to="/login" className="text-[#e98a76] text-sm font-semibold flex items-center gap-1 hover:underline flex-shrink-0">
             See All <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
           </Link>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {FEATURED_PGS.map(pg => <PGCard key={pg.id} pg={pg} />)}
+          {loading
+            ? Array.from({ length: 3 }).map((_, i) => <PGCardSkeleton key={i} />)
+            : pgs.length > 0
+              ? pgs.map(pg => <FeaturedPGCard key={pg._id} pg={pg} />)
+              : null}
         </div>
       </div>
     </section>
   )
 }
 
-function PGCard({ pg }) {
+const PG_PLACEHOLDER = 'https://placehold.co/600x400/e2e8f0/94a3b8?text=No+Image'
+
+function FeaturedPGCard({ pg }) {
+  const image = pg.images?.[0] || PG_PLACEHOLDER
+  const area = pg.location?.area
+  const city = pg.location?.city
+  const location = [area, city].filter(Boolean).join(', ') || '—'
+  const rent = pg.pricing?.rent
+
   return (
     <div className="bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden group hover:shadow-card transition-all duration-300">
-      <div className="relative h-64 overflow-hidden">
+      <div className="relative h-52 overflow-hidden bg-[#dbeafe] flex items-center justify-center">
         <img
-          src={pg.src}
+          src={image}
           alt={pg.name}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          onError={(e) => { e.target.src = PG_PLACEHOLDER }}
         />
-        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-1">
-          <span
-            className="material-symbols-outlined text-[#e98a76] text-[16px]"
-            style={{ fontVariationSettings: "'FILL' 1" }}
-          >star</span>
-          <span className="text-xs font-bold text-[#1b1c1c]">{pg.rating}</span>
-        </div>
-      </div>
-      <div className="p-6">
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="text-xl font-bold text-[#1b1c1c]">{pg.name}</h3>
-          <span className={`px-3 py-1 rounded-full text-xs font-bold ${pg.statusStyle}`}>{pg.status}</span>
-        </div>
-        <div className="flex items-center gap-1 text-[#73787a] text-sm mb-4">
-          <span className="material-symbols-outlined text-[18px]">location_on</span>
-          {pg.location}
-        </div>
-        <div className="pt-4 border-t border-[#E5E7EB] flex justify-between items-center">
-          <div className="text-2xl font-bold text-[#e98a76]">
-            {pg.price}<span className="text-sm font-normal text-[#73787a]">/mo</span>
+        <span className="absolute top-3 left-3 bg-[#e98a76] text-white px-3 py-1 rounded-md text-xs font-semibold">
+          VERIFIED
+        </span>
+        {pg.meta?.trustScore > 0 && (
+          <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-1">
+            <span
+              className="material-symbols-outlined text-[#e98a76] text-[16px]"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >star</span>
+            <span className="text-xs font-bold text-[#1b1c1c]">{pg.meta.trustScore}</span>
           </div>
-          <Link to="/login" className="text-black text-sm font-semibold hover:text-[#e98a76] transition-colors">
-            Details
+        )}
+      </div>
+      <div className="p-5">
+        <h3 className="text-base font-semibold text-[#1b1c1c] mb-1">{pg.name}</h3>
+        <div className="flex items-center gap-1 text-[#73787a] text-sm mb-3">
+          <span className="material-symbols-outlined text-[16px]">location_on</span>
+          {location}
+        </div>
+        <div className="text-xl font-bold text-[#e98a76] mb-4">
+          {rent ? <>&#8377;{rent.toLocaleString('en-IN')}<span className="text-sm font-normal text-[#73787a]">/month</span></> : '—'}
+        </div>
+        <div className="flex gap-2">
+          <Link
+            to={`/user/pgs/${pg._id}`}
+            className="flex-1 px-4 py-2.5 border border-[#E5E7EB] rounded-lg text-sm font-semibold text-[#1b1c1c] text-center hover:bg-[#f3f4f6] transition-colors"
+          >
+            View Details
+          </Link>
+          <Link
+            to={`/user/pgs/${pg._id}/apply`}
+            className="flex-1 px-4 py-2.5 bg-[#e98a76] text-white rounded-lg text-sm font-semibold text-center hover:opacity-90 transition-all"
+          >
+            Book Visit
           </Link>
         </div>
       </div>
@@ -372,40 +439,227 @@ function PGCard({ pg }) {
   )
 }
 
-// ─── Testimonials ─────────────────────────────────────────────────────────────
+// ─── Why Students Love NestStay ───────────────────────────────────────────────
 
-function TestimonialsSection() {
+function ValuePropSection() {
   return (
-    <section id="reviews" className="py-12 lg:py-24 bg-[#f6f3f2]">
-      <div className="max-w-[1280px] mx-auto px-6 lg:px-16">
-        <div className="text-center mb-16">
-          <span className="text-[#e98a76] text-xs font-bold uppercase tracking-wider mb-2 block">What Residents Say</span>
-          <h2 className="text-[32px] font-bold text-[#1b1c1c]">Loved by Growing Residents</h2>
+    <section id="about" className="py-16 lg:py-24 bg-[#101e22] text-white">
+      <div className="max-w-[1280px] mx-auto px-6 lg:px-16 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+
+        <div className="order-2 lg:order-1 w-full h-72 lg:h-80 bg-gradient-to-br from-[#dcfce7] to-[#86efac] rounded-2xl flex items-center justify-center">
+          <span className="material-symbols-outlined text-[#16a34a]" style={{ fontSize: '80px' }}>laptop_mac</span>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {TESTIMONIALS.map(t => (
-            <div key={t.id} className="bg-white p-8 rounded-2xl border border-[#E5E7EB] hover:shadow-card transition-all">
-              <div className="flex gap-1 text-[#e98a76] mb-6">
-                {[...Array(5)].map((_, i) => (
-                  <span
-                    key={i}
-                    className="material-symbols-outlined text-[20px]"
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >star</span>
-                ))}
-              </div>
-              <p className="text-sm text-[#434849] italic mb-8 leading-relaxed">{t.quote}</p>
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm ${t.avatarBg} ${t.avatarText}`}>
-                  {t.initials}
+
+        <div className="order-1 lg:order-2">
+          <span className="text-[#ffdbd0] text-xs font-bold tracking-widest uppercase mb-4 block">
+            Why Students Love NestStay
+          </span>
+          <h2 className="text-[28px] lg:text-[32px] font-bold mb-8 leading-tight">
+            Everything You Need, <br /> All in One Place
+          </h2>
+          <ul className="space-y-5">
+            {[
+              { icon: 'verified',       title: 'Verified Properties',   desc: 'Every property is thoroughly verified for safety and quality' },
+              { icon: 'shield',         title: 'Safe Environment',       desc: 'Your security is our top priority' },
+              { icon: 'bolt',           title: 'Easy Booking',           desc: 'Simple and hassle-free booking process' },
+              { icon: 'payments',       title: 'Transparent Pricing',    desc: 'No hidden charges, all costs upfront' },
+              { icon: 'support_agent',  title: 'Student Support',        desc: '24/7 customer support for your needs' },
+              { icon: 'description',    title: 'Digital Agreement',      desc: 'Secure online contracts and documentation' },
+            ].map(({ icon, title, desc }) => (
+              <li key={title} className="flex gap-4">
+                <span className="material-symbols-outlined text-[#e98a76] text-[22px] flex-shrink-0 mt-0.5">{icon}</span>
+                <span className="text-sm text-[#bac9ce] leading-relaxed">
+                  <strong className="text-white font-semibold">{title}</strong> — {desc}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+      </div>
+    </section>
+  )
+}
+
+// ─── Video Tour ───────────────────────────────────────────────────────────────
+
+const TOURS = [
+  { title: 'Modern PG Tour — Hinjewadi', from: '#f3e8ff', to: '#e9d5ff', playColor: '#a855f7', duration: '01:20' },
+  { title: 'Girls PG Tour — Baner',      from: '#dbeafe', to: '#bfdbfe', playColor: '#3b82f6', duration: '01:15' },
+  { title: 'Budget Stay — Wakad',        from: '#dcfce7', to: '#bbf7d0', playColor: '#16a34a', duration: '01:18' },
+]
+
+function VideoTourSection() {
+  return (
+    <section className="py-12 lg:py-20">
+      <div className="max-w-[1280px] mx-auto px-6 lg:px-16">
+        <h2 className="text-[28px] font-bold text-[#1b1c1c] text-center mb-8">Take a Video Tour</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {TOURS.map(({ title, from, to, playColor, duration }) => (
+            <div
+              key={title}
+              className="relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-card"
+              style={{ aspectRatio: '16/9', background: `linear-gradient(135deg, ${from}, ${to})` }}
+            >
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div
+                  className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg"
+                >
+                  <span className="material-symbols-outlined text-[28px]" style={{ color: playColor, fontVariationSettings: "'FILL' 1" }}>
+                    play_circle
+                  </span>
                 </div>
-                <div>
-                  <div className="text-sm font-semibold text-[#1b1c1c]">{t.name}</div>
-                  <div className="text-xs text-[#73787a]">{t.role}</div>
-                </div>
               </div>
+              <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs font-medium px-2 py-1 rounded">
+                {duration}
+              </div>
+              <div className="absolute bottom-3 left-3 text-xs font-semibold text-[#1b1c1c]/70">{title}</div>
             </div>
           ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── How It Works ─────────────────────────────────────────────────────────────
+
+const STEPS = [
+  { n: '1', title: 'Search',        desc: 'Browse verified properties near your college or workplace' },
+  { n: '2', title: 'Compare',       desc: 'Compare prices, amenities and locations side by side'      },
+  { n: '3', title: 'Schedule Visit', desc: 'Book a property visit at your preferred date and time'    },
+  { n: '4', title: 'Move In',       desc: 'Complete documentation digitally and move in hassle-free'  },
+]
+
+function HowItWorksSection() {
+  return (
+    <section className="py-12 lg:py-20 bg-[#f6f3f2] border-y border-[#E5E7EB]">
+      <div className="max-w-[1280px] mx-auto px-6 lg:px-16">
+        <h2 className="text-[28px] font-bold text-[#1b1c1c] text-center mb-10">How NestStay Works</h2>
+        <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div
+            className="absolute top-5 left-[12.5%] right-[12.5%] h-px hidden lg:block"
+            style={{
+              backgroundImage: 'repeating-linear-gradient(90deg, #d1d5db 0, #d1d5db 8px, transparent 8px, transparent 16px)',
+            }}
+          />
+          {STEPS.map(({ n, title, desc }) => (
+            <div
+              key={n}
+              className="bg-white border border-[#E5E7EB] rounded-xl p-6 text-center relative z-10"
+            >
+              <div className="w-10 h-10 bg-[#e98a76] text-white rounded-full flex items-center justify-center font-bold text-lg mx-auto mb-3">
+                {n}
+              </div>
+              <div className="text-base font-semibold text-[#1b1c1c] mb-2">{title}</div>
+              <div className="text-xs text-[#73787a] leading-relaxed">{desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── Testimonials ─────────────────────────────────────────────────────────────
+
+const FALLBACK_TESTIMONIALS = [
+  {
+    _id: 'f1',
+    rating: 5,
+    content: 'NestStay made finding a PG super easy! The verification process gave me complete peace of mind about safety and quality.',
+    createdBy: { name: 'Rohit Sharma' },
+    pgSnapshot: { name: 'MIT-WPU' },
+  },
+  {
+    _id: 'f2',
+    rating: 5,
+    content: 'Excellent support team and transparent pricing. Found my perfect accommodation without any hassle or hidden charges!',
+    createdBy: { name: 'Ananya Verma' },
+    pgSnapshot: { name: 'Symbiosis' },
+  },
+  {
+    _id: 'f3',
+    rating: 5,
+    content: 'Best platform for student accommodation. Quick bookings and amazing customer service throughout the entire process!',
+    createdBy: { name: 'Pranav Joshi' },
+    pgSnapshot: { name: 'COEP' },
+  },
+]
+
+const AVATAR_COLORS = [
+  ['bg-[#ffdbd0]', 'text-[#3a0b00]'],
+  ['bg-[#d0e8ff]', 'text-[#003a6a]'],
+  ['bg-[#d0ffd8]', 'text-[#003a10]'],
+  ['bg-[#f5d0ff]', 'text-[#3a006a]'],
+  ['bg-[#fff3d0]', 'text-[#3a2800]'],
+  ['bg-[#d0fffa]', 'text-[#003a35]'],
+]
+
+function TestimonialsSection() {
+  const [testimonials, setTestimonials] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    getFeaturedTestimonials()
+      .then(res => setTestimonials(res.data?.length ? res.data : FALLBACK_TESTIMONIALS))
+      .catch(() => setTestimonials(FALLBACK_TESTIMONIALS))
+      .finally(() => setLoading(false))
+  }, [])
+
+  return (
+    <section id="reviews" className="py-12 lg:py-20">
+      <div className="max-w-[1280px] mx-auto px-6 lg:px-16">
+        <div className="text-center mb-10">
+          <span className="text-[#e98a76] text-xs font-bold uppercase tracking-wider mb-2 block">What Residents Say</span>
+          <h2 className="text-[28px] font-bold text-[#1b1c1c]">What Students Say</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {loading
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="bg-white p-6 rounded-2xl border border-[#E5E7EB] animate-pulse space-y-4">
+                  <div className="flex gap-1">{[...Array(5)].map((_, j) => <div key={j} className="w-4 h-4 bg-gray-200 rounded" />)}</div>
+                  <div className="space-y-2">
+                    <div className="h-3 bg-gray-200 rounded w-full" />
+                    <div className="h-3 bg-gray-200 rounded w-5/6" />
+                  </div>
+                  <div className="flex items-center gap-3 pt-2">
+                    <div className="w-11 h-11 bg-gray-200 rounded-full" />
+                    <div className="space-y-1.5">
+                      <div className="h-3 bg-gray-200 rounded w-24" />
+                      <div className="h-2.5 bg-gray-200 rounded w-16" />
+                    </div>
+                  </div>
+                </div>
+              ))
+            : testimonials.length > 0
+              ? testimonials.map((t, idx) => {
+                  const name = t.createdBy?.name || 'Resident'
+                  const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+                  const [avatarBg, avatarText] = AVATAR_COLORS[idx % AVATAR_COLORS.length]
+                  return (
+                    <div key={t._id} className="bg-white p-6 rounded-2xl border border-[#E5E7EB] hover:shadow-card transition-all">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm ${avatarBg} ${avatarText}`}>
+                          {initials}
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-[#1b1c1c]">{name}</div>
+                          {t.pgSnapshot?.name && (
+                            <div className="text-xs text-[#73787a]">{t.pgSnapshot.name}</div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-0.5 text-[#e98a76] mb-3">
+                        {[...Array(t.rating)].map((_, i) => (
+                          <span key={i} className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                        ))}
+                      </div>
+                      <p className="text-sm text-[#434849] leading-relaxed italic">"{t.content}"</p>
+                    </div>
+                  )
+                })
+              : null}
         </div>
       </div>
     </section>
@@ -416,139 +670,37 @@ function TestimonialsSection() {
 
 function OwnerSection() {
   return (
-    <section id="for-owners" className="py-16 lg:py-32 bg-[#fbf9f8] relative overflow-hidden">
-      <div className="absolute inset-0 bg-[#e98a76] opacity-[0.03] -skew-y-3 origin-right pointer-events-none" />
-      <div className="max-w-[1280px] mx-auto px-6 lg:px-16 grid grid-cols-1 lg:grid-cols-2 gap-20 items-center relative">
-
-        <div>
-          <span className="text-[#e98a76] text-xs font-bold uppercase tracking-widest mb-4 block">For Property Owners</span>
-          <h2 className="text-[32px] font-bold mb-6 leading-tight text-[#1b1c1c]">
-            Manage Your PG with a{' '}
-            <span className="text-[#e98a76]">Digital Dashboard</span>
-          </h2>
-          <p className="text-[#434849] mb-10 leading-relaxed">
-            List your property once and manage everything from your dashboard. Admissions, complaints, resident roster, and photos — all in one place.
-          </p>
-          <div className="grid grid-cols-2 gap-x-12 gap-y-6 mb-12">
-            {['One-click admissions', 'Photo gallery management', 'Complaint tracking', 'Resident analytics'].map(f => (
-              <div key={f} className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-[#e98a76]">check_circle</span>
-                <span className="text-sm font-semibold">{f}</span>
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-4">
-            <Link
-              to="/register"
-              className="bg-[#e98a76] text-white px-8 py-4 rounded-2xl text-sm font-semibold hover:opacity-90 transition-all"
-            >
-              List Your Property
-            </Link>
-            <Link
-              to="/login"
-              className="bg-[#f0eded] text-[#1b1c1c] px-8 py-4 rounded-2xl text-sm font-semibold border border-[#E5E7EB] hover:bg-[#eae8e7] transition-all"
-            >
-              Owner Sign In
-            </Link>
-          </div>
-        </div>
-
-        {/* Dashboard mockup */}
-        <div className="relative">
-          <div className="bg-white rounded-[2rem] border border-[#E5E7EB] shadow-card overflow-hidden">
-            <div className="bg-[#eae8e7] p-4 flex items-center justify-between">
-              <div className="flex gap-2">
-                <div className="w-3 h-3 rounded-full bg-red-400" />
-                <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                <div className="w-3 h-3 rounded-full bg-green-400" />
-              </div>
-              <span className="text-xs text-[#73787a]">Owner Dashboard — Zenith Suites, Baner</span>
+    <section id="for-owners" className="py-16 lg:py-24 bg-[#101e22] text-white">
+      <div className="max-w-[1280px] mx-auto px-6 lg:px-16 text-center">
+        <h2 className="text-[32px] lg:text-[40px] font-bold mb-6 leading-tight">
+          Own a PG?<br />
+          <span className="text-[#e98a76]">Get More Bookings Through NestStay</span>
+        </h2>
+        <p className="text-[#bac9ce] text-lg mb-10 max-w-2xl mx-auto leading-relaxed">
+          List your property once and manage everything from your dashboard — admissions, complaints, residents, and photos, all in one place.
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-2xl mx-auto mb-12">
+          {['One-click admissions', 'Photo management', 'Complaint tracking', 'Resident analytics'].map(f => (
+            <div key={f} className="flex flex-col items-center gap-2 text-sm text-[#bac9ce]">
+              <span className="material-symbols-outlined text-[#e98a76] text-[28px]">check_circle</span>
+              {f}
             </div>
-            <div className="p-8">
-              <div className="grid grid-cols-2 gap-4 mb-8">
-                <div className="p-4 bg-[#f6f3f2] rounded-xl">
-                  <div className="text-[#73787a] text-xs font-bold uppercase mb-1">Occupancy</div>
-                  <div className="text-2xl font-bold">94%</div>
-                </div>
-                <div className="p-4 bg-[#ffdbd0] rounded-xl">
-                  <div className="text-[#3a0b00] text-xs font-bold uppercase mb-1">New Requests</div>
-                  <div className="text-[#3a0b00] text-2xl font-bold">03</div>
-                </div>
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-[#1b1c1c] mb-4">Recent Activities</div>
-                <div className="flex items-center justify-between py-3 border-b border-[#E5E7EB]">
-                  <span className="text-sm text-[#434849]">Rahul Sharma — admission approved</span>
-                  <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-bold">Admitted</span>
-                </div>
-                <div className="flex items-center justify-between py-3 border-b border-[#E5E7EB]">
-                  <span className="text-sm text-[#434849]">Complaint: AC Not Cooling</span>
-                  <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-bold">In Progress</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#ffdbd0] rounded-full blur-3xl opacity-30 -z-10" />
+          ))}
         </div>
-
-      </div>
-    </section>
-  )
-}
-
-// ─── CTA Section ──────────────────────────────────────────────────────────────
-
-function CTASection() {
-  return (
-    <section className="py-12 lg:py-24">
-      <div className="max-w-[1280px] mx-auto px-6 lg:px-16">
-        <div className="bg-[#101e22] rounded-[3rem] p-12 lg:p-24 text-center text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-[#e98a76] opacity-10 blur-3xl pointer-events-none" />
-          <div className="relative z-10">
-            <span className="text-[#ffdbd0] text-xs font-bold uppercase tracking-widest mb-6 block">Find Your PG Today</span>
-            <h2 className="text-[40px] lg:text-[48px] font-extrabold mb-8 leading-tight">
-              Stop Searching. <br /> Start Living.
-            </h2>
-            <p className="text-lg text-[#bac9ce] max-w-2xl mx-auto mb-12 leading-relaxed">
-              Verified PGs in Pune with transparent pricing, quick admission, and a support system that actually works.
-            </p>
-            <div className="flex flex-wrap justify-center gap-6">
-              <Link
-                to="/register"
-                className="bg-[#e98a76] text-white px-10 py-5 rounded-2xl text-sm font-semibold hover:opacity-90 transition-all"
-              >
-                Get Started — It's Free
-              </Link>
-              <Link
-                to="/login"
-                className="bg-transparent border border-[#c3c7c9] text-white px-10 py-5 rounded-2xl text-sm font-semibold hover:bg-white/10 transition-all"
-              >
-                Browse Listings
-              </Link>
-            </div>
-          </div>
+        <div className="flex flex-wrap justify-center gap-4">
+          <Link
+            to="/register"
+            className="bg-[#e98a76] text-white px-10 py-4 rounded-2xl text-sm font-semibold hover:opacity-90 transition-all"
+          >
+            Partner With Us
+          </Link>
+          <Link
+            to="/login"
+            className="bg-transparent border border-[#c3c7c9] text-white px-10 py-4 rounded-2xl text-sm font-semibold hover:bg-white/10 transition-all"
+          >
+            Schedule Demo
+          </Link>
         </div>
-      </div>
-    </section>
-  )
-}
-
-// ─── Stats Section ────────────────────────────────────────────────────────────
-
-function StatsSection() {
-  return (
-    <section className="py-12 border-y border-[#E5E7EB]">
-      <div className="max-w-[1280px] mx-auto px-6 lg:px-16 grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
-        {[
-          { value: '200+',  label: 'Verified Listings'    },
-          { value: '1,500+', label: 'Happy Residents'     },
-          { value: '18',    label: 'Pune Localities'       },
-        ].map(({ value, label }) => (
-          <div key={label}>
-            <div className="text-[48px] font-extrabold text-black mb-2">{value}</div>
-            <div className="text-sm font-semibold text-[#73787a]">{label}</div>
-          </div>
-        ))}
       </div>
     </section>
   )
@@ -558,78 +710,106 @@ function StatsSection() {
 
 function Footer() {
   return (
-    <footer className="bg-[#e4e2e1] border-t border-[#E5E7EB] pt-24 pb-12">
-      <div className="max-w-[1280px] mx-auto px-6 lg:px-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-20">
+    <footer id="contact" className="bg-[#e4e2e1] border-t border-[#E5E7EB] pt-16 pb-8">
+      <div className="max-w-[1280px] mx-auto px-6 lg:px-16">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 mb-12 pb-12 border-b border-[#E5E7EB]">
 
-        <div>
-          <img src="/nest-stay-logo.png" alt="Nest Stay" className="h-12 w-auto mb-6" />
-          <p className="text-sm text-[#434849] mb-8 leading-relaxed">
-            Pune's trusted platform for verified PG accommodation — from Hinjewadi to Kharadi, find your perfect stay.
-          </p>
-          <div className="flex gap-4">
-            <a href="#" aria-label="Website" className="w-10 h-10 rounded-full border border-[#c3c7c9] flex items-center justify-center hover:bg-black hover:text-white transition-all">
-              <span className="material-symbols-outlined text-[20px]">public</span>
-            </a>
-            <a href="#" aria-label="Share" className="w-10 h-10 rounded-full border border-[#c3c7c9] flex items-center justify-center hover:bg-black hover:text-white transition-all">
-              <span className="material-symbols-outlined text-[20px]">share</span>
-            </a>
+          <div className="col-span-2 md:col-span-1">
+            <img src="/nest-stay-logo.png" alt="Nest Stay" className="h-10 w-auto mb-4" />
+            <p className="text-sm text-[#434849] leading-relaxed mb-4">
+              Your trusted platform for verified PGs and hostels near colleges.
+            </p>
+            <div className="flex gap-3">
+              {['public', 'share', 'mail'].map(icon => (
+                <a key={icon} href="#" className="w-9 h-9 rounded-full border border-[#c3c7c9] flex items-center justify-center hover:bg-black hover:text-white transition-all">
+                  <span className="material-symbols-outlined text-[18px]">{icon}</span>
+                </a>
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div>
-          <h4 className="text-sm font-bold text-[#1b1c1c] mb-8">Quick Links</h4>
-          <ul className="space-y-4">
-            {['Browse PGs', 'How It Works', 'For Students', 'List Your PG', 'Owner Login'].map(l => (
-              <li key={l}>
-                <Link to="/login" className="text-sm text-[#434849] hover:text-black transition-colors">{l}</Link>
+          <div>
+            <h4 className="text-sm font-bold text-[#1b1c1c] mb-4">Quick Links</h4>
+            <ul className="space-y-2">
+              {['Properties', 'PG Near Colleges', 'Locations', 'Contact Us'].map(l => (
+                <li key={l}><Link to="/login" className="text-sm text-[#434849] hover:text-black transition-colors block">{l}</Link></li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-bold text-[#1b1c1c] mb-4">For Owners</h4>
+            <ul className="space-y-2">
+              {['List Your Property', 'Partner With Us', 'Owner Login', 'Resources'].map(l => (
+                <li key={l}><Link to="/login" className="text-sm text-[#434849] hover:text-black transition-colors block">{l}</Link></li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-bold text-[#1b1c1c] mb-4">Company</h4>
+            <ul className="space-y-2">
+              {['About Us', 'Careers', 'Blog', 'Press'].map(l => (
+                <li key={l}><a href="#" className="text-sm text-[#434849] hover:text-black transition-colors block">{l}</a></li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-bold text-[#1b1c1c] mb-4">Support</h4>
+            <ul className="space-y-2">
+              {['Help Center', 'Terms &amp; Conditions', 'Privacy Policy', 'Refund Policy'].map(l => (
+                <li key={l}><a href="#" className="text-sm text-[#434849] hover:text-black transition-colors block" dangerouslySetInnerHTML={{ __html: l }} /></li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-bold text-[#1b1c1c] mb-4">Contact</h4>
+            <ul className="space-y-3">
+              <li className="flex items-center gap-2 text-sm text-[#434849]">
+                <span className="material-symbols-outlined text-[18px] text-[#73787a]">call</span>
+                <a href="tel:+919970114079" className="hover:text-black transition-colors">+91 99701 14079</a>
               </li>
-            ))}
-          </ul>
-        </div>
-
-        <div>
-          <h4 className="text-sm font-bold text-[#1b1c1c] mb-8">Contact</h4>
-          <ul className="space-y-4">
-            <li className="flex items-center gap-3 text-sm text-[#434849]">
-              <span className="material-symbols-outlined text-[20px] text-[#73787a]">call</span>
-              <a href="tel:+919970114079" className="hover:text-[#1b1c1c] transition-colors">+91 99701 14079</a>
-            </li>
-            <li className="flex items-center gap-3 text-sm text-[#434849]">
-              <span className="material-symbols-outlined text-[20px] text-[#73787a]">mail</span>
-              <a href="mailto:neststayco@gmail.com" className="hover:text-[#1b1c1c] transition-colors">neststayco@gmail.com</a>
-            </li>
-            <li className="flex items-start gap-3 text-sm text-[#434849]">
-              <span className="material-symbols-outlined text-[20px] text-[#73787a] mt-0.5">location_on</span>
-              Baner, Pune, <br /> Maharashtra
-            </li>
-          </ul>
-        </div>
-
-        <div>
-          <h4 className="text-sm font-bold text-[#1b1c1c] mb-8">Newsletter</h4>
-          <p className="text-sm text-[#434849] mb-6">Get the latest PG listings and living tips in your inbox.</p>
-          <div className="flex items-center p-1 border border-[#c3c7c9] rounded-xl bg-[#f6f3f2]">
-            <input
-              type="email"
-              placeholder="Your email address"
-              className="flex-1 bg-transparent border-none focus:ring-0 px-4 text-sm outline-none"
-            />
-            <button className="w-10 h-10 bg-[#e98a76] text-white rounded-lg flex items-center justify-center hover:opacity-90 flex-shrink-0">
-              <span className="material-symbols-outlined text-[20px]">send</span>
-            </button>
+              <li className="flex items-center gap-2 text-sm text-[#434849]">
+                <span className="material-symbols-outlined text-[18px] text-[#73787a]">mail</span>
+                <a href="mailto:neststayco@gmail.com" className="hover:text-black transition-colors">neststayco@gmail.com</a>
+              </li>
+              <li className="flex items-start gap-2 text-sm text-[#434849]">
+                <span className="material-symbols-outlined text-[18px] text-[#73787a] mt-0.5">location_on</span>
+                Pune, Maharashtra
+              </li>
+            </ul>
           </div>
+
         </div>
 
-      </div>
-
-      <div className="max-w-[1280px] mx-auto px-6 lg:px-16 pt-8 border-t border-[#E5E7EB] flex flex-col md:flex-row justify-between items-center gap-4">
-        <p className="text-xs text-[#73787a]">© {new Date().getFullYear()} Nest Stay Hospitality. Premium sanctuary living.</p>
-        <div className="flex gap-8">
-          <a href="#" className="text-xs text-[#73787a] hover:text-black transition-colors">Privacy Policy</a>
-          <a href="#" className="text-xs text-[#73787a] hover:text-black transition-colors">Terms of Service</a>
-          <a href="#" className="text-xs text-[#73787a] hover:text-black transition-colors">Guest Guidelines</a>
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-xs text-[#73787a]">© {new Date().getFullYear()} NestStay. All rights reserved.</p>
+          <div className="flex gap-6">
+            <a href="#" className="text-xs text-[#73787a] hover:text-black transition-colors">Privacy Policy</a>
+            <a href="#" className="text-xs text-[#73787a] hover:text-black transition-colors">Terms of Service</a>
+            <a href="#" className="text-xs text-[#73787a] hover:text-black transition-colors">Guest Guidelines</a>
+          </div>
         </div>
       </div>
     </footer>
+  )
+}
+
+// ─── WhatsApp Floating Button ─────────────────────────────────────────────────
+
+function WhatsAppButton() {
+  return (
+    <a
+      href="https://wa.me/919970114079"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="fixed bottom-6 right-6 w-14 h-14 rounded-full flex items-center justify-center text-white z-50 shadow-lg hover:scale-110 transition-transform"
+      style={{ backgroundColor: '#25d366' }}
+      aria-label="Chat on WhatsApp"
+    >
+      <span className="material-symbols-outlined text-[28px]">chat</span>
+    </a>
   )
 }

@@ -2,6 +2,7 @@ import express from "express";
 import {
   createTestimonial,
   getPublicTestimonials,
+  getFeaturedTestimonials,
   getMyTestimonials,
   getOwnerTestimonials,
   updateTestimonial,
@@ -12,6 +13,7 @@ import { protect, allowRoles } from "../middleware/auth.middleware.js";
 const router = express.Router();
 
 // Public
+router.get("/featured", getFeaturedTestimonials);
 router.get("/", getPublicTestimonials);
 
 // Authenticated user

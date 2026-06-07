@@ -268,6 +268,46 @@ export const ownerAddResident = async (req, res) => {
   }
 };
 
+// POST /api/admissions/:id/withdraw — user withdraws their own pending admission
+export const withdrawAdmission = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "Invalid admission ID" });
+    }
+
+    const admission = await PGResidency.findById(id);
+    if (!admission) {
+      return res.status(404).json({ success: false, message: "Admission not found" });
+    }
+
+    if (!admission.userId.equals(userId)) {
+      return res.status(403).json({ success: false, message: "Not authorized to withdraw this admission" });
+    }
+
+    if (admission.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: "Only pending applications can be withdrawn",
+      });
+    }
+
+    admission.status = "rejected";
+    admission.revokedAt = new Date();
+    admission.revokedBy = userId;
+    await admission.save();
+
+    Logger.event("admission.withdrawn", { admissionId: id, userId });
+
+    return res.status(200).json({ success: true, message: "Application withdrawn", data: admission });
+  } catch (error) {
+    Logger.error("WITHDRAW_ADMISSION_ERROR", { error: error.message });
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
 // PATCH /api/admissions/:id/revoke — admin or pg_owner revokes an admission
 export const revokeAdmission = async (req, res) => {
   try {

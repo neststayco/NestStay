@@ -8,6 +8,7 @@ import {
   updateMyPGCapacity,
   updateMyPGLocation,
   updateMyPGImages,
+  updateMyPGDetails,
 } from "../controllers/pg.controller.js";
 import { protect, allowRoles, optionalAuth } from "../middleware/auth.middleware.js";
 
@@ -21,6 +22,7 @@ router.get("/:id", optionalAuth, getPGDetails);
 router.patch("/my/images", protect, allowRoles("pg_owner"), updateMyPGImages);
 router.patch("/my/location", protect, allowRoles("pg_owner"), updateMyPGLocation);
 router.patch("/my/capacity", protect, allowRoles("pg_owner"), updateMyPGCapacity);
+router.patch("/my/details", protect, allowRoles("pg_owner"), updateMyPGDetails);
 
 // Admin routes
 router.post("/", protect, allowRoles("admin"), createPG);

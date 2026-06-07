@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import UserNavbar from '../../components/UserNavbar'
+import OfflineBanner from '@shared/components/OfflineBanner'
 import { getPGDetails } from '@shared/api/pgs'
 import { getPublicTestimonials, createTestimonial } from '@shared/api/testimonials'
 import { useAuth } from '@shared/context/AuthContext'
@@ -117,7 +118,10 @@ export default function PGDetailPage() {
         const res = await getPGDetails(id)
         setData(res)
       } catch (err) {
-        setError(err.response?.status === 404 ? 'PG not found.' : 'Failed to load PG details.')
+        const status = err.response?.status
+        if (status === 404) setError('PG not found or no longer active.')
+        else if (status === 400) setError('Invalid PG identifier.')
+        else setError('Failed to load PG details. Please try again.')
       } finally {
         setLoading(false)
       }
@@ -128,6 +132,7 @@ export default function PGDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
+        <OfflineBanner />
         <UserNavbar />
         <main className="max-w-3xl mx-auto px-4 py-8"><Skeleton /></main>
       </div>
@@ -135,24 +140,39 @@ export default function PGDetailPage() {
   }
 
   if (error) {
+    const is404 = error.includes('not found') || error.includes('404')
+    const is400 = error.includes('Invalid')
     return (
       <div className="min-h-screen bg-gray-50">
+        <OfflineBanner />
         <UserNavbar />
         <main className="max-w-3xl mx-auto px-4 py-8 text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <button onClick={() => navigate('/user')} className="text-sm text-action underline">
-            &larr; Back to listings
-          </button>
+          <div className="bg-white border border-[#e0e0e0] rounded-[20px] shadow-card p-8 inline-block">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${is404 || is400 ? 'bg-gray-100' : 'bg-red-50'}`}>
+              <svg className={`w-6 h-6 ${is404 || is400 ? 'text-gray-400' : 'text-red-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <p className="font-semibold text-gray-900 mb-1">
+              {is404 ? 'PG not found' : is400 ? 'Invalid request' : 'Something went wrong'}
+            </p>
+            <p className="text-sm text-gray-500 mb-5">{error}</p>
+            <Link to="/user" className="text-sm text-action underline">
+              ← Back to listings
+            </Link>
+          </div>
         </main>
       </div>
     )
   }
 
-  const { pg, userContext, remainingCapacity } = data
+  const { pg, trust, userContext, remainingCapacity } = data
   const images = pg.images?.length > 0 ? pg.images : [PLACEHOLDER]
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <OfflineBanner />
       <UserNavbar />
 
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-6">
@@ -334,6 +354,33 @@ export default function PGDetailPage() {
           )}
         </div>
 
+        {trust && (
+          <div className="bg-white border border-[#e0e0e0] rounded-[20px] shadow-card p-5">
+            <h2 className="font-semibold text-gray-900 text-sm uppercase tracking-wide mb-3">Trust &amp; Complaints</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+              <div className="bg-green-50 border border-green-100 rounded-[10px] p-3">
+                <p className="text-xl font-bold text-green-700">{trust.verifiedResidentsCount}</p>
+                <p className="text-xs text-green-600 mt-0.5">Verified residents</p>
+              </div>
+              <div className={`rounded-[10px] p-3 border ${trust.totalComplaints === 0 ? 'bg-gray-50 border-gray-100' : 'bg-amber-50 border-amber-100'}`}>
+                <p className={`text-xl font-bold ${trust.totalComplaints === 0 ? 'text-gray-700' : 'text-amber-700'}`}>{trust.totalComplaints}</p>
+                <p className={`text-xs mt-0.5 ${trust.totalComplaints === 0 ? 'text-gray-500' : 'text-amber-600'}`}>Total complaints</p>
+              </div>
+              <div className={`rounded-[10px] p-3 border ${trust.verifiedComplaints === 0 ? 'bg-gray-50 border-gray-100' : 'bg-red-50 border-red-100'}`}>
+                <p className={`text-xl font-bold ${trust.verifiedComplaints === 0 ? 'text-gray-700' : 'text-red-600'}`}>{trust.verifiedComplaints}</p>
+                <p className={`text-xs mt-0.5 ${trust.verifiedComplaints === 0 ? 'text-gray-500' : 'text-red-500'}`}>Verified complaints</p>
+              </div>
+              <div className="bg-gray-50 border border-gray-100 rounded-[10px] p-3">
+                <p className="text-xl font-bold text-gray-600">{trust.unverifiedComplaints}</p>
+                <p className="text-xs text-gray-500 mt-0.5">Unverified complaints</p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mt-3">
+              Trust score = max(0, verified complaints × 2 − unverified complaints). Higher is better.
+            </p>
+          </div>
+        )}
+
         {/* Testimonials */}
         <div className="bg-white border border-[#e0e0e0] rounded-[20px] shadow-card p-5 space-y-4">
           <h2 className="font-semibold text-gray-900 text-sm uppercase tracking-wide">
@@ -360,15 +407,23 @@ export default function PGDetailPage() {
                       <p className="text-xs text-gray-500 mb-1">Rating</p>
                       <StarRating rating={testimonialRating} onChange={setTestimonialRating} />
                     </div>
-                    <textarea
-                      value={testimonialContent}
-                      onChange={e => setTestimonialContent(e.target.value)}
-                      placeholder="Share your experience living here…"
-                      rows={3}
-                      required
-                      minLength={10}
-                      className="w-full border border-[#e0e0e0] rounded-[10px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action bg-gray-50 resize-none"
-                    />
+                    <div className="relative">
+                      <textarea
+                        value={testimonialContent}
+                        onChange={e => setTestimonialContent(e.target.value)}
+                        placeholder="Share your experience living here…"
+                        rows={3}
+                        required
+                        minLength={10}
+                        maxLength={1000}
+                        className="w-full border border-[#e0e0e0] rounded-[10px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action bg-gray-50 resize-none"
+                      />
+                      {testimonialContent.length >= 750 && (
+                        <p className={`text-xs mt-1 text-right ${testimonialContent.length >= 950 ? 'text-red-500' : 'text-gray-400'}`}>
+                          {testimonialContent.length}/1000
+                        </p>
+                      )}
+                    </div>
                     <button
                       type="submit"
                       disabled={submitting || !testimonialRating || !testimonialContent.trim()}

@@ -2,6 +2,7 @@ import axios from 'axios'
 
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+  withCredentials: true,
 })
 
 client.interceptors.request.use((config) => {
@@ -12,17 +13,53 @@ client.interceptors.request.use((config) => {
   return config
 })
 
+// Silent refresh state
+let isRefreshing = false
+let pendingRetries = []
+
 client.interceptors.response.use(
   (res) => res,
   async (err) => {
     const status = err.response?.status
     const config = err.config
 
-    if (status === 401) {
-      localStorage.removeItem('pg_token')
-      localStorage.removeItem('pg_user')
-      window.location.href = '/login'
-      return Promise.reject(err)
+    if (status === 401 && !config._isRetry) {
+      // Queue concurrent 401s while refresh is in flight
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          pendingRetries.push({ resolve, reject, config })
+        })
+      }
+
+      isRefreshing = true
+
+      try {
+        const { data } = await client.post('/auth/refresh', {}, { _isRetry: true })
+        const newToken = data.accessToken
+        localStorage.setItem('pg_token', newToken)
+        isRefreshing = false
+
+        // Drain the queue
+        pendingRetries.forEach(({ resolve, config: retryConfig }) => {
+          retryConfig.headers.Authorization = `Bearer ${newToken}`
+          retryConfig._isRetry = true
+          resolve(client(retryConfig))
+        })
+        pendingRetries = []
+
+        // Retry original request
+        config.headers.Authorization = `Bearer ${newToken}`
+        config._isRetry = true
+        return client(config)
+      } catch {
+        isRefreshing = false
+        pendingRetries.forEach(({ reject }) => reject(new Error('Session expired')))
+        pendingRetries = []
+        localStorage.removeItem('pg_token')
+        localStorage.removeItem('pg_user')
+        window.location.href = '/login'
+        return Promise.reject(err)
+      }
     }
 
     // Auto-retry 429 only when Retry-After is short enough to be tolerable

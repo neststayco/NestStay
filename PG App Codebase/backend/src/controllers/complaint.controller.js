@@ -1,7 +1,6 @@
 import Complaint from "../models/Complaint.js";
 import PG from "../models/pg.js";
 import PGResidency from "../models/pgResidency.js";
-import eventEmitter from "../events/eventEmitter.js";
 import Logger from "../services/logger.service.js";
 import mongoose from "mongoose";
 
@@ -78,7 +77,6 @@ export const createComplaint = async (req, res) => {
     });
 
     Logger.event("complaint.created", { complaintId: complaint._id, pgId: complaint.pgId });
-    eventEmitter.emit("complaint.new", complaint);
 
     return res.status(201).json({
       success: true,

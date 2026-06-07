@@ -34,7 +34,7 @@ One consolidated Vite package with two build modes. All shared code lives under 
 ### Backend Entry Points
 
 - `backend/server.js` — MongoDB connection, binds Express app, registers event listeners
-- `backend/app.js` — CORS (permissive, restrict before prod), JSON parsing, request logger, route mounting, 404/500 handlers
+- `backend/app.js` — CORS (`ALLOWED_ORIGINS` env var), Helmet, cookie parser, JSON parsing, request logger, rate limiter, route mounting, health + root endpoints, 404/500 handlers
 
 ### Domain Model
 
@@ -48,23 +48,26 @@ One consolidated Vite package with two build modes. All shared code lives under 
 ### Backend Request Flow
 
 ```
-HTTP → requestLogger → auth middleware (protect / allowRoles / optionalAuth)
+HTTP → Helmet → CORS → cookieParser → requestLogger → generalLimiter
+     → auth middleware (protect / allowRoles / optionalAuth)
      → Route → Controller → Mongoose Model → MongoDB
                           → Logger service
-                          → EventEmitter (complaint.approved → NotificationService stub)
+                          → EventEmitter (no active listeners)
 ```
 
 ### Route Map
 
 | Prefix | Auth | Handlers |
 |---|---|---|
-| `/api/auth` | public | register, login |
-| `/api/pgs` | optional/admin | list (public), detail (optionalAuth), CRUD (admin) |
-| `/api/complaints` | auth | create (user/student), list (admin + pg_owner), update-status (admin) |
-| `/api/complaints/mine` | user/student | list own complaints |
-| `/api/admissions` | varies | POST (user/student), GET /mine (user/student), GET /pg (pg_owner), GET / (admin), PATCH /:id/decide (pg_owner + admin), PATCH /:id/revoke (pg_owner + admin) |
-| `/api/verify-residency` | auth/admin | legacy residency system (apply, list/manage) |
-| `/api/admin` | admin | global stats, per-PG stats, PG owner CRUD |
+| `/api/auth` | public | register/initiate, register/verify (OTP), login, logout, refresh, forgot-password/initiate, forgot-password/verify, reset-password, GET /me |
+| `/api/pgs` | optional/admin/pg_owner | list (public, supports `search` text query), detail (optionalAuth), CRUD (admin), owner self-service: PATCH /my/details, /my/images, /my/location, /my/capacity |
+| `/api/complaints` | auth | create (user), list (admin + pg_owner), update-status (admin), GET /mine (user) |
+| `/api/admissions` | varies | POST (user), GET /mine (user), POST /:id/withdraw (user), POST /owner-add (pg_owner), GET /pg (pg_owner), GET / (admin), PATCH /:id/decide (pg_owner + admin), PATCH /:id/revoke (pg_owner + admin) |
+| `/api/testimonials` | varies | GET /featured (public), GET / (public, ?pgId=), POST / (user), GET /mine (user), GET /pg (pg_owner), PATCH /:id (pg_owner + admin), GET /admin (admin) |
+| `/api/admin` | admin | users list + deactivate, global stats, per-PG stats, PG owner CRUD |
+| `/api/imagekit` | pg_owner | auth token for ImageKit SDK uploads |
+| `/api/verify-residency` | auth/admin | legacy (still mounted, not used by UI) |
+| `GET /health` | public | uptime, version, env, timestamp |
 
 ### Frontend — Unified App (`frontend/`, default mode, port 5174)
 
@@ -79,7 +82,7 @@ Entry: `src/platforms/unified/App.jsx` — loaded by `src/main.jsx` when `MODE !
 | `/login` | `LoginPage` (redirects by role after auth) |
 | `/register` | `RegisterPage` |
 
-**Admin area** — `RequireRole roles={["admin"]}` → `Layout` (sidebar)
+**Admin area** — `RequireRole role="admin"` → `Layout` (sidebar)
 
 | Route | Component |
 |---|---|
@@ -88,25 +91,32 @@ Entry: `src/platforms/unified/App.jsx` — loaded by `src/main.jsx` when `MODE !
 | `/admin/pgs` | `PGManagementPage` |
 | `/admin/residency` | `AdmissionsPage` |
 | `/admin/owners` | `OwnersPage` |
+| `/admin/testimonials` | `AdminTestimonialsPage` |
+| `/admin/users` | `AdminUsersPage` |
 
-**User area** — `RequireRole roles={["user","student"]}`
+**User area** — `RequireRole roles={["user"]}`
 
 | Route | Component |
 |---|---|
-| `/user` | `UserDashboardPage` (PG browse; auto-redirects admitted users to /user/my-pg) |
+| `/user` | `UserDashboardPage` (PG browse + keyword search; auto-redirects admitted users to /user/my-pg; shows pending admission banner with withdraw) |
 | `/user/my-pg` | `user/MyPGPage` |
 | `/user/pgs/:id` | `user/PGDetailPage` |
 | `/user/pgs/:id/complaint` | `user/ComplaintFormPage` |
 | `/user/pgs/:id/apply` | `user/AdmissionFormPage` |
 
-**PG Owner area** — `RequireRole roles={["pg_owner"]}` → `OwnerLayout` (sidebar with pending badge)
+**PG Owner area** — `RequireRole role="pg_owner"` → `OwnerLayout` (sidebar with pending badge)
 
 | Route | Component |
 |---|---|
 | `/pgowner` | `pgowner/DashboardPage` |
 | `/pgowner/admissions` | `pgowner/AdmissionsPage` |
-| `/pgowner/students` | `pgowner/StudentsPage` |
+| `/pgowner/residents` | `pgowner/StudentsPage` |
 | `/pgowner/complaints` | `pgowner/ComplaintsPage` (read-only) |
+| `/pgowner/testimonials` | `pgowner/TestimonialsPage` |
+| `/pgowner/photos` | `pgowner/PhotosPage` |
+| `/pgowner/location` | `pgowner/LocationPage` |
+| `/pgowner/capacity` | `pgowner/CapacityPage` |
+| `/pgowner/details` | `pgowner/DetailsPage` |
 
 **Auth guard:** `RequireRole` checks token presence AND `user.role` is in allowed roles. Role values must use the exact backend enum values: `user`, `admin`, `pg_owner` (underscore — not `pgowner`).
 
@@ -120,8 +130,8 @@ Service worker registered only in student mode. Bundle is ~48% smaller than unif
 
 All code shared between both platforms. Imported via the `@shared` alias.
 
-- **Auth**: JWT stored in `localStorage` as `pg_token` / `pg_user`; axios request interceptor attaches `Bearer` header; 401 response interceptor clears storage and redirects to `/login`
-- **API layer**: `@shared/api/client.js` (axios instance) + domain files (`auth.js`, `pgs.js`, `admissions.js`, `complaints.js`, `admin.js`, `owners.js`)
+- **Auth**: Access token in `localStorage` (`pg_token`); refresh token in HttpOnly cookie. Axios interceptor attaches `Bearer` header; 401 response interceptor attempts silent refresh via `POST /api/auth/refresh`, then falls back to logout + redirect.
+- **API layer**: `@shared/api/client.js` (axios instance) + domain files (`auth.js`, `pgs.js`, `admissions.js`, `complaints.js`, `admin.js`, `owners.js`, `testimonials.js`, `imagekit.js`)
 - **Auth context**: `@shared/context/AuthContext.jsx` — `{ user, token, login, logout, currentAdmission, setCurrentAdmission, isAdmitted, admissionLoaded }`. On mount, fetches `GET /admissions/mine` to populate admission state.
 - **Toast**: `@shared/components/Toast.jsx` — `ToastProvider` wraps app root; `useToast()` returns `toast(msg, type)` function; types: `success | error | info`
 - **PGCard**: `@shared/components/PGCard.jsx` — accepts `basePath` prop (default `/pgs` for student PWA, `/user/pgs` for unified user area)
@@ -132,9 +142,9 @@ All code shared between both platforms. Imported via the `@shared` alias.
 
 - **ES Modules** throughout (`"type": "module"` — use `import/export`, not `require`)
 - **RBAC** via `protect` + `allowRoles(...roles)` in `src/middleware/auth.middleware.js`
-- **Event-driven notifications**: `complaint.approved` → `NotificationService.notifyPGOwner()` (Twilio/SendGrid stubs)
+- **Event-driven notifications**: EventEmitter framework kept; event handlers emptied (no active listeners)
 - **Anti-spam**: 15-min cooldown per `userId+pgId` before new complaint
-- **Trust score**: `max(0, verifiedComplaints×2 − unverifiedComplaints)` — computed in aggregation pipeline in `pg.controller.js`; only on list endpoint, not detail
+- **Trust score**: `max(0, verifiedComplaints×2 − unverifiedComplaints)` — computed in aggregation pipeline in `pg.controller.js`; returned on both list and detail endpoints (detail also returns `remainingCapacity` and the requesting user's admission status)
 - **Lean queries**: `.lean()` on all read-only queries
 - **Structured logging**: `src/services/logger.service.js` — use instead of `console.log`
 - **Soft delete**: `deletePG` sets `isActive: false`, never physically removes
@@ -146,17 +156,25 @@ All code shared between both platforms. Imported via the `@shared` alias.
 ```
 MONGO_URI=mongodb://127.0.0.1:27017/pg-app
 PORT=3000
-JWT_SECRET=...
+JWT_ACCESS_SECRET=...   # access tokens, 15 min expiry
+JWT_REFRESH_SECRET=...  # refresh tokens, 7 day expiry
+SMTP_HOST=              # leave blank in dev — OTPs log to console
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM_EMAIL=
 ```
 
-JWT expires in 7 days. `JWT_SECRET` falls back to `"fallback_secret_for_dev"` if unset — never deploy with this fallback.
+See `.env.example` for all required vars. No fallback secrets — missing `JWT_ACCESS_SECRET`/`JWT_REFRESH_SECRET` will crash token signing in production.
 
 ### Production Checklist (not done yet)
 
-- [ ] Restrict CORS origins in `backend/app.js` (currently allows all — see `codebase.md` §2 for exact code)
-- [ ] Twilio/SendGrid integration in `backend/src/services/notification.service.js`
-- [ ] Set real `JWT_SECRET` in prod environment
-- [ ] Restrict `role` field on `registerUser` (currently self-assignable)
+- [x] CORS — uses `ALLOWED_ORIGINS` env var, no wildcard
+- [x] Helmet active
+- [x] Role self-assignment restricted on register
+- [x] JWT rotated access+refresh with HttpOnly cookie
+- [ ] Set real `JWT_ACCESS_SECRET` + `JWT_REFRESH_SECRET` in prod environment
+- [ ] Configure SMTP vars in prod (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM_EMAIL`)
 - [ ] Add auto-escalation job: mark `PGResidency` records as `escalatedAt` when owner hasn't acted within N hours
 
 ## Product Context

@@ -13,7 +13,7 @@ export async function runEscalationJob() {
     ).lean();
 
     if (toEscalate.length === 0) {
-      console.log("[EscalationJob] No pending admissions require escalation.");
+      Logger.info("EscalationJob: no pending admissions require escalation");
       return;
     }
 
@@ -23,12 +23,11 @@ export async function runEscalationJob() {
     );
 
     for (const r of toEscalate) {
-      const ageHours = Math.round((Date.now() - new Date(r.createdAt).getTime()) / (1000 * 60 * 60));
-      console.log(`[EscalationJob] Escalated admission ${r._id} | PG: ${r.pgId} | User: ${r.userId} | Age: ${ageHours}h`);
+      Logger.event("admission.escalated", { residencyId: r._id, pgId: r.pgId, userId: r.userId });
       await NotificationService.notifyAdminEscalation(r);
     }
 
-    console.log(`[EscalationJob] Total escalated: ${toEscalate.length}`);
+    Logger.info(`EscalationJob: escalated ${toEscalate.length} admission(s)`);
   } catch (error) {
     Logger.error("ESCALATION_JOB_ERROR", { error: error.message });
   }

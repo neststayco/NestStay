@@ -37,3 +37,8 @@ export async function updateMyPGLocation(lat, lng) {
   const { data } = await client.patch('/pgs/my/location', { lat, lng })
   return data
 }
+
+export async function updateMyPGDetails(body) {
+  const { data } = await client.patch('/pgs/my/details', body)
+  return data
+}

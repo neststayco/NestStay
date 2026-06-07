@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { getGlobalStats, getStatsByPG } from '@shared/api/admin'
 
@@ -28,21 +28,29 @@ export default function DashboardPage() {
   const [pgStats, setPgStats] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState('')
+  const [is403, setIs403]     = useState(false)
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const [s, p] = await Promise.all([getGlobalStats(), getStatsByPG()])
-        setStats(s.data)
-        setPgStats(p.data)
-      } catch {
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    setIs403(false)
+    try {
+      const [s, p] = await Promise.all([getGlobalStats(), getStatsByPG()])
+      setStats(s.data)
+      setPgStats(p.data)
+    } catch (err) {
+      if (err.response?.status === 403) {
+        setIs403(true)
+        setError('You don\'t have permission to view this. Contact your administrator.')
+      } else {
         setError('Failed to load stats.')
-      } finally {
-        setLoading(false)
       }
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [])
+
+  useEffect(() => { load() }, [load])
 
   const needsAttention = !loading && stats && (
     stats.escalatedAdmissions > 0 || stats.totalPendingAdmissions > 0
@@ -56,8 +64,20 @@ export default function DashboardPage() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm">
-          {error}
+        <div className={`border px-4 py-3 rounded-lg mb-6 text-sm flex items-start justify-between gap-4 ${
+          is403
+            ? 'bg-amber-50 border-amber-200 text-amber-800'
+            : 'bg-red-50 border-red-200 text-red-700'
+        }`}>
+          <span>{error}</span>
+          {!is403 && (
+            <button
+              onClick={load}
+              className="text-xs font-semibold underline underline-offset-2 whitespace-nowrap hover:no-underline"
+            >
+              Retry
+            </button>
+          )}
         </div>
       )}
 
@@ -154,7 +174,6 @@ export default function DashboardPage() {
           </>
         )}
       </div>
-
     </div>
   )
 }

@@ -1,72 +1,87 @@
-import sgMail from '@sendgrid/mail';
-import twilio from 'twilio';
+import nodemailer from "nodemailer";
+import Logger from "./logger.service.js";
 
-const sendgridConfigured =
-  !!process.env.SENDGRID_API_KEY && !process.env.SENDGRID_API_KEY.includes('your_');
+const smtpConfigured =
+  !!process.env.SMTP_HOST &&
+  !!process.env.SMTP_USER &&
+  !!process.env.SMTP_PASS;
 
-const twilioConfigured =
-  !!process.env.TWILIO_ACCOUNT_SID && !process.env.TWILIO_ACCOUNT_SID.includes('your_');
+let transporter = null;
 
-if (!sendgridConfigured) {
-  console.warn('[NotificationService] SendGrid not configured — email notifications disabled');
+if (smtpConfigured) {
+  transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || "587"),
+    secure: process.env.SMTP_PORT === "465",
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
 } else {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-}
-
-const twilioClient = twilioConfigured
-  ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
-  : null;
-
-if (!twilioConfigured) {
-  console.warn('[NotificationService] Twilio not configured — SMS notifications disabled');
+  Logger.warn("NotificationService: SMTP not configured — OTPs will log to console (dev mode)");
 }
 
 class NotificationService {
-  /**
-   * Sends an SMS to the configured owner notification number when a complaint is approved
-   * @param {Object} complaint - The approved complaint document
-   */
-  static async notifyPGOwner(complaint) {
+  static async sendOTPEmail(email, otp, type) {
     try {
-      if (!twilioConfigured) {
-        return false;
+      if (!smtpConfigured) {
+        Logger.info(`[DEV] OTP for ${email} (${type}): ${otp}`);
+        return true;
       }
 
-      await twilioClient.messages.create({
-        body: `Nest Stay: New complaint received for your PG. Complaint ID: ${complaint._id}. Login to review.`,
-        from: process.env.TWILIO_FROM_NUMBER,
-        to: process.env.OWNER_NOTIFICATION_PHONE,
+      const config = {
+        REGISTER: {
+          subject: "Nest Stay — Verify your email",
+          text: `Your registration OTP is: ${otp}\n\nThis OTP expires in 10 minutes. Do not share it.`,
+        },
+        FORGOT_PASSWORD: {
+          subject: "Nest Stay — Password reset OTP",
+          text: `Your password reset OTP is: ${otp}\n\nThis OTP expires in 10 minutes. Do not share it.`,
+        },
+      };
+
+      const { subject, text } = config[type] || {
+        subject: "Nest Stay — OTP",
+        text: `Your OTP is: ${otp}`,
+      };
+
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER,
+        to: email,
+        subject,
+        text,
       });
 
-      console.log(`[NotificationService] SMS sent for complaint ${complaint._id}`);
+      Logger.event("otp.email.sent", { email, type });
       return true;
     } catch (error) {
-      console.error('[NotificationService] notifyPGOwner failed:', error);
+      Logger.error("sendOTPEmail failed", { error: error.message });
       return false;
     }
   }
 
-  /**
-   * Sends an email to the configured admin address when an admission request is escalated
-   * @param {Object} admission - The escalated admission document
-   */
-  static async notifyAdminEscalation(admission) {
+  static async notifyAdminEscalation(residency) {
     try {
-      if (!sendgridConfigured) {
-        return false;
+      const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
+      if (!smtpConfigured || !adminEmail) {
+        Logger.info(`[DEV] Escalation notification skipped for residency ${residency._id} — SMTP/admin email not configured`);
+        return true;
       }
 
-      await sgMail.send({
-        to: process.env.ADMIN_NOTIFICATION_EMAIL,
-        from: process.env.SENDGRID_FROM_EMAIL,
-        subject: 'Nest Stay: Admission Request Escalated',
-        text: `An admission request has been pending for too long and has been escalated.\n\nAdmission ID: ${admission._id}\nPG ID: ${admission.pgId}\nUser ID: ${admission.userId}\n\nPlease log in to the admin panel to review.`,
+      const ageHours = Math.round((Date.now() - new Date(residency.createdAt).getTime()) / (1000 * 60 * 60));
+
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER,
+        to: adminEmail,
+        subject: "Nest Stay — Admission escalation alert",
+        text: `Admission request ${residency._id} for PG ${residency.pgId} (user: ${residency.userId}) has been pending for ${ageHours} hours and has been escalated for admin review.`,
       });
 
-      console.log(`[NotificationService] Escalation email sent for admission ${admission._id}`);
+      Logger.event("escalation.email.sent", { residencyId: residency._id });
       return true;
     } catch (error) {
-      console.error('[NotificationService] notifyAdminEscalation failed:', error);
+      Logger.error("notifyAdminEscalation failed", { error: error.message });
       return false;
     }
   }

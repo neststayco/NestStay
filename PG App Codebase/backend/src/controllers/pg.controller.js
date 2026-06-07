@@ -89,9 +89,13 @@ export const deletePG = async (req, res) => {
 
 export const getPGList = async (req, res) => {
   try {
-    const { city, area, gender, foodType, minPrice, maxPrice, amenities, sortBy, page = 1, limit = 10 } = req.query;
+    const { city, area, gender, foodType, minPrice, maxPrice, amenities, sortBy, search, page = 1, limit = 10 } = req.query;
 
     const matchFilter = { isActive: true };
+
+    if (search && search.trim()) {
+      matchFilter.$text = { $search: search.trim() };
+    }
 
     if (city) matchFilter["location.city"] = city;
     if (area) matchFilter["location.area"] = area;
@@ -346,6 +350,63 @@ export const updateMyPGLocation = async (req, res) => {
     return res.status(200).json({ success: true, message: "Location updated", data: pg });
   } catch (error) {
     Logger.error("UPDATE_LOCATION_ERROR", { message: error.message });
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// PATCH /api/pgs/my/details — pg_owner updates description, pricing, amenities
+export const updateMyPGDetails = async (req, res) => {
+  try {
+    if (!req.user.pgId) {
+      return res.status(400).json({ success: false, message: "No PG linked to this owner account" });
+    }
+
+    const { description, pricing, amenities } = req.body;
+    const update = {};
+
+    if (description !== undefined) {
+      if (typeof description !== "string" || description.trim().length < 10) {
+        return res.status(400).json({ success: false, message: "Description must be at least 10 characters" });
+      }
+      update.description = description.trim();
+    }
+
+    if (pricing !== undefined) {
+      const { rent, deposit, maintenance } = pricing;
+      if (rent !== undefined && (isNaN(Number(rent)) || Number(rent) < 0)) {
+        return res.status(400).json({ success: false, message: "pricing.rent must be a non-negative number" });
+      }
+      if (deposit !== undefined && (isNaN(Number(deposit)) || Number(deposit) < 0)) {
+        return res.status(400).json({ success: false, message: "pricing.deposit must be a non-negative number" });
+      }
+      if (maintenance !== undefined && (isNaN(Number(maintenance)) || Number(maintenance) < 0)) {
+        return res.status(400).json({ success: false, message: "pricing.maintenance must be a non-negative number" });
+      }
+      if (rent !== undefined) update["pricing.rent"] = Number(rent);
+      if (deposit !== undefined) update["pricing.deposit"] = Number(deposit);
+      if (maintenance !== undefined) update["pricing.maintenance"] = Number(maintenance);
+    }
+
+    if (amenities !== undefined) {
+      if (!Array.isArray(amenities)) {
+        return res.status(400).json({ success: false, message: "amenities must be an array of strings" });
+      }
+      update.amenities = amenities.map(a => String(a).trim()).filter(Boolean);
+    }
+
+    if (Object.keys(update).length === 0) {
+      return res.status(400).json({ success: false, message: "No valid fields to update" });
+    }
+
+    const pg = await PG.findByIdAndUpdate(req.user.pgId, update, { new: true, runValidators: true }).lean();
+    if (!pg) {
+      return res.status(404).json({ success: false, message: "PG not found" });
+    }
+
+    Logger.event("pg.details.updated", { pgId: pg._id });
+    return res.status(200).json({ success: true, message: "Details updated", data: pg });
+  } catch (error) {
+    Logger.error("UPDATE_PG_DETAILS_ERROR", { message: error.message });
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };

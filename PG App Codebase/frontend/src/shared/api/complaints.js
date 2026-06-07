@@ -13,6 +13,11 @@ export async function getComplaints(params = {}) {
   return data // { success, data: Complaint[], pagination }
 }
 
+export async function getMyComplaints() {
+  const { data } = await client.get('/complaints/mine')
+  return data // { success, data: Complaint[] }
+}
+
 export async function updateComplaintStatus(id, { status }) {
   const { data } = await client.patch(`/complaints/${id}`, { status })
   return data

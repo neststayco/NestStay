@@ -71,6 +71,22 @@ export const createTestimonial = async (req, res) => {
   }
 };
 
+// GET /api/testimonials/featured — public, top-rated approved+visible across all PGs (for landing page)
+export const getFeaturedTestimonials = async (req, res) => {
+  try {
+    const testimonials = await Testimonial.find({ status: "approved", isVisible: true })
+      .populate("createdBy", "name")
+      .sort({ rating: -1, createdAt: -1 })
+      .limit(6)
+      .lean();
+
+    return res.status(200).json({ success: true, data: testimonials });
+  } catch (error) {
+    Logger.error("GET_FEATURED_TESTIMONIALS_ERROR", { error: error.message });
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
 // GET /api/testimonials?pgId= — public, returns approved + visible testimonials
 export const getPublicTestimonials = async (req, res) => {
   try {

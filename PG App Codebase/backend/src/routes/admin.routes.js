@@ -6,6 +6,8 @@ import {
   getAllPGOwners,
   updatePGOwner,
   resetOwnerPassword,
+  getAllUsers,
+  deactivateUser,
 } from "../controllers/admin.controller.js";
 import { protect, allowRoles } from "../middleware/auth.middleware.js";
 
@@ -13,6 +15,9 @@ const router = express.Router();
 
 router.use(protect);
 router.use(allowRoles("admin"));
+
+router.get("/users", getAllUsers);
+router.patch("/users/:id/deactivate", deactivateUser);
 
 router.get("/complaints/stats", getGlobalStats);
 router.get("/complaints/by-pg", getStatsByPG);

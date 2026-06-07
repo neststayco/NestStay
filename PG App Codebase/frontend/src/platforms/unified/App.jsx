@@ -24,6 +24,12 @@ import OwnerStudentsPage from './pages/pgowner/StudentsPage'
 import OwnerComplaintsPage from './pages/pgowner/ComplaintsPage'
 import OwnerTestimonialsPage from './pages/pgowner/TestimonialsPage'
 import OwnerPhotosPage from './pages/pgowner/PhotosPage'
+import OwnerLocationPage from './pages/pgowner/LocationPage'
+import OwnerCapacityPage from './pages/pgowner/CapacityPage'
+import OwnerDetailsPage from './pages/pgowner/DetailsPage'
+import AdminTestimonialsPage from './pages/AdminTestimonialsPage'
+import AdminUsersPage from './pages/AdminUsersPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
 
 export default function App() {
   return (
@@ -36,6 +42,7 @@ export default function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
               {/* Admin area */}
               <Route element={<RequireRole role="admin" />}>
@@ -44,7 +51,9 @@ export default function App() {
                   <Route path="/admin/complaints" element={<ComplaintsPage />} />
                   <Route path="/admin/pgs"        element={<PGManagementPage />} />
                   <Route path="/admin/residency"  element={<AdmissionsPage />} />
-                  <Route path="/admin/owners"     element={<OwnersPage />} />
+                  <Route path="/admin/owners"          element={<OwnersPage />} />
+                  <Route path="/admin/testimonials"   element={<AdminTestimonialsPage />} />
+                  <Route path="/admin/users"          element={<AdminUsersPage />} />
                 </Route>
               </Route>
 
@@ -66,6 +75,9 @@ export default function App() {
                   <Route path="/pgowner/complaints"    element={<OwnerComplaintsPage />} />
                   <Route path="/pgowner/testimonials" element={<OwnerTestimonialsPage />} />
                   <Route path="/pgowner/photos"      element={<OwnerPhotosPage />} />
+                  <Route path="/pgowner/location"   element={<OwnerLocationPage />} />
+                  <Route path="/pgowner/capacity"   element={<OwnerCapacityPage />} />
+                  <Route path="/pgowner/details"    element={<OwnerDetailsPage />} />
                 </Route>
               </Route>
 

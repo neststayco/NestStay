@@ -6,12 +6,7 @@ import { login } from '@shared/api/auth'
 import { normalizeError } from '@shared/api/client'
 import OfflineBanner from '@shared/components/OfflineBanner'
 import { useOnline } from '@shared/hooks/useOnline'
-
-function roleRedirect(role) {
-  if (role === 'admin') return '/admin'
-  if (role === 'pg_owner') return '/pgowner'
-  return '/user'
-}
+import { resolveUserHomeRoute } from '@shared/utils/routing'
 
 const EyeOpenIcon = () => (
   <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -41,10 +36,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [rateLimitSeconds, setRateLimitSeconds] = useState(0)
   const countdownRef = useRef(null)
-  const { login: authLogin } = useAuth()
+  const { user, login: authLogin } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const isOnline = useOnline()
+
+  useEffect(() => {
+    if (user && !searchParams.get('redirect')) {
+      navigate(resolveUserHomeRoute(user.role), { replace: true })
+    }
+  }, [user, navigate, searchParams])
 
   useEffect(() => () => { if (countdownRef.current) clearInterval(countdownRef.current) }, [])
 
@@ -89,8 +90,8 @@ export default function LoginPage() {
     try {
       const res = await login(email.trim(), password)
       const redirect = searchParams.get('redirect')
-      flushSync(() => authLogin(res.token, res.data))
-      navigate(redirect || roleRedirect(res.data.role), { replace: true })
+      flushSync(() => authLogin(res.accessToken, res.data))
+      navigate(redirect || resolveUserHomeRoute(res.data.role), { replace: true })
     } catch (err) {
       const normalized = normalizeError(err)
       if (normalized.code === 'RATE_LIMITED') startCountdown(normalized.retryAfter || 900)
@@ -182,6 +183,15 @@ export default function LoginPage() {
                 {fieldErrors.password && (
                   <p id="login-password-err" className="mt-1.5 text-xs text-red-600">{fieldErrors.password}</p>
                 )}
+              </div>
+
+              <div className="flex justify-end -mt-1">
+                <Link
+                  to="/forgot-password"
+                  className="text-xs text-[#73787a] hover:text-[#e98a76] transition-colors"
+                >
+                  Forgot password?
+                </Link>
               </div>
 
               <button

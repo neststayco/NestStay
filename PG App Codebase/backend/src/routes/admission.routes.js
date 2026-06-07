@@ -7,6 +7,7 @@ import {
   decideAdmission,
   revokeAdmission,
   ownerAddResident,
+  withdrawAdmission,
 } from "../controllers/admission.controller.js";
 import { protect, allowRoles } from "../middleware/auth.middleware.js";
 
@@ -15,6 +16,7 @@ const router = express.Router();
 // Guest (user) routes
 router.post("/", protect, allowRoles("user"), createAdmissionRequest);
 router.get("/mine", protect, allowRoles("user"), getMyAdmission);
+router.post("/:id/withdraw", protect, allowRoles("user"), withdrawAdmission);
 
 // PG Owner routes
 router.get("/pg", protect, allowRoles("pg_owner"), getPGAdmissions);

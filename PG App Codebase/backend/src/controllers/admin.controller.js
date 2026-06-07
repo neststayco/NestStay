@@ -5,6 +5,77 @@ import User from "../models/user.js";
 import mongoose from "mongoose";
 import Logger from "../services/logger.service.js";
 
+// GET /api/admin/users
+export const getAllUsers = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, search = "", role = "user" } = req.query;
+
+    const filter = { role };
+    if (search) {
+      const regex = new RegExp(search.trim(), "i");
+      filter.$or = [{ name: regex }, { email: regex }];
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const [users, totalItems] = await Promise.all([
+      User.find(filter)
+        .select("-password -refreshToken")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      User.countDocuments(filter),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: users,
+      pagination: {
+        totalItems,
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalItems / parseInt(limit)),
+        limit: parseInt(limit),
+      },
+    });
+  } catch (error) {
+    Logger.error("GET_ALL_USERS_ERROR", { error: error.message });
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// PATCH /api/admin/users/:id/deactivate
+export const deactivateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "Invalid user ID" });
+    }
+
+    if (id === req.user.id.toString()) {
+      return res.status(400).json({ success: false, message: "Cannot deactivate your own account" });
+    }
+
+    const user = await User.findOneAndUpdate(
+      { _id: id, role: "user" },
+      { isActive: false, refreshToken: null },
+      { new: true }
+    ).select("-password -refreshToken").lean();
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    Logger.event("user.deactivated", { targetUserId: id, byAdmin: req.user.id });
+
+    return res.status(200).json({ success: true, message: "User deactivated", data: user });
+  } catch (error) {
+    Logger.error("DEACTIVATE_USER_ERROR", { error: error.message });
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
 // GET /api/admin/complaints/stats
 export const getGlobalStats = async (req, res) => {
   try {
@@ -135,7 +206,16 @@ export const createPGOwner = async (req, res) => {
       return res.status(400).json({ success: false, message: "Email already in use" });
     }
 
-    const owner = await User.create({ name, email, password, role: "pg_owner", pgId });
+    // Admin-provisioned accounts are pre-verified and active
+    const owner = await User.create({
+      name,
+      email,
+      password,
+      role: "pg_owner",
+      pgId,
+      isVerified: true,
+      isActive: true,
+    });
 
     Logger.event("owner.created", { ownerId: owner._id, pgId });
 
@@ -160,7 +240,7 @@ export const createPGOwner = async (req, res) => {
 export const getAllPGOwners = async (req, res) => {
   try {
     const owners = await User.find({ role: "pg_owner" })
-      .select("-password")
+      .select("-password -refreshToken")
       .populate("pgId", "name location.city")
       .lean();
 

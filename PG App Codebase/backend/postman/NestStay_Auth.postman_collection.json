@@ -1,0 +1,356 @@
+{
+  "info": {
+    "name": "Nest Stay — Auth API",
+    "description": "Complete authentication flow: registration with OTP, login with JWT access + httpOnly refresh cookie, refresh rotation, logout, forgot/reset password. Run requests in numbered order.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "resetToken", "value": "", "type": "string" },
+    { "key": "testEmail", "value": "newuser@example.com", "type": "string" },
+    { "key": "testPassword", "value": "SecurePass123", "type": "string" },
+    { "key": "testOtp", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "1. Register — Initiate",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/auth/register/initiate",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{testEmail}}\"\n}"
+        },
+        "description": "Step 1 of 2-step registration. Sends a 6-digit OTP to the email (dev: logged to console). Returns 200 on success, 409 if email already registered, 429 if called again within 60s for the same email."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('success true', () => pm.expect(pm.response.json().success).to.be.true);",
+              "// In dev mode, copy the OTP from server console and paste into testOtp variable"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Register — Verify OTP",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/auth/register/verify",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"otp\": \"{{testOtp}}\",\n  \"name\": \"Test User\",\n  \"password\": \"{{testPassword}}\"\n}"
+        },
+        "description": "Step 2 of 2-step registration. Verifies the OTP and creates the account. Returns 201 with access token in body and refresh token in httpOnly Set-Cookie. OTP has 10-minute expiry and 5 max attempts."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "const json = pm.response.json();",
+              "pm.test('accessToken present', () => pm.expect(json.accessToken).to.be.a('string'));",
+              "pm.test('isVerified true', () => pm.expect(json.data.isVerified).to.be.true);",
+              "pm.collectionVariables.set('accessToken', json.accessToken);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Login — Admin",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@pgapp.com\",\n  \"password\": \"Admin@123\"\n}"
+        },
+        "description": "Login with admin credentials. Returns access token (15min JWT, type=access) in body and refresh token (7d JWT, type=refresh) as httpOnly cookie. After 5 consecutive wrong passwords the account is locked for 30 minutes."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('accessToken present', () => pm.expect(json.accessToken).to.be.a('string'));",
+              "pm.test('role is admin', () => pm.expect(json.data.role).to.equal('admin'));",
+              "pm.test('no password in response', () => pm.expect(json.data).to.not.have.property('password'));",
+              "pm.collectionVariables.set('accessToken', json.accessToken);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3b. Login — PG Owner",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"owner1@pgapp.com\",\n  \"password\": \"Owner@123\"\n}"
+        },
+        "description": "Login with PG owner credentials."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('role is pg_owner', () => pm.expect(pm.response.json().data.role).to.equal('pg_owner'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3c. Login — User",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"rahul.sharma@student.com\",\n  \"password\": \"Student@123\"\n}"
+        },
+        "description": "Login with user credentials."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('role is user', () => pm.expect(pm.response.json().data.role).to.equal('user'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Get Current User (/me)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": "{{baseUrl}}/api/auth/me",
+        "description": "Returns the authenticated user's profile. Requires valid access token (15min JWT with type=access). Refresh tokens and access tokens from other types are rejected."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('data.email present', () => pm.expect(json.data.email).to.be.a('string'));",
+              "pm.test('no password field', () => pm.expect(json.data).to.not.have.property('password'));",
+              "pm.test('no refreshToken field', () => pm.expect(json.data).to.not.have.property('refreshToken'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Refresh Tokens",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "{{baseUrl}}/api/auth/refresh",
+        "description": "Exchange the httpOnly refresh cookie for a new access token and rotated refresh cookie. The old refresh token is immediately invalidated. If the old token is replayed, both tokens are revoked (reuse detection). Requires the refreshToken cookie to be sent automatically by the browser/Postman cookie jar."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('new accessToken present', () => pm.expect(json.accessToken).to.be.a('string'));",
+              "pm.collectionVariables.set('accessToken', json.accessToken);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Logout",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "{{baseUrl}}/api/auth/logout",
+        "description": "Revokes the refresh token in the database and clears the httpOnly cookie by setting Expires=Thu, 01 Jan 1970. The access token remains valid until its 15-minute natural expiry. Graceful: returns 200 even with no cookie present."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('success true', () => pm.expect(pm.response.json().success).to.be.true);",
+              "pm.collectionVariables.set('accessToken', '');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Forgot Password — Initiate",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/auth/forgot-password/initiate",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@pgapp.com\"\n}"
+        },
+        "description": "Sends a 6-digit OTP to the email address for password reset. Always returns the same success message regardless of whether the email exists (anti-enumeration). Rate limited to 3 requests per hour per IP."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('identical message regardless of email existence', () => {",
+              "  pm.expect(pm.response.json().message).to.include('If that email');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Forgot Password — Verify OTP",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/auth/forgot-password/verify",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@pgapp.com\",\n  \"otp\": \"{{testOtp}}\"\n}"
+        },
+        "description": "Verifies the FORGOT_PASSWORD OTP. On success, returns a short-lived reset token (15min JWT with type=reset, purpose=PASSWORD_RESET). The OTP is deleted immediately after use — replay returns 400. 5 max attempts before OTP invalidation."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('resetToken present', () => pm.expect(json.resetToken).to.be.a('string'));",
+              "pm.collectionVariables.set('resetToken', json.resetToken);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Reset Password",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/auth/reset-password",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"resetToken\": \"{{resetToken}}\",\n  \"newPassword\": \"NewSecure123@\"\n}"
+        },
+        "description": "Sets a new password using the reset token from step 8. Verifies token has type=reset AND purpose=PASSWORD_RESET (both claims required). On success: clears all refresh tokens and login attempt counters, forcing a fresh login. Token is single-use (stateless JWT — use immediately before it expires in 15 min)."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('success true', () => pm.expect(pm.response.json().success).to.be.true);",
+              "pm.collectionVariables.set('resetToken', '');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "— Security: Wrong password (401)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@pgapp.com\",\n  \"password\": \"WRONG\"\n}"
+        },
+        "description": "Negative test: wrong password returns 401."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('Status 401', () => pm.response.to.have.status(401));"] }
+        }
+      ]
+    },
+    {
+      "name": "— Security: NoSQL injection login (400)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": {\"$ne\": null},\n  \"password\": {\"$ne\": null}\n}"
+        },
+        "description": "Negative test: mongo-sanitize strips $ keys → isString() guard returns 400."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('Status 400', () => pm.response.to.have.status(400));"] }
+        }
+      ]
+    },
+    {
+      "name": "— Security: Refresh token as access token (401)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer PASTE_REFRESH_TOKEN_HERE" }],
+        "url": "{{baseUrl}}/api/auth/me",
+        "description": "Negative test: refresh token used in Authorization header. protect middleware checks decoded.type !== 'access' and rejects with 401."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('Status 401', () => pm.response.to.have.status(401));"] }
+        }
+      ]
+    },
+    {
+      "name": "— Security: Replay old refresh token (401)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "{{baseUrl}}/api/auth/refresh",
+        "description": "Negative test: after calling request #5 (Refresh Tokens), send this request with the OLD refresh cookie to trigger reuse detection. The server clears the stored token and returns 401. All existing sessions for the user are invalidated."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('Status 401', () => pm.response.to.have.status(401));"] }
+        }
+      ]
+    }
+  ]
+}

@@ -35,9 +35,9 @@ const pgSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Search indexes
 pgSchema.index({ "location.city": 1, "location.area": 1 });
 pgSchema.index({ "pricing.rent": 1 });
 pgSchema.index({ isActive: 1 });
+pgSchema.index({ name: "text", description: "text", amenities: "text", "location.area": "text" }, { name: "pg_text_search" });
 
 export default mongoose.model("PG", pgSchema);

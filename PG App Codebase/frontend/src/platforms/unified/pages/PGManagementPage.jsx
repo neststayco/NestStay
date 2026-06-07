@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { getPGList, createPG, updatePG, deletePG } from '@shared/api/pgs'
 
 function slugify(name) {
@@ -369,16 +370,27 @@ function RowSkeleton() {
 }
 
 export default function PGManagementPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const page = parseInt(searchParams.get('page') || '1', 10)
+
   const [pgs, setPgs] = useState([])
   const [pagination, setPagination] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [page, setPage] = useState(1)
   const [formOpen, setFormOpen] = useState(false)
   const [editTarget, setEditTarget] = useState(null)
   const [confirmTarget, setConfirmTarget] = useState(null)
   const [deactivating, setDeactivating] = useState(false)
   const [togglingVerify, setTogglingVerify] = useState(null)
+
+  function setPage(p) {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      if (p > 1) next.set('page', String(p))
+      else next.delete('page')
+      return next
+    }, { replace: false })
+  }
 
   const fetch = useCallback(async () => {
     setLoading(true)
@@ -544,11 +556,11 @@ export default function PGManagementPage() {
               {pagination.totalItems} total · page {pagination.currentPage} of {pagination.totalPages}
             </p>
             <div className="flex gap-2">
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
                 className="text-sm px-3 py-1.5 border border-[#e0e0e0] rounded-[10px] hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
                 ← Prev
               </button>
-              <button onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))} disabled={page === pagination.totalPages}
+              <button onClick={() => setPage(Math.min(pagination.totalPages, page + 1))} disabled={page === pagination.totalPages}
                 className="text-sm px-3 py-1.5 border border-[#e0e0e0] rounded-[10px] hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
                 Next →
               </button>

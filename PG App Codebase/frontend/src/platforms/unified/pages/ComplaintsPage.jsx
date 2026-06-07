@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { getComplaints } from '@shared/api/complaints'
+import { relativeTime, absoluteDate } from '@shared/utils/relativeTime'
 
 const STATUS_STYLES = {
   pending:  'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -15,16 +17,18 @@ const TYPE_LABELS = {
   other:       '📋  Other',
 }
 
-function fmt(dateStr) {
-  return new Date(dateStr).toLocaleDateString('en-IN', {
-    day: 'numeric', month: 'short', year: 'numeric',
-  })
-}
-
 function StatusBadge({ status }) {
   return (
     <span className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full border capitalize ${STATUS_STYLES[status] || 'bg-gray-100 text-gray-600'}`}>
       {status}
+    </span>
+  )
+}
+
+function RelativeTime({ isoString }) {
+  return (
+    <span title={absoluteDate(isoString)} className="text-xs text-gray-400 whitespace-nowrap">
+      {relativeTime(isoString)}
     </span>
   )
 }
@@ -66,8 +70,10 @@ function ViewModal({ complaint, onClose }) {
               )}
             </div>
             <div className="bg-gray-50 rounded-xl p-3">
-              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Date</p>
-              <p className="text-sm font-semibold text-gray-900">{fmt(complaint.createdAt)}</p>
+              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Filed</p>
+              <p className="text-sm font-semibold text-gray-900">
+                <RelativeTime isoString={complaint.createdAt} />
+              </p>
             </div>
           </div>
 
@@ -95,6 +101,12 @@ function ViewModal({ complaint, onClose }) {
           {complaint.image && (
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Attached Image</p>
+              <img
+                src={complaint.image}
+                alt="Complaint attachment"
+                className="w-full rounded-xl object-cover max-h-48 mb-2"
+                onError={(e) => { e.target.style.display = 'none' }}
+              />
               <a href={complaint.image} target="_blank" rel="noopener noreferrer"
                 className="text-sm text-action hover:underline break-all">
                 {complaint.image}
@@ -117,7 +129,7 @@ function ViewModal({ complaint, onClose }) {
 function RowSkeleton() {
   return (
     <tr className="animate-pulse">
-      {Array.from({ length: 6 }).map((_, i) => (
+      {Array.from({ length: 7 }).map((_, i) => (
         <td key={i} className="px-4 py-3.5">
           <div className="h-3 bg-gray-200 rounded w-full" />
         </td>
@@ -127,14 +139,17 @@ function RowSkeleton() {
 }
 
 export default function ComplaintsPage() {
-  const [complaints, setComplaints]   = useState([])
-  const [pagination, setPagination]   = useState(null)
-  const [loading, setLoading]         = useState(true)
-  const [error, setError]             = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [verifiedOnly, setVerifiedOnly] = useState(false)
-  const [page, setPage]               = useState(1)
-  const [selected, setSelected] = useState(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const statusFilter  = searchParams.get('status') || ''
+  const verifiedOnly  = searchParams.get('verifiedOnly') === 'true'
+  const page          = parseInt(searchParams.get('page') || '1', 10)
+
+  const [complaints, setComplaints] = useState([])
+  const [pagination, setPagination] = useState(null)
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState('')
+  const [selected, setSelected]     = useState(null)
 
   const fetchComplaints = useCallback(async () => {
     setLoading(true)
@@ -155,11 +170,35 @@ export default function ComplaintsPage() {
 
   useEffect(() => { fetchComplaints() }, [fetchComplaints])
 
-  function handleFilterChange(setter) {
-    return (val) => { setter(val); setPage(1) }
+  function updateParams(updates) {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      next.delete('page')
+      Object.entries(updates).forEach(([k, v]) => {
+        if (v !== '' && v !== false && v !== null && v !== undefined) next.set(k, String(v))
+        else next.delete(k)
+      })
+      return next
+    }, { replace: false })
+  }
+
+  function setPage(p) {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      if (p > 1) next.set('page', String(p))
+      else next.delete('page')
+      return next
+    }, { replace: false })
+  }
+
+  function clearFilters() {
+    setSearchParams({}, { replace: false })
   }
 
   const pendingCount = complaints.filter((c) => c.status === 'pending').length
+
+  const showingFrom = pagination ? ((pagination.currentPage - 1) * pagination.limit) + 1 : 0
+  const showingTo   = pagination ? Math.min(pagination.currentPage * pagination.limit, pagination.totalItems) : 0
 
   return (
     <div className="p-6">
@@ -178,7 +217,7 @@ export default function ComplaintsPage() {
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <select
           value={statusFilter}
-          onChange={(e) => handleFilterChange(setStatusFilter)(e.target.value)}
+          onChange={(e) => updateParams({ status: e.target.value })}
           className="border border-[#e0e0e0] rounded-[10px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action bg-white"
         >
           <option value="">All statuses</option>
@@ -191,24 +230,35 @@ export default function ComplaintsPage() {
           <input
             type="checkbox"
             checked={verifiedOnly}
-            onChange={(e) => handleFilterChange(setVerifiedOnly)(e.target.checked)}
+            onChange={(e) => updateParams({ verifiedOnly: e.target.checked ? 'true' : '' })}
             className="w-4 h-4 accent-action"
           />
           <span className="text-sm text-gray-700">Verified residents only</span>
         </label>
 
-        <button
-          onClick={() => { setStatusFilter(''); setVerifiedOnly(false); setPage(1) }}
-          className="text-sm text-gray-400 hover:text-gray-700 underline"
-        >
-          Clear
-        </button>
+        {(statusFilter || verifiedOnly) && (
+          <button
+            onClick={clearFilters}
+            className="text-sm text-gray-400 hover:text-gray-700 underline"
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-          {error}
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm flex items-center justify-between gap-3">
+          <span>{error}</span>
+          <button onClick={fetchComplaints} className="text-sm font-medium underline shrink-0">Retry</button>
         </div>
+      )}
+
+      {pagination && (
+        <p className="text-xs text-gray-400 mb-3">
+          {pagination.totalItems === 0
+            ? 'No complaints found'
+            : `Showing ${showingFrom}–${showingTo} of ${pagination.totalItems} complaints`}
+        </p>
       )}
 
       <div className="bg-white border border-[#e0e0e0] rounded-[20px] shadow-card overflow-hidden">
@@ -221,16 +271,21 @@ export default function ComplaintsPage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Description</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Flags</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Filed</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                Array.from({ length: 8 }).map((_, i) => <RowSkeleton key={i} />)
+                Array.from({ length: 10 }).map((_, i) => <RowSkeleton key={i} />)
               ) : complaints.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-gray-400 text-sm">No complaints found</td>
+                  <td colSpan={7} className="text-center py-12">
+                    <p className="text-gray-400 text-sm font-medium">No complaints found</p>
+                    <p className="text-gray-300 text-xs mt-1">
+                      {statusFilter || verifiedOnly ? 'Try clearing your filters' : 'All quiet — no complaints yet'}
+                    </p>
+                  </td>
                 </tr>
               ) : (
                 complaints.map((c) => {
@@ -251,7 +306,9 @@ export default function ComplaintsPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3.5"><StatusBadge status={c.status} /></td>
-                      <td className="px-4 py-3.5 text-gray-400 whitespace-nowrap text-xs">{fmt(c.createdAt)}</td>
+                      <td className="px-4 py-3.5">
+                        <RelativeTime isoString={c.createdAt} />
+                      </td>
                       <td className="px-4 py-3.5">
                         <button
                           onClick={() => setSelected(c)}
@@ -271,14 +328,14 @@ export default function ComplaintsPage() {
         {pagination && pagination.totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
             <p className="text-xs text-gray-400">
-              {pagination.totalItems} total · page {pagination.currentPage} of {pagination.totalPages}
+              Page {pagination.currentPage} of {pagination.totalPages}
             </p>
             <div className="flex gap-2">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
+              <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
                 className="text-sm px-3 py-1.5 border border-[#e0e0e0] rounded-[10px] hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
                 ← Prev
               </button>
-              <button onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))} disabled={page === pagination.totalPages}
+              <button onClick={() => setPage(Math.min(pagination.totalPages, page + 1))} disabled={page === pagination.totalPages}
                 className="text-sm px-3 py-1.5 border border-[#e0e0e0] rounded-[10px] hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
                 Next →
               </button>

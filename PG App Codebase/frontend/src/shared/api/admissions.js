@@ -20,3 +20,6 @@ export const revokeAdmission = (id) =>
 
 export const ownerAddResident = (email) =>
   client.post('/admissions/owner-add', { email }).then(r => r.data)
+
+export const withdrawAdmission = (id) =>
+  client.post(`/admissions/${id}/withdraw`).then(r => r.data)

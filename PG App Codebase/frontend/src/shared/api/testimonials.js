@@ -2,7 +2,12 @@ import client from './client'
 
 export async function getPublicTestimonials(pgId) {
   const { data } = await client.get('/testimonials', { params: { pgId } })
-  return data // { success, data: Testimonial[] }
+  return data
+}
+
+export async function getFeaturedTestimonials() {
+  const { data } = await client.get('/testimonials/featured')
+  return data
 }
 
 export async function createTestimonial(body) {

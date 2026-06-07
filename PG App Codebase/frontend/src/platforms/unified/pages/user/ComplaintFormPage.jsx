@@ -4,6 +4,7 @@ import UserNavbar from '../../components/UserNavbar'
 import { createComplaint } from '@shared/api/complaints'
 import { getPGDetails } from '@shared/api/pgs'
 import { useAuth } from '@shared/context/AuthContext'
+import ImageUploadField from '@shared/components/ImageUploadField'
 
 const COMPLAINT_TYPES = [
   { value: '', label: 'Select complaint type…' },
@@ -175,18 +176,15 @@ export default function ComplaintFormPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Image URL <span className="text-gray-400 font-normal">(optional)</span>
+                  Evidence photo <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
-                <input
-                  type="url"
+                <ImageUploadField
                   value={image}
-                  onChange={(e) => setImage(e.target.value)}
-                  placeholder="https://…"
-                  className="w-full border border-[#e0e0e0] rounded-[10px] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action"
+                  onChange={setImage}
+                  disabled={loading}
+                  folder="/complaint-evidence"
+                  filePrefix="complaint"
                 />
-                <p className="text-xs text-gray-400 mt-1">
-                  Upload your image elsewhere (e.g. Imgur) and paste the link here.
-                </p>
               </div>
 
               <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-[10px] border border-[#e0e0e0]">

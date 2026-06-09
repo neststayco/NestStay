@@ -256,12 +256,12 @@ function TrustIndicators() {
 // ─── Popular Locations ────────────────────────────────────────────────────────
 
 const LOCATIONS = [
-  { name: 'Hinjewadi',     count: '80+', img: '/cities/city1.jpeg' },
-  { name: 'Baner',         count: '60+', img: '/cities/city2.jpeg' },
-  { name: 'Kharadi',       count: '55+', img: '/cities/city3.jpeg' },
-  { name: 'Wakad',         count: '45+', img: '/cities/city4.jpeg' },
-  { name: 'Kalyani Nagar', count: '40+', img: '/cities/city5.jpeg' },
-  { name: 'Viman Nagar',   count: '35+', img: '/cities/city6.jpeg' },
+  { name: 'Kasba Peth',    count: '50+', img: '/cities/hinjewadi.jpeg' },
+  { name: 'Baner',         count: '60+', img: '/cities/baner.jpeg' },
+  { name: 'Koregaon Park', count: '45+', img: '/cities/kharadi.jpeg' },
+  { name: 'Shivajinagar',  count: '55+', img: '/cities/wakad.jpeg' },
+  { name: 'Kharadi',     count: '80+', img: '/cities/kalyani-nagar.jpeg' },
+  { name: 'Deccan',        count: '35+', img: '/cities/viman-nagar.jpeg' },
 ]
 
 function PopularLocationsSection() {

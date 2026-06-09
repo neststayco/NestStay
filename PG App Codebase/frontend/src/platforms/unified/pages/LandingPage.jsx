@@ -17,7 +17,6 @@ export default function LandingPage() {
         <CollegesSection />
         <FeaturedPGsSection />
         <ValuePropSection />
-        <VideoTourSection />
         <HowItWorksSection />
         <TestimonialsSection />
         <OwnerSection />
@@ -45,7 +44,7 @@ function Navbar({ user }) {
     >
       <div className="flex justify-between items-center w-full px-6 lg:px-16 max-w-[1280px] mx-auto h-20">
         <Link to="/">
-          <img src="/nest-stay-logo.png" alt="Nest Stay" className="h-10 w-auto" />
+          <img src="/logo.png" alt="Nest Stay" className="h-14 w-auto" />
         </Link>
 
         <div className="hidden lg:flex items-center gap-6">
@@ -257,12 +256,12 @@ function TrustIndicators() {
 // ─── Popular Locations ────────────────────────────────────────────────────────
 
 const LOCATIONS = [
-  { name: 'Hinjewadi',   count: '80+', from: '#fbbf24', to: '#f59e0b' },
-  { name: 'Baner',       count: '60+', from: '#f87171', to: '#ef4444' },
-  { name: 'Kharadi',     count: '55+', from: '#818cf8', to: '#6366f1' },
-  { name: 'Wakad',       count: '45+', from: '#a78bfa', to: '#9333ea' },
-  { name: 'Kalyani Nagar', count: '40+', from: '#14b8a6', to: '#0d9488' },
-  { name: 'Viman Nagar', count: '35+', from: '#fb923c', to: '#ea580c' },
+  { name: 'Hinjewadi',     count: '80+', img: '/cities/city1.jpeg' },
+  { name: 'Baner',         count: '60+', img: '/cities/city2.jpeg' },
+  { name: 'Kharadi',       count: '55+', img: '/cities/city3.jpeg' },
+  { name: 'Wakad',         count: '45+', img: '/cities/city4.jpeg' },
+  { name: 'Kalyani Nagar', count: '40+', img: '/cities/city5.jpeg' },
+  { name: 'Viman Nagar',   count: '35+', img: '/cities/city6.jpeg' },
 ]
 
 function PopularLocationsSection() {
@@ -270,17 +269,23 @@ function PopularLocationsSection() {
     <section className="py-12 lg:py-20">
       <div className="max-w-[1280px] mx-auto px-6 lg:px-16">
         <h2 className="text-[28px] font-bold text-[#1b1c1c] text-center mb-8">Popular Areas in Pune</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {LOCATIONS.map(({ name, count, from, to }) => (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {LOCATIONS.map(({ name, count, img }) => (
             <Link
               key={name}
               to="/login"
-              className="relative rounded-xl overflow-hidden cursor-pointer transition-transform duration-300 hover:-translate-y-1 hover:shadow-card"
-              style={{ aspectRatio: '16/10', background: `linear-gradient(135deg, ${from}, ${to})` }}
+              className="relative rounded-2xl overflow-hidden cursor-pointer transition-transform duration-300 hover:-translate-y-2 hover:shadow-xl group"
+              style={{ aspectRatio: '3/2' }}
             >
-              <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                <div className="text-sm font-semibold">{name}</div>
-                <div className="text-xs opacity-90">{count} Properties</div>
+              <img
+                src={img}
+                alt={name}
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
+                <div className="text-base font-bold mb-0.5">{name}</div>
+                <div className="text-sm opacity-80">{count} Properties</div>
               </div>
             </Link>
           ))}
@@ -293,35 +298,60 @@ function PopularLocationsSection() {
 // ─── Colleges Section ─────────────────────────────────────────────────────────
 
 const COLLEGES = [
-  { name: 'Symbiosis',         abbr: 'S', from: '#3b82f6', to: '#1e40af' },
-  { name: 'MIT-WPU',           abbr: 'M', from: '#ef4444', to: '#dc2626' },
-  { name: 'DY Patil',          abbr: 'D', from: '#8b5cf6', to: '#6d28d9' },
-  { name: 'Fergusson College', abbr: 'F', from: '#14b8a6', to: '#0d9488' },
-  { name: 'COEP',              abbr: 'C', from: '#f59e0b', to: '#d97706' },
-  { name: 'VIT Pune',          abbr: 'V', from: '#e98a76', to: '#c06a58' },
+  { name: 'Symbiosis',         abbr: 'S', from: '#3b82f6', to: '#1e40af', logo: '/colleges/symbiosis.svg', count: '650+' },
+  { name: 'PCCOE',             abbr: 'P', from: '#ef4444', to: '#dc2626', logo: '/colleges/pccoe.jpeg',    count: '400+' },
+  { name: 'DY Patil',          abbr: 'D', from: '#8b5cf6', to: '#6d28d9', logo: '/colleges/dypatil.png',  count: '450+' },
+  { name: 'Fergusson College', abbr: 'F', from: '#14b8a6', to: '#0d9488', logo: '/colleges/fergusson.png',count: '350+' },
+  { name: 'COEP',              abbr: 'C', from: '#f59e0b', to: '#d97706', logo: '/colleges/coep.png',     count: '300+' },
+  { name: 'AISSMS',            abbr: 'A', from: '#e98a76', to: '#c06a58', logo: '/colleges/aissms.png',   count: '250+' },
 ]
+
+function CollegeLogo({ name, abbr, from, to, logo }) {
+  const [failed, setFailed] = useState(false)
+  return (
+    <div className="w-16 h-16 rounded-full mx-auto mb-3 bg-white border-2 border-[#E5E7EB] flex items-center justify-center overflow-hidden shadow-sm">
+      {logo && !failed ? (
+        <img
+          src={logo}
+          alt={`${name} logo`}
+          loading="lazy"
+          className="w-full h-full object-contain p-2"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <div
+          className="w-full h-full flex items-center justify-center text-white text-xl font-bold"
+          style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
+        >
+          {abbr}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function CollegesSection() {
   return (
-    <section id="colleges" className="py-12 lg:py-20 bg-[#f6f3f2] border-y border-[#E5E7EB]">
+    <section id="colleges" className="py-8 bg-white border-y border-[#E5E7EB]">
       <div className="max-w-[1280px] mx-auto px-6 lg:px-16">
-        <h2 className="text-[28px] font-bold text-[#1b1c1c] text-center mb-8">
-          Find Accommodation Near Your College
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {COLLEGES.map(({ name, abbr, from, to }) => (
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-[20px] font-bold text-[#1b1c1c]">
+            Find Accommodation Near Your College
+          </h2>
+          <Link to="/login" className="text-[#e98a76] text-sm font-semibold flex items-center gap-1 hover:underline flex-shrink-0">
+            View All Colleges <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+          {COLLEGES.map(({ name, abbr, from, to, logo, count }) => (
             <Link
               key={name}
               to="/login"
-              className="bg-white border border-[#E5E7EB] rounded-xl py-6 px-4 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-card hover:border-[#e98a76] cursor-pointer"
+              className="bg-white border border-[#E5E7EB] rounded-xl py-5 px-3 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[#e98a76] cursor-pointer"
             >
-              <div
-                className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-bold mx-auto mb-3"
-                style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
-              >
-                {abbr}
-              </div>
-              <p className="text-sm font-medium text-[#1b1c1c]">{name}</p>
+              <CollegeLogo name={name} abbr={abbr} from={from} to={to} logo={logo} />
+              <p className="text-sm font-semibold text-[#1b1c1c] mb-1">{name}</p>
+              <p className="text-xs text-[#6B7280]">{count} Properties</p>
             </Link>
           ))}
         </div>
@@ -446,8 +476,8 @@ function ValuePropSection() {
     <section id="about" className="py-16 lg:py-24 bg-[#101e22] text-white">
       <div className="max-w-[1280px] mx-auto px-6 lg:px-16 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
 
-        <div className="order-2 lg:order-1 w-full h-72 lg:h-80 bg-gradient-to-br from-[#dcfce7] to-[#86efac] rounded-2xl flex items-center justify-center">
-          <span className="material-symbols-outlined text-[#16a34a]" style={{ fontSize: '80px' }}>laptop_mac</span>
+        <div className="order-2 lg:order-1 w-full h-72 lg:h-96 rounded-2xl overflow-hidden">
+          <img src="/student-section.png" alt="Students using Nest Stay" className="w-full h-full object-cover" />
         </div>
 
         <div className="order-1 lg:order-2">
@@ -464,7 +494,6 @@ function ValuePropSection() {
               { icon: 'bolt',           title: 'Easy Booking',           desc: 'Simple and hassle-free booking process' },
               { icon: 'payments',       title: 'Transparent Pricing',    desc: 'No hidden charges, all costs upfront' },
               { icon: 'support_agent',  title: 'Student Support',        desc: '24/7 customer support for your needs' },
-              { icon: 'description',    title: 'Digital Agreement',      desc: 'Secure online contracts and documentation' },
             ].map(({ icon, title, desc }) => (
               <li key={title} className="flex gap-4">
                 <span className="material-symbols-outlined text-[#e98a76] text-[22px] flex-shrink-0 mt-0.5">{icon}</span>
@@ -476,47 +505,6 @@ function ValuePropSection() {
           </ul>
         </div>
 
-      </div>
-    </section>
-  )
-}
-
-// ─── Video Tour ───────────────────────────────────────────────────────────────
-
-const TOURS = [
-  { title: 'Modern PG Tour — Hinjewadi', from: '#f3e8ff', to: '#e9d5ff', playColor: '#a855f7', duration: '01:20' },
-  { title: 'Girls PG Tour — Baner',      from: '#dbeafe', to: '#bfdbfe', playColor: '#3b82f6', duration: '01:15' },
-  { title: 'Budget Stay — Wakad',        from: '#dcfce7', to: '#bbf7d0', playColor: '#16a34a', duration: '01:18' },
-]
-
-function VideoTourSection() {
-  return (
-    <section className="py-12 lg:py-20">
-      <div className="max-w-[1280px] mx-auto px-6 lg:px-16">
-        <h2 className="text-[28px] font-bold text-[#1b1c1c] text-center mb-8">Take a Video Tour</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {TOURS.map(({ title, from, to, playColor, duration }) => (
-            <div
-              key={title}
-              className="relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-card"
-              style={{ aspectRatio: '16/9', background: `linear-gradient(135deg, ${from}, ${to})` }}
-            >
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div
-                  className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg"
-                >
-                  <span className="material-symbols-outlined text-[28px]" style={{ color: playColor, fontVariationSettings: "'FILL' 1" }}>
-                    play_circle
-                  </span>
-                </div>
-              </div>
-              <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs font-medium px-2 py-1 rounded">
-                {duration}
-              </div>
-              <div className="absolute bottom-3 left-3 text-xs font-semibold text-[#1b1c1c]/70">{title}</div>
-            </div>
-          ))}
-        </div>
       </div>
     </section>
   )
@@ -715,7 +703,7 @@ function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 mb-12 pb-12 border-b border-[#E5E7EB]">
 
           <div className="col-span-2 md:col-span-1">
-            <img src="/nest-stay-logo.png" alt="Nest Stay" className="h-10 w-auto mb-4" />
+            <img src="/logo2.png" alt="Nest Stay" className="h-20 w-auto mb-4" />
             <p className="text-sm text-[#434849] leading-relaxed mb-4">
               Your trusted platform for verified PGs and hostels near colleges.
             </p>

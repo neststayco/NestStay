@@ -1,16 +1,13 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { useAuth } from '@shared/context/AuthContext'
-import { resolveUserHomeRoute } from '@shared/utils/routing'
+import { Link, useNavigate } from 'react-router-dom'
 import { getPGList } from '@shared/api/pgs'
 import { getFeaturedTestimonials } from '@shared/api/testimonials'
 
 export default function LandingPage() {
-  const { user } = useAuth()
   return (
     <div className="bg-[#fbf9f8] text-[#1b1c1c] overflow-x-hidden">
-      <Navbar user={user} />
-      <main className="pt-20">
+      <Navbar />
+      <main className="pt-14 lg:pt-20">
         <HeroSection />
         <TrustIndicators />
         <PopularLocationsSection />
@@ -29,22 +26,17 @@ export default function LandingPage() {
 
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 
-function Navbar({ user }) {
+function Navbar() {
   const [open, setOpen] = useState(false)
-
-  function dashboardPath() {
-    if (!user) return '/login'
-    return resolveUserHomeRoute(user.role)
-  }
 
   return (
     <nav
-      className="fixed top-0 left-0 right-0 z-50 border-b border-[#E5E7EB]"
-      style={{ backdropFilter: 'blur(8px)', backgroundColor: 'rgba(251,249,248,0.85)' }}
+      className="fixed top-0 left-0 right-0 z-50 border-b border-[#E5E7EB]/60"
+      style={{ backdropFilter: 'blur(12px)', backgroundColor: 'rgba(251,249,248,0.92)' }}
     >
-      <div className="flex justify-between items-center w-full px-6 lg:px-16 max-w-[1280px] mx-auto h-20">
+      <div className="flex justify-between items-center w-full px-6 lg:px-16 max-w-[1280px] mx-auto h-14 lg:h-20">
         <Link to="/">
-          <img src="/logo.png" alt="Nest Stay" className="h-14 w-auto" />
+          <img src="/logo.png" alt="Nest Stay" className="h-[52px] lg:h-14 w-auto" />
         </Link>
 
         <div className="hidden lg:flex items-center gap-6">
@@ -56,16 +48,10 @@ function Navbar({ user }) {
           <a href="#contact" className="text-sm font-medium text-[#434849] hover:text-black transition-colors">Contact</a>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Link
-            to={dashboardPath()}
-            className="hidden md:block px-5 py-2.5 rounded-xl border border-[#73787a] text-black text-sm font-semibold hover:bg-[#f0eded] transition-all"
-          >
-            {user ? 'Open App' : 'Login'}
-          </Link>
+        <div className="flex items-center gap-2">
           <Link
             to="/register"
-            className="bg-[#e98a76] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 active:scale-95 transition-all"
+            className="bg-[#e98a76] text-white px-4 py-2 lg:px-5 lg:py-2.5 rounded-full lg:rounded-xl text-xs lg:text-sm font-semibold hover:opacity-90 active:scale-95 transition-all"
           >
             Register
           </Link>
@@ -76,7 +62,7 @@ function Navbar({ user }) {
             List Your Property
           </Link>
           <button
-            className="lg:hidden text-black p-2 rounded-lg hover:bg-[#f0eded] transition-colors"
+            className="lg:hidden text-black p-2.5 rounded-lg hover:bg-[#f0eded] transition-colors"
             onClick={() => setOpen(!open)}
             aria-label="Toggle menu"
           >
@@ -94,9 +80,6 @@ function Navbar({ user }) {
           <a href="#about" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>About Us</a>
           <a href="#contact" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>Contact</a>
           <div className="pt-3 border-t border-[#E5E7EB] space-y-1">
-            <Link to={dashboardPath()} className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>
-              {user ? 'Open App' : 'Login'}
-            </Link>
             <Link to="/register" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>Register</Link>
             <Link to="/register" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>List Your Property</Link>
           </div>
@@ -108,83 +91,99 @@ function Navbar({ user }) {
 
 // ─── Hero Section ─────────────────────────────────────────────────────────────
 
-function HeroSection() {
-  return (
-    <section id="home" className="relative bg-[#fbf9f8] py-12 lg:py-20">
-      <div className="w-full max-w-[1280px] mx-auto px-6 lg:px-16 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+const SELECT_ARROW = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2373787a' d='M6 8L1 3h10z'/%3E%3C/svg%3E\")"
 
-        <div className="z-10">
-          <span className="inline-block bg-tertiary-fixed text-on-tertiary-fixed-variant px-4 py-1.5 rounded-full text-xs font-bold tracking-wider mb-6">
+function HeroSection() {
+  const navigate = useNavigate()
+  const [college, setCollege] = useState('')
+  const [area, setArea] = useState('')
+  const [budget, setBudget] = useState('')
+  const [gender, setGender] = useState('')
+
+  function handleFindPG(e) {
+    e.preventDefault()
+    const params = new URLSearchParams()
+    const c = college.trim()
+    const b = budget.trim().replace(/[^0-9]/g, '')
+    if (c) params.set('college', c)
+    if (area && area !== 'Select Area') params.set('area', area)
+    if (b && parseInt(b) > 0) params.set('budget', b)
+    if (gender && gender !== 'Boys / Girls' && gender !== 'Any') params.set('gender', gender.toLowerCase())
+    navigate(`/properties${params.toString() ? '?' + params.toString() : ''}`)
+  }
+
+  return (
+    <section
+      id="home"
+      className="relative overflow-hidden"
+    >
+      {/* Mobile background image */}
+      <div
+        className="absolute inset-0 z-0 lg:hidden"
+        style={{
+          backgroundImage: "url('/hero-section-mobile.jpg')",
+          backgroundSize: 'cover',
+          backgroundPosition: '65% center',
+        }}
+      />
+      {/* Mobile fade overlay */}
+      <div
+        className="absolute inset-0 z-0 lg:hidden"
+        style={{
+          background: 'linear-gradient(to bottom, rgba(251,249,248,0.80) 0%, rgba(251,249,248,0.60) 55%, rgba(251,249,248,0.20) 100%)',
+        }}
+      />
+
+      {/* Desktop background image */}
+      <div
+        className="absolute inset-0 z-0 hidden lg:block"
+        style={{
+          backgroundImage: "url('/hero-section')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center right',
+        }}
+      />
+      {/* Desktop fade overlay: left-to-right */}
+      <div
+        className="absolute inset-0 z-0 hidden lg:block"
+        style={{
+          background: 'linear-gradient(to right, #fbf9f8 0%, #fbf9f8 45%, rgba(251,249,248,0.85) 65%, rgba(251,249,248,0.2) 100%)',
+        }}
+      />
+
+      <div className="relative z-10 w-full max-w-[1280px] mx-auto px-6 lg:px-16 py-12 lg:py-24 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+
+        <div>
+          {/* Trust badge */}
+          <span className="inline-flex items-center gap-1.5 bg-[#fef3f0] text-[#c0431e] border border-[#f4c4b5] px-4 py-1.5 rounded-full text-[10px] font-bold tracking-wide mb-3">
+            <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
             Trusted by 3000+ Students Across Pune
           </span>
-          <h1 className="text-[40px] lg:text-[48px] font-extrabold text-[#1b1c1c] leading-tight mb-4">
-            Find Verified PGs &amp; Hostels<br />
+
+          {/* Headline */}
+          <h1 className="text-[28px] sm:text-[34px] lg:text-[48px] font-extrabold text-[#1b1c1c] leading-[1.18] mb-3">
+            Find Verified PGs &amp; Hostels{' '}
             <span className="text-[#e98a76]">Near Your College</span>
           </h1>
-          <p className="text-lg text-[#434849] mb-8 leading-relaxed">
+
+          {/* Supporting text */}
+          <p className="text-sm sm:text-base lg:text-lg text-[#434849] mb-4 leading-relaxed max-w-[460px] lg:max-w-none">
             Safe, Affordable &amp; Fully Verified Student Accommodation.
           </p>
 
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <input
-              type="text"
-              placeholder="Search by College"
-              className="h-[52px] px-4 border border-[#E5E7EB] rounded-lg text-sm outline-none focus:border-[#e98a76] bg-white"
-            />
-            <select className="h-[52px] px-4 border border-[#E5E7EB] rounded-lg text-sm outline-none focus:border-[#e98a76] bg-white text-[#434849]">
-              <option>Select Area</option>
-              <option>Hinjewadi</option>
-              <option>Baner</option>
-              <option>Kharadi</option>
-              <option>Wakad</option>
-              <option>Kalyani Nagar</option>
-              <option>Viman Nagar</option>
-              <option>Pimpri-Chinchwad</option>
-              <option>Hadapsar</option>
-            </select>
-            <input
-              type="text"
-              placeholder="Budget (e.g. ₹8,000/mo)"
-              className="h-[52px] px-4 border border-[#E5E7EB] rounded-lg text-sm outline-none focus:border-[#e98a76] bg-white"
-            />
-            <select className="h-[52px] px-4 border border-[#E5E7EB] rounded-lg text-sm outline-none focus:border-[#e98a76] bg-white text-[#434849]">
-              <option>Boys / Girls</option>
-              <option>Boys</option>
-              <option>Girls</option>
-              <option>Any</option>
-            </select>
-          </div>
-
-          <div className="flex flex-wrap gap-3 mb-8">
-            <Link
-              to="/login"
-              className="flex items-center gap-2 bg-[#e98a76] text-white px-8 h-[52px] rounded-xl text-sm font-semibold hover:opacity-90 active:scale-95 transition-all"
-            >
-              <span className="material-symbols-outlined text-[20px]">search</span>
-              Find PG
-            </Link>
-            <a
-              href="https://wa.me/919970114079"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-6 h-[52px] border border-[#E5E7EB] rounded-xl bg-white text-[#1b1c1c] text-sm font-semibold hover:bg-[#f3f4f6] transition-colors"
-            >
-              <span className="material-symbols-outlined text-[20px]" style={{ color: '#25d366' }}>chat</span>
-              Talk to Expert
-            </a>
-          </div>
-
-          <div className="flex items-center gap-3">
+          {/* Social proof — above form to prime trust before action */}
+          <div className="flex items-center gap-3 mb-5">
             <div className="flex">
               {[
-                { initials: 'A', bg: '#8b5cf6' },
-                { initials: 'R', bg: '#ec4899' },
-                { initials: 'P', bg: '#06b6d4' },
-              ].map(({ initials, bg }, i) => (
+                { initials: 'A', bg: '#8b5cf6', color: '#fff' },
+                { initials: 'R', bg: '#ec4899', color: '#fff' },
+                { initials: 'P', bg: '#06b6d4', color: '#fff' },
+                { initials: '+',  bg: '#f3f4f6', color: '#73787a' },
+              ].map(({ initials, bg, color }, i) => (
                 <div
                   key={initials}
-                  className={`w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-white text-xs font-medium ${i > 0 ? '-ml-2' : ''}`}
-                  style={{ backgroundColor: bg }}
+                  className={`w-9 h-9 rounded-full border-2 border-white flex items-center justify-center text-xs font-semibold ${i > 0 ? '-ml-2.5' : ''}`}
+                  style={{ backgroundColor: bg, color }}
                 >
                   {initials}
                 </div>
@@ -195,32 +194,84 @@ function HeroSection() {
               Already Found Their Home
             </div>
           </div>
-        </div>
 
-        <div className="relative hidden lg:block" style={{ paddingBottom: '64px' }}>
-          <div className="rounded-2xl overflow-hidden">
-            <img
-              src="https://images.unsplash.com/photo-1760072513376-67a46aab0fd1?w=600&h=340&fit=crop&q=80&auto=format"
-              alt="Modern PG accommodation"
-              className="w-full aspect-video object-cover"
-            />
-          </div>
-          <div
-            className="absolute left-1/2 -translate-x-1/2 w-[90%] bg-white rounded-2xl px-6 py-4 shadow-card border border-[#E5E7EB] grid grid-cols-4 gap-4 text-center z-10"
-            style={{ bottom: '0' }}
-          >
-            {[
-              { value: '✓', label: 'Verified Properties' },
-              { value: '₹0', label: 'Zero Brokerage' },
-              { value: '24/7', label: 'Support' },
-              { value: '📄', label: 'Digital Agreement' },
-            ].map(({ value, label }) => (
-              <div key={label} className="text-xs text-[#73787a]">
-                <strong className="block text-base font-semibold text-[#e98a76] mb-1">{value}</strong>
-                {label}
+          {/* Search form card */}
+          <form onSubmit={handleFindPG} className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-[0_8px_32px_rgba(0,0,0,0.10)] border border-[#E5E7EB]">
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-semibold text-[#73787a] uppercase tracking-wide px-1">College</label>
+                <input
+                  type="text"
+                  value={college}
+                  onChange={e => setCollege(e.target.value)}
+                  placeholder="Search by College"
+                  className="h-[48px] sm:h-[52px] px-3 border border-[#d1d5db] rounded-xl text-sm outline-none focus:border-[#e98a76] focus:bg-[#fffaf9] bg-white transition-colors"
+                />
               </div>
-            ))}
-          </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-semibold text-[#73787a] uppercase tracking-wide px-1">Area</label>
+                <select
+                  value={area}
+                  onChange={e => setArea(e.target.value)}
+                  className="h-[48px] sm:h-[52px] px-3 pr-8 border border-[#d1d5db] rounded-xl text-sm outline-none focus:border-[#e98a76] focus:bg-[#fffaf9] bg-white text-[#434849] appearance-none transition-colors"
+                  style={{ backgroundImage: SELECT_ARROW, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center' }}
+                >
+                  <option value="">Select Area</option>
+                  <option>Hinjewadi</option>
+                  <option>Baner</option>
+                  <option>Kharadi</option>
+                  <option>Wakad</option>
+                  <option>Kalyani Nagar</option>
+                  <option>Viman Nagar</option>
+                  <option>Pimpri-Chinchwad</option>
+                  <option>Hadapsar</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-semibold text-[#73787a] uppercase tracking-wide px-1">Budget</label>
+                <input
+                  type="text"
+                  value={budget}
+                  onChange={e => setBudget(e.target.value)}
+                  placeholder="e.g. ₹8,000"
+                  className="h-[48px] sm:h-[52px] px-3 border border-[#d1d5db] rounded-xl text-sm outline-none focus:border-[#e98a76] focus:bg-[#fffaf9] bg-white transition-colors"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-semibold text-[#73787a] uppercase tracking-wide px-1">Gender</label>
+                <select
+                  value={gender}
+                  onChange={e => setGender(e.target.value)}
+                  className="h-[48px] sm:h-[52px] px-3 pr-8 border border-[#d1d5db] rounded-xl text-sm outline-none focus:border-[#e98a76] focus:bg-[#fffaf9] bg-white text-[#434849] appearance-none transition-colors"
+                  style={{ backgroundImage: SELECT_ARROW, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center' }}
+                >
+                  <option value="">Boys / Girls</option>
+                  <option value="Boys">Boys</option>
+                  <option value="Girls">Girls</option>
+                  <option value="Any">Any</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                type="submit"
+                className="flex items-center justify-center gap-2 bg-[#e98a76] text-white px-6 h-[56px] rounded-xl text-[15px] font-bold hover:opacity-90 active:scale-95 transition-all flex-1 shadow-[0_4px_12px_rgba(233,138,118,0.40)]"
+              >
+                <span className="material-symbols-outlined text-[18px]">search</span>
+                Find PG
+              </button>
+              <a
+                href="https://wa.me/919970114079"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 px-6 h-[48px] sm:h-[56px] border border-[#c3c7c9] rounded-xl bg-[#f9f8f7] text-[#1b1c1c] text-sm font-medium hover:bg-[#f0eded] transition-colors flex-1"
+              >
+                <span className="material-symbols-outlined text-[18px] text-[#434849]">support_agent</span>
+                Talk to Expert
+              </a>
+            </div>
+          </form>
+
         </div>
 
       </div>
@@ -362,10 +413,39 @@ function CollegesSection() {
 
 // ─── Featured Properties ──────────────────────────────────────────────────────
 
+const FALLBACK_PGS = [
+  {
+    _id: 'fp1',
+    name: 'Sunrise Boys PG',
+    location: { area: 'Hinjewadi Phase 1', city: 'Pune' },
+    pricing: { rent: 7500 },
+    images: [],
+    meta: { trustScore: 4.8 },
+  },
+  {
+    _id: 'fp2',
+    name: 'Green Nest Girls PG',
+    location: { area: 'Baner', city: 'Pune' },
+    pricing: { rent: 9000 },
+    images: [],
+    meta: { trustScore: 4.9 },
+  },
+  {
+    _id: 'fp3',
+    name: 'Urban Stay Co-Living',
+    location: { area: 'Kharadi', city: 'Pune' },
+    pricing: { rent: 8200 },
+    images: [],
+    meta: { trustScore: 4.7 },
+  },
+]
+
+const PG_PLACEHOLDER = '/pg-placeholder.jpg'
+
 function PGCardSkeleton() {
   return (
     <div className="bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden animate-pulse">
-      <div className="h-52 bg-gray-200" />
+      <div className="h-48 bg-gray-200" />
       <div className="p-5 space-y-3">
         <div className="h-5 bg-gray-200 rounded w-2/3" />
         <div className="h-4 bg-gray-200 rounded w-1/2" />
@@ -381,15 +461,15 @@ function FeaturedPGsSection() {
 
   useEffect(() => {
     getPGList({ sortBy: 'trustScore', limit: 3 })
-      .then(res => setPgs(res.data || []))
-      .catch(() => {})
+      .then(res => setPgs(res.data?.length ? res.data : FALLBACK_PGS))
+      .catch(() => setPgs(FALLBACK_PGS))
       .finally(() => setLoading(false))
   }, [])
 
   return (
     <section id="listings" className="py-12 lg:py-20">
       <div className="max-w-[1280px] mx-auto px-6 lg:px-16">
-        <div className="flex justify-between items-end mb-10">
+        <div className="flex justify-between items-end mb-8">
           <div>
             <span className="text-[#e98a76] text-xs font-bold uppercase tracking-wider mb-2 block">Featured</span>
             <h2 className="text-[28px] font-bold text-[#1b1c1c]">Featured Properties</h2>
@@ -398,68 +478,90 @@ function FeaturedPGsSection() {
             See All <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
           </Link>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        {/* Desktop: 3-col grid */}
+        <div className="hidden md:grid md:grid-cols-3 gap-6">
           {loading
             ? Array.from({ length: 3 }).map((_, i) => <PGCardSkeleton key={i} />)
-            : pgs.length > 0
-              ? pgs.map(pg => <FeaturedPGCard key={pg._id} pg={pg} />)
-              : null}
+            : pgs.map(pg => <FeaturedPGCard key={pg._id} pg={pg} />)}
+        </div>
+
+        {/* Mobile: horizontal scroll strip */}
+        <div
+          className="flex md:hidden gap-4 overflow-x-auto pb-3 -mx-6 px-6 snap-x snap-mandatory"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          {loading
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex-shrink-0 w-[78vw] snap-start"><PGCardSkeleton /></div>
+              ))
+            : pgs.map(pg => (
+                <div key={pg._id} className="flex-shrink-0 w-[78vw] snap-start">
+                  <FeaturedPGCard pg={pg} />
+                </div>
+              ))}
         </div>
       </div>
     </section>
   )
 }
 
-const PG_PLACEHOLDER = 'https://placehold.co/600x400/e2e8f0/94a3b8?text=No+Image'
-
 function FeaturedPGCard({ pg }) {
-  const image = pg.images?.[0] || PG_PLACEHOLDER
+  const [imgError, setImgError] = useState(false)
+  const image = (!imgError && pg.images?.[0]) ? pg.images[0] : null
   const area = pg.location?.area
   const city = pg.location?.city
   const location = [area, city].filter(Boolean).join(', ') || '—'
   const rent = pg.pricing?.rent
 
   return (
-    <div className="bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden group hover:shadow-card transition-all duration-300">
-      <div className="relative h-52 overflow-hidden bg-[#dbeafe] flex items-center justify-center">
-        <img
-          src={image}
-          alt={pg.name}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          onError={(e) => { e.target.src = PG_PLACEHOLDER }}
-        />
-        <span className="absolute top-3 left-3 bg-[#e98a76] text-white px-3 py-1 rounded-md text-xs font-semibold">
+    <div className="bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden group hover:shadow-card transition-all duration-300 h-full flex flex-col">
+      <div className="relative h-48 overflow-hidden bg-[#f6f3f2] flex items-center justify-center flex-shrink-0">
+        {image ? (
+          <img
+            src={image}
+            alt={pg.name}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+            <span className="material-symbols-outlined text-[48px] text-[#d1d5db]">apartment</span>
+            <span className="text-xs text-[#9ca3af]">{pg.location?.area || 'Pune'}</span>
+          </div>
+        )}
+        <span className="absolute top-3 left-3 bg-[#e98a76] text-white px-3 py-1 rounded-full text-xs font-semibold">
           VERIFIED
         </span>
         {pg.meta?.trustScore > 0 && (
-          <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-1">
+          <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full flex items-center gap-1">
             <span
-              className="material-symbols-outlined text-[#e98a76] text-[16px]"
+              className="material-symbols-outlined text-[#e98a76] text-[14px]"
               style={{ fontVariationSettings: "'FILL' 1" }}
             >star</span>
             <span className="text-xs font-bold text-[#1b1c1c]">{pg.meta.trustScore}</span>
           </div>
         )}
       </div>
-      <div className="p-5">
+      <div className="p-5 flex flex-col flex-1">
         <h3 className="text-base font-semibold text-[#1b1c1c] mb-1">{pg.name}</h3>
         <div className="flex items-center gap-1 text-[#73787a] text-sm mb-3">
           <span className="material-symbols-outlined text-[16px]">location_on</span>
           {location}
         </div>
-        <div className="text-xl font-bold text-[#e98a76] mb-4">
+        <div className="text-xl font-bold text-[#e98a76] mb-4 mt-auto">
           {rent ? <>&#8377;{rent.toLocaleString('en-IN')}<span className="text-sm font-normal text-[#73787a]">/month</span></> : '—'}
         </div>
         <div className="flex gap-2">
           <Link
-            to={`/user/pgs/${pg._id}`}
-            className="flex-1 px-4 py-2.5 border border-[#E5E7EB] rounded-lg text-sm font-semibold text-[#1b1c1c] text-center hover:bg-[#f3f4f6] transition-colors"
+            to="/login"
+            className="flex-1 px-4 py-2.5 border border-[#E5E7EB] rounded-xl text-sm font-semibold text-[#1b1c1c] text-center hover:bg-[#f3f4f6] transition-colors"
           >
             View Details
           </Link>
           <Link
-            to={`/user/pgs/${pg._id}/apply`}
-            className="flex-1 px-4 py-2.5 bg-[#e98a76] text-white rounded-lg text-sm font-semibold text-center hover:opacity-90 transition-all"
+            to="/login"
+            className="flex-1 px-4 py-2.5 bg-[#e98a76] text-white rounded-xl text-sm font-semibold text-center hover:opacity-90 transition-all"
           >
             Book Visit
           </Link>

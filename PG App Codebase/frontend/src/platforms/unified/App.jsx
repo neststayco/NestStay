@@ -6,6 +6,8 @@ import { RequireRole } from './components/ProtectedRoute'
 import Layout from './components/Layout'
 import OwnerLayout from './components/OwnerLayout'
 import LandingPage from './pages/LandingPage'
+import PropertiesPage from './pages/PropertiesPage'
+import PropertyDetailPage from './pages/PropertyDetailPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
@@ -40,6 +42,8 @@ export default function App() {
             <Routes>
               {/* Public */}
               <Route path="/" element={<LandingPage />} />
+              <Route path="/properties" element={<PropertiesPage />} />
+              <Route path="/properties/:id" element={<PropertyDetailPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />

@@ -38,12 +38,16 @@ export const createAdmissionRequest = async (req, res) => {
 
     const admission = await PGResidency.create({ userId, pgId, moveInNote: moveInNote || "" });
 
+    const populatedAdmission = await PGResidency.findById(admission._id)
+      .populate("pgId", "name location images slug")
+      .lean();
+
     Logger.event("admission.requested", { admissionId: admission._id, userId, pgId });
 
     return res.status(201).json({
       success: true,
       message: "Admission request submitted",
-      data: admission,
+      data: populatedAdmission,
     });
   } catch (error) {
     Logger.error("CREATE_ADMISSION_ERROR", { error: error.message });

@@ -23,6 +23,9 @@ const DUMMY_HASH = "$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW
 // Rejects after mongo-sanitize strips $ keys, leaving {} instead of string
 const isString = (v) => typeof v === "string" && v.length > 0;
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const isValidEmail = (v) => isString(v) && EMAIL_RE.test(v.toLowerCase().trim());
+
 // ─────────────────────────────────────────────────────────────────────────────
 // REGISTRATION — 2-step OTP flow
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31,8 +34,8 @@ export const registerInitiate = async (req, res) => {
   try {
     const { email } = req.body;
 
-    if (!isString(email)) {
-      return res.status(400).json({ success: false, message: "Email is required" });
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ success: false, message: "Valid email address is required" });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
@@ -373,8 +376,8 @@ export const forgotPasswordInitiate = async (req, res) => {
   try {
     const { email } = req.body;
 
-    if (!isString(email)) {
-      return res.status(400).json({ success: false, message: "Email is required" });
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ success: false, message: "Valid email address is required" });
     }
 
     const normalizedEmail = email.toLowerCase().trim();

@@ -31,7 +31,7 @@ export default function OwnerLayout() {
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="md:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200">
+        <div className="md:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-[#e0e0e0]">
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 rounded-lg text-gray-600 hover:bg-gray-100"

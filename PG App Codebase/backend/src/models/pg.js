@@ -21,7 +21,12 @@ const pgSchema = new mongoose.Schema(
     },
     foodType: { type: String, enum: ['veg', 'non-veg', 'both'], default: null },
     amenities: [String],
-    images: [String],
+    images: [
+      {
+        url: { type: String, required: true },
+        fileId: { type: String },
+      }
+    ],
     owner: {
       name: String,
       phone: String,

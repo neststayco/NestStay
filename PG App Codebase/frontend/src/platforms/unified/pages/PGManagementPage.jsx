@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getPGList, createPG, updatePG, deletePG } from '@shared/api/pgs'
+import PGImageUploader from '@shared/components/PGImageUploader'
 
 function slugify(name) {
   return name.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
@@ -13,7 +14,8 @@ const EMPTY_FORM = {
   accommodation: { gender: '', totalCapacity: '' },
   foodType: '',
   amenities: '',
-  images: '',
+  imageFiles: [],
+  existingImages: [],
   owner: { name: '', phone: '', email: '', isVerified: false },
   isVerified: false,
 }
@@ -43,7 +45,8 @@ function pgToForm(pg) {
     },
     foodType: pg.foodType || '',
     amenities: (pg.amenities || []).join(', '),
-    images: (pg.images || []).join('\n'),
+    imageFiles: [],
+    existingImages: pg.images || [],
     owner: {
       name: pg.owner?.name || '',
       phone: pg.owner?.phone || '',
@@ -54,7 +57,7 @@ function pgToForm(pg) {
   }
 }
 
-function formToPayload(f) {
+function buildTextPayload(f) {
   return {
     name: f.name,
     slug: f.slug,
@@ -77,7 +80,6 @@ function formToPayload(f) {
     },
     foodType: f.foodType || undefined,
     amenities: f.amenities.split(',').map(s => s.trim()).filter(Boolean),
-    images: f.images.split('\n').map(s => s.trim()).filter(Boolean),
     owner: { ...f.owner },
     isVerified: f.isVerified,
   }
@@ -122,12 +124,20 @@ function PGFormModal({ editPG, onClose, onSaved }) {
       setError('Name, slug, and description are required.')
       return
     }
+    if (!isEdit && form.imageFiles.length < 3) {
+      setError('Minimum 3 images required.')
+      return
+    }
+    if (form.imageFiles.length > 10) {
+      setError('Maximum 10 images allowed.')
+      return
+    }
     setLoading(true)
     try {
-      const payload = formToPayload(form)
+      const textPayload = buildTextPayload(form)
       const res = isEdit
-        ? await updatePG(editPG._id, payload)
-        : await createPG(payload)
+        ? await updatePG(editPG._id, textPayload, form.imageFiles)
+        : await createPG(textPayload, form.imageFiles)
       onSaved(res.data, isEdit)
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save PG.')
@@ -272,11 +282,33 @@ function PGFormModal({ editPG, onClose, onSaved }) {
 
           <section>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Images</p>
-            <Field label="Image URLs (one per line)">
-              <textarea className={`${inputCls} resize-none font-mono text-xs`} rows={3}
-                value={form.images} onChange={e => setField('images', e.target.value)}
-                placeholder="https://…&#10;https://…" />
-            </Field>
+
+            {isEdit && form.existingImages.length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs text-gray-500 mb-2">
+                  Current images ({form.existingImages.length})
+                  {form.imageFiles.length > 0 && (
+                    <span className="ml-1 text-amber-600"> — will be replaced on save</span>
+                  )}
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {form.existingImages.map((img, i) => (
+                    <img
+                      key={i}
+                      src={img.url}
+                      alt={`Image ${i + 1}`}
+                      className="w-full aspect-square object-cover rounded-lg border border-gray-200"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <PGImageUploader
+              files={form.imageFiles}
+              onChange={(files) => setField('imageFiles', files)}
+              required={!isEdit}
+            />
           </section>
 
           <section>

@@ -4,6 +4,8 @@ import { getComplaints, updateComplaintStatus } from '@shared/api/complaints'
 import { useToast } from '@shared/components/Toast'
 import OfflineBanner from '@shared/components/OfflineBanner'
 import { relativeTime, absoluteDate } from '@shared/utils/relativeTime'
+import Pagination from '../../components/Pagination'
+import TabFilter from '../../components/TabFilter'
 
 const STATUS_COLORS = {
   pending:  'bg-yellow-100 text-yellow-700',
@@ -25,6 +27,13 @@ const TYPE_LABELS = {
   other:       'Other',
 }
 
+const TABS = [
+  { value: '', label: 'All' },
+  { value: 'pending', label: 'New' },
+  { value: 'approved', label: 'Acknowledged' },
+  { value: 'rejected', label: 'Dismissed' },
+]
+
 function RelativeTime({ isoString }) {
   return (
     <span title={absoluteDate(isoString)} className="text-xs text-gray-400 whitespace-nowrap">
@@ -42,13 +51,6 @@ function RowSkeleton() {
     </tr>
   )
 }
-
-const TABS = [
-  { value: '', label: 'All' },
-  { value: 'pending', label: 'New' },
-  { value: 'approved', label: 'Acknowledged' },
-  { value: 'rejected', label: 'Dismissed' },
-]
 
 export default function OwnerComplaintsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -69,7 +71,7 @@ export default function OwnerComplaintsPage() {
     setError('')
     try {
       const res = await getComplaints({
-        status:      statusFilter || undefined,
+        status:       statusFilter || undefined,
         verifiedOnly: verifiedOnly ? 'true' : undefined,
         page,
         limit: 15,
@@ -109,13 +111,11 @@ export default function OwnerComplaintsPage() {
   async function handleAction(id, status) {
     const prev = complaints
     setActing(id + status)
-    // Optimistic update
     setComplaints(list => list.map(c => c._id === id ? { ...c, status } : c))
     try {
       await updateComplaintStatus(id, { status })
       toast(status === 'approved' ? 'Complaint acknowledged' : 'Complaint dismissed', 'success')
     } catch (err) {
-      // Roll back on failure
       setComplaints(prev)
       toast(err.response?.data?.message || 'Action failed — please try again', 'error')
     } finally {
@@ -134,25 +134,17 @@ export default function OwnerComplaintsPage() {
 
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Complaints</h1>
-        <p className="text-gray-500 text-sm mt-1">Complaints about your PG. Acknowledge resolved ones or dismiss invalid ones.</p>
+        <p className="text-gray-500 text-sm mt-0.5">Acknowledge resolved ones or dismiss invalid ones.</p>
       </div>
 
-      <div className="flex items-center gap-2 mb-5 flex-wrap">
-        {TABS.map(tab => (
-          <button
-            key={tab.value}
-            onClick={() => updateParams({ status: tab.value })}
-            className={`px-3 py-1.5 rounded-[10px] text-sm font-medium transition-colors ${
-              statusFilter === tab.value
-                ? 'bg-[#222121] text-white'
-                : 'bg-white border border-[#e0e0e0] text-[#6c757d] hover:border-[#027fff]'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="flex items-center gap-3 mb-5 flex-wrap">
+        <TabFilter
+          tabs={TABS}
+          value={statusFilter}
+          onChange={s => updateParams({ status: s })}
+        />
 
-        <label className="flex items-center gap-2 ml-2 cursor-pointer select-none">
+        <label className="flex items-center gap-2 ml-1 cursor-pointer select-none">
           <input
             type="checkbox"
             checked={verifiedOnly}
@@ -163,9 +155,7 @@ export default function OwnerComplaintsPage() {
         </label>
 
         {pagination.totalItems !== undefined && (
-          <span className="ml-auto text-sm text-gray-400">
-            {pagination.totalItems} total
-          </span>
+          <span className="ml-auto text-sm text-gray-400">{pagination.totalItems} total</span>
         )}
       </div>
 
@@ -220,10 +210,10 @@ export default function OwnerComplaintsPage() {
                     <td className="px-4 py-3">
                       <div className="flex gap-1 flex-wrap">
                         {c.isVerifiedResident && (
-                          <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">Verified</span>
+                          <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">Verified</span>
                         )}
                         {c.isAnonymous && (
-                          <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">Anon</span>
+                          <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">Anon</span>
                         )}
                       </div>
                     </td>
@@ -263,25 +253,7 @@ export default function OwnerComplaintsPage() {
         </div>
       </div>
 
-      {pagination.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-          <button
-            onClick={() => setPage(Math.max(1, page - 1))}
-            disabled={page === 1}
-            className="px-4 py-2 border border-[#e0e0e0] rounded-[10px] disabled:opacity-40 hover:bg-gray-50 transition-colors"
-          >
-            ← Prev
-          </button>
-          <span>Page {page} of {pagination.totalPages}</span>
-          <button
-            onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
-            disabled={page === pagination.totalPages}
-            className="px-4 py-2 border border-[#e0e0e0] rounded-[10px] disabled:opacity-40 hover:bg-gray-50 transition-colors"
-          >
-            Next →
-          </button>
-        </div>
-      )}
+      <Pagination page={page} totalPages={pagination.totalPages} onPageChange={setPage} />
     </div>
   )
 }

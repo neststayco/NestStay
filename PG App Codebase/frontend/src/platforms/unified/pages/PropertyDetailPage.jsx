@@ -191,7 +191,7 @@ export default function PropertyDetailPage() {
   if (error) return <ErrorState error={error} onBack={() => navigate(-1)} />
 
   const { pg, trust, remainingCapacity } = data
-  const images = pg.images?.length > 0 ? pg.images : []
+  const images = pg.images?.length > 0 ? pg.images.map(img => img?.url || img) : []
   const locationStr = [pg.location?.area, pg.location?.city, pg.location?.state].filter(Boolean).join(', ')
   const whatsappMsg = encodeURIComponent(
     `Hi! I'm interested in ${pg.name}${pg.location?.area ? ` in ${pg.location.area}` : ''}. Can you share more details? (via NestStay)`

@@ -4,6 +4,8 @@ import { getOwnerTestimonials, updateTestimonial } from '@shared/api/testimonial
 import { useToast } from '@shared/components/Toast'
 import OfflineBanner from '@shared/components/OfflineBanner'
 import { relativeTime, absoluteDate } from '@shared/utils/relativeTime'
+import Pagination from '../../components/Pagination'
+import TabFilter from '../../components/TabFilter'
 
 const STATUS_STYLES = {
   pending:  'bg-yellow-100 text-yellow-700 border-yellow-200',
@@ -11,7 +13,12 @@ const STATUS_STYLES = {
   rejected: 'bg-red-100 text-red-700 border-red-200',
 }
 
-const TABS = ['', 'pending', 'approved', 'rejected']
+const TABS = [
+  { value: '', label: 'All' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' },
+]
 
 function StarRating({ rating }) {
   return (
@@ -115,11 +122,9 @@ export default function OwnerTestimonialsPage() {
   const pendingCount = testimonials.filter(t => t.status === 'pending').length
 
   const showingFrom = pagination.totalItems
-    ? ((pagination.currentPage - 1) * (pagination.limit || 15)) + 1
-    : 0
+    ? ((pagination.currentPage - 1) * (pagination.limit || 15)) + 1 : 0
   const showingTo = pagination.totalItems
-    ? Math.min(pagination.currentPage * (pagination.limit || 15), pagination.totalItems)
-    : 0
+    ? Math.min(pagination.currentPage * (pagination.limit || 15), pagination.totalItems) : 0
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -127,41 +132,27 @@ export default function OwnerTestimonialsPage() {
 
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Testimonials</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Reviews from your verified residents. Approve and make visible ones you want shown publicly.
+        <p className="text-gray-500 text-sm mt-0.5">
+          Reviews from your verified residents. Approve ones you want shown publicly.
         </p>
       </div>
 
-      <div className="flex items-center gap-3 mb-5 flex-wrap">
-        {TABS.map(s => (
-          <button
-            key={s}
-            onClick={() => updateParams({ status: s })}
-            className={`px-3 py-1.5 rounded-[10px] text-sm font-medium transition-colors ${
-              statusFilter === s
-                ? 'bg-[#222121] text-white'
-                : 'bg-white border border-[#e0e0e0] text-[#6c757d] hover:border-[#027fff]'
-            }`}
-          >
-            {s === '' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
-            {s === 'pending' && pendingCount > 0 && (
-              <span className="ml-1.5 bg-yellow-400 text-black text-xs font-bold px-1.5 py-0.5 rounded-full">
-                {pendingCount}
-              </span>
-            )}
-          </button>
-        ))}
+      <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
+        <TabFilter
+          tabs={TABS}
+          value={statusFilter}
+          onChange={s => updateParams({ status: s })}
+          badge={{ tabValue: 'pending', count: pendingCount }}
+        />
         {pagination.totalItems !== undefined && (
-          <span className="ml-auto text-sm text-gray-400">{pagination.totalItems} total</span>
+          <span className="text-sm text-gray-400">{pagination.totalItems} total</span>
         )}
       </div>
 
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-[10px] text-sm text-red-700 flex items-center justify-between gap-3">
           <span>{error}</span>
-          <button onClick={fetchTestimonials} className="text-sm font-medium underline shrink-0">
-            Retry
-          </button>
+          <button onClick={fetchTestimonials} className="text-sm font-medium underline shrink-0">Retry</button>
         </div>
       )}
 
@@ -174,14 +165,14 @@ export default function OwnerTestimonialsPage() {
       <div className="bg-white rounded-[20px] border border-[#e0e0e0] shadow-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
+            <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Resident</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Rating</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Testimonial</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Visible</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Resident</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Rating</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Testimonial</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Visible</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Date</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -194,9 +185,7 @@ export default function OwnerTestimonialsPage() {
                     <td colSpan={7} className="px-4 py-12 text-center">
                       <p className="text-gray-400 text-sm font-medium">No testimonials found</p>
                       <p className="text-gray-300 text-xs mt-1">
-                        {statusFilter
-                          ? 'Try a different filter'
-                          : 'No testimonials submitted by your residents yet'}
+                        {statusFilter ? 'Try a different filter' : 'No testimonials submitted by your residents yet'}
                       </p>
                     </td>
                   </tr>
@@ -237,10 +226,7 @@ export default function OwnerTestimonialsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3.5">
-                      <span
-                        title={absoluteDate(t.createdAt)}
-                        className="text-xs text-gray-400 whitespace-nowrap"
-                      >
+                      <span title={absoluteDate(t.createdAt)} className="text-xs text-gray-400 whitespace-nowrap">
                         {relativeTime(t.createdAt)}
                       </span>
                     </td>
@@ -272,25 +258,7 @@ export default function OwnerTestimonialsPage() {
         </div>
       </div>
 
-      {pagination.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-          <button
-            onClick={() => setPage(Math.max(1, page - 1))}
-            disabled={page === 1}
-            className="px-4 py-2 border border-[#e0e0e0] rounded-[10px] disabled:opacity-40 hover:bg-gray-50 transition-colors"
-          >
-            ← Prev
-          </button>
-          <span>Page {page} of {pagination.totalPages}</span>
-          <button
-            onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
-            disabled={page === pagination.totalPages}
-            className="px-4 py-2 border border-[#e0e0e0] rounded-[10px] disabled:opacity-40 hover:bg-gray-50 transition-colors"
-          >
-            Next →
-          </button>
-        </div>
-      )}
+      <Pagination page={page} totalPages={pagination.totalPages} onPageChange={setPage} />
     </div>
   )
 }

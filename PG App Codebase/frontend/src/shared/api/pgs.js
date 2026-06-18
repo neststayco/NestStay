@@ -13,12 +13,22 @@ export async function getPGDetails(id) {
   return data // { success, pg, trust, userContext }
 }
 
-export async function createPG(body) {
-  const { data } = await client.post('/pgs', body)
+export async function createPG(textPayload, files) {
+  const formData = new FormData()
+  formData.append('data', JSON.stringify(textPayload))
+  files.forEach((f) => formData.append('images', f))
+  const { data } = await client.post('/pgs', formData)
   return data
 }
 
-export async function updatePG(id, body) {
+export async function updatePG(id, body, files = []) {
+  if (files.length > 0) {
+    const formData = new FormData()
+    formData.append('data', JSON.stringify(body))
+    files.forEach((f) => formData.append('images', f))
+    const { data } = await client.patch(`/pgs/${id}`, formData)
+    return data
+  }
   const { data } = await client.patch(`/pgs/${id}`, body)
   return data
 }

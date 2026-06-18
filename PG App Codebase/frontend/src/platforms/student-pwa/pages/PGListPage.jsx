@@ -4,6 +4,10 @@ import Navbar from '../components/Navbar'
 import PGCard from '@shared/components/PGCard'
 import OfflineBanner from '@shared/components/OfflineBanner'
 import { getPGList } from '@shared/api/pgs'
+import { getMyAdmission, withdrawAdmission } from '@shared/api/admissions'
+import { useAuth } from '@shared/context/AuthContext'
+import { useToast } from '@shared/components/Toast'
+import { normalizeAdmission } from '@shared/utils/normalizeAdmission'
 
 const SORT_OPTIONS = [
   { value: '', label: 'Newest first' },
@@ -43,6 +47,11 @@ function Skeleton() {
 }
 
 export default function PGListPage() {
+  const { currentAdmission, setCurrentAdmission } = useAuth()
+  const toast = useToast()
+  const [withdrawing, setWithdrawing] = useState(false)
+  const [checking, setChecking] = useState(false)
+
   const [searchParams, setSearchParams] = useSearchParams()
 
   const [localSearch, setLocalSearch] = useState(searchParams.get('search') || '')
@@ -135,6 +144,56 @@ export default function PGListPage() {
       <Navbar />
 
       <main className="max-w-6xl mx-auto px-4 py-6">
+        {currentAdmission?.status === 'pending' && (
+          <div className="bg-amber-50 border border-amber-200 rounded-[16px] px-4 py-3.5 mb-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-amber-800">Application pending</p>
+              <p className="text-xs text-amber-600 mt-0.5">
+                Your admission request is awaiting owner review. You cannot apply to another PG until this is resolved.
+              </p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <button
+                onClick={async () => {
+                  setChecking(true)
+                  try {
+                    const res = await getMyAdmission()
+                    setCurrentAdmission(normalizeAdmission(res.data))
+                    if (res.data?.status === 'admitted') toast('You have been admitted!', 'success')
+                    else if (!res.data || res.data.status === 'rejected') toast('Application was not approved.', 'info')
+                    else toast('Still pending — check back later.', 'info')
+                  } catch { /* ignore */ } finally {
+                    setChecking(false)
+                  }
+                }}
+                disabled={checking}
+                className="text-xs font-semibold px-3 py-1.5 bg-white hover:bg-amber-50 text-amber-800 border border-amber-200 rounded-lg disabled:opacity-50"
+              >
+                {checking ? 'Checking…' : 'Check Status'}
+              </button>
+              <button
+                onClick={async () => {
+                  if (!window.confirm('Withdraw your pending application?')) return
+                  setWithdrawing(true)
+                  try {
+                    await withdrawAdmission(currentAdmission._id)
+                    setCurrentAdmission(null)
+                    toast('Application withdrawn', 'success')
+                  } catch (err) {
+                    toast(err.response?.data?.message || 'Failed to withdraw', 'error')
+                  } finally {
+                    setWithdrawing(false)
+                  }
+                }}
+                disabled={withdrawing}
+                className="text-xs font-semibold px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg disabled:opacity-50"
+              >
+                {withdrawing ? 'Withdrawing…' : 'Withdraw'}
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="mb-5">
           <h1 className="text-2xl font-bold text-gray-900">Find a PG</h1>
           <p className="text-gray-500 text-sm mt-0.5">

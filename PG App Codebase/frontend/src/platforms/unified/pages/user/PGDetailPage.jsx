@@ -168,7 +168,7 @@ export default function PGDetailPage() {
   }
 
   const { pg, trust, userContext, remainingCapacity } = data
-  const images = pg.images?.length > 0 ? pg.images : [PLACEHOLDER]
+  const images = pg.images?.length > 0 ? pg.images.map(img => img?.url || img) : [PLACEHOLDER]
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -25,7 +25,7 @@ function MapPinIcon() {
 }
 
 export default function PGCard({ pg, basePath = '/pgs' }) {
-  const image = pg.images?.[0] || PLACEHOLDER
+  const image = pg.images?.[0]?.url || PLACEHOLDER
   const city = pg.location?.city || '—'
   const area = pg.location?.area || ''
   const rent = pg.pricing?.rent

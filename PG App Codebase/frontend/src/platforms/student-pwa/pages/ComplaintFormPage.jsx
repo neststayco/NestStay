@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { createComplaint } from '@shared/api/complaints'
 import { getPGDetails } from '@shared/api/pgs'
+import { useAuth } from '@shared/context/AuthContext'
 import ImageUploadField from '@shared/components/ImageUploadField'
 
 const COMPLAINT_TYPES = [
@@ -14,7 +15,7 @@ const COMPLAINT_TYPES = [
   { value: 'other', label: 'Other' },
 ]
 
-function SuccessState({ pgId, pgName }) {
+function SuccessState({ pgName, backPath }) {
   return (
     <div className="text-center py-12 px-4">
       <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
@@ -24,11 +25,11 @@ function SuccessState({ pgId, pgName }) {
       </div>
       <h2 className="text-xl font-bold text-gray-900 mb-2">Complaint submitted</h2>
       <p className="text-gray-500 text-sm mb-6 max-w-xs mx-auto">
-        Your complaint has been submitted and is now visible on the PG's profile.
+        Your complaint has been submitted and is now visible on the PG&apos;s profile.
       </p>
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <Link
-          to={`/pgs/${pgId}`}
+          to={backPath}
           className="bg-brand hover:bg-brand-light text-black text-sm font-semibold px-5 py-2.5 rounded-[10px] transition-colors"
         >
           Back to {pgName || 'PG'}
@@ -47,6 +48,11 @@ function SuccessState({ pgId, pgName }) {
 export default function ComplaintFormPage() {
   const { id: pgId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const { isAdmitted, admissionLoaded, currentAdmission } = useAuth()
+
+  const backPath = location.state?.from || `/pgs/${pgId}`
+  const isResidentOfThisPG = isAdmitted && currentAdmission?.pgId === pgId
 
   const [pgName, setPgName] = useState('')
   const [type, setType] = useState('')
@@ -91,7 +97,7 @@ export default function ComplaintFormPage() {
 
       <main className="max-w-xl mx-auto px-4 py-6">
         <Link
-          to={`/pgs/${pgId}`}
+          to={backPath}
           className="text-sm text-action hover:underline inline-flex items-center gap-1 mb-5"
         >
           &larr; Back to PG
@@ -107,8 +113,28 @@ export default function ComplaintFormPage() {
             )}
           </div>
 
-          {submitted ? (
-            <SuccessState pgId={pgId} pgName={pgName} />
+          {!admissionLoaded ? (
+            <div className="p-6 text-center text-sm text-gray-400">Checking residency…</div>
+          ) : !isResidentOfThisPG ? (
+            <div className="p-6 text-center py-10">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-yellow-100 mb-4">
+                <svg className="w-7 h-7 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+              </div>
+              <h2 className="text-base font-semibold text-gray-900 mb-2">Verified residents only</h2>
+              <p className="text-sm text-gray-500 max-w-xs mx-auto mb-5">
+                Only current residents of this PG with an approved admission can submit complaints.
+              </p>
+              <Link
+                to={backPath}
+                className="border border-[#e0e0e0] text-gray-700 hover:bg-gray-50 text-sm font-medium px-5 py-2.5 rounded-[10px] transition-colors"
+              >
+                Back to PG
+              </Link>
+            </div>
+          ) : submitted ? (
+            <SuccessState pgName={pgName} backPath={backPath} />
           ) : (
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
               {error && (
@@ -188,7 +214,7 @@ export default function ComplaintFormPage() {
               <div className="flex gap-3 pt-1">
                 <button
                   type="button"
-                  onClick={() => navigate(`/pgs/${pgId}`)}
+                  onClick={() => navigate(backPath)}
                   className="flex-1 border border-[#e0e0e0] text-gray-700 hover:bg-gray-50 text-sm font-medium py-2.5 rounded-[10px] transition-colors"
                 >
                   Cancel

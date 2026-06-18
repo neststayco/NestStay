@@ -21,7 +21,7 @@ function Skeleton() {
 }
 
 const inputCls =
-  'w-full border border-[#e0e0e0] rounded-[10px] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action focus:border-action bg-gray-50 h-[42px]'
+  'w-full border border-[#e0e0e0] rounded-[10px] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action focus:border-action bg-white h-[42px]'
 
 export default function OwnerLocationPage() {
   const { user } = useAuth()
@@ -79,7 +79,7 @@ export default function OwnerLocationPage() {
   if (!pgId && !loading) {
     return (
       <div className="p-6">
-        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-[10px] px-4 py-3">
           No PG is linked to your account yet. Contact an admin to link a PG.
         </p>
       </div>
@@ -130,7 +130,7 @@ export default function OwnerLocationPage() {
             className="bg-white border border-[#e0e0e0] rounded-[20px] shadow-card p-6 space-y-5"
           >
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-[10px] text-sm">
                 {error}
               </div>
             )}

@@ -11,6 +11,7 @@ import {
   updateMyPGDetails,
 } from "../controllers/pg.controller.js";
 import { protect, allowRoles, optionalAuth } from "../middleware/auth.middleware.js";
+import { uploadImages } from "../middleware/upload.middleware.js";
 
 const router = express.Router();
 
@@ -25,8 +26,8 @@ router.patch("/my/capacity", protect, allowRoles("pg_owner"), updateMyPGCapacity
 router.patch("/my/details", protect, allowRoles("pg_owner"), updateMyPGDetails);
 
 // Admin routes
-router.post("/", protect, allowRoles("admin"), createPG);
-router.patch("/:id", protect, allowRoles("admin"), updatePG);
+router.post("/", protect, allowRoles("admin"), uploadImages, createPG);
+router.patch("/:id", protect, allowRoles("admin"), uploadImages, updatePG);
 router.delete("/:id", protect, allowRoles("admin"), deletePG);
 
 export default router;

@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar'
 import { getPGDetails } from '@shared/api/pgs'
 import { createAdmissionRequest } from '@shared/api/admissions'
 import { useAuth } from '@shared/context/AuthContext'
+import { normalizeAdmission } from '@shared/utils/normalizeAdmission'
 import { useToast } from '@shared/components/Toast'
 
 export default function AdmissionFormPage() {
@@ -29,7 +30,7 @@ export default function AdmissionFormPage() {
     setLoading(true)
     try {
       const res = await createAdmissionRequest({ pgId: id, moveInNote })
-      setCurrentAdmission(res.data)
+      setCurrentAdmission(normalizeAdmission(res.data))
       setSubmitted(true)
     } catch (err) {
       toast(err.response?.data?.message || 'Failed to submit request. Please try again.', 'error')

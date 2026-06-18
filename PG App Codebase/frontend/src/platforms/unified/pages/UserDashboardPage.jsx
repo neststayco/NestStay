@@ -4,8 +4,9 @@ import UserNavbar from '../components/UserNavbar'
 import PGCard from '@shared/components/PGCard'
 import OfflineBanner from '@shared/components/OfflineBanner'
 import { getPGList } from '@shared/api/pgs'
-import { withdrawAdmission } from '@shared/api/admissions'
+import { withdrawAdmission, getMyAdmission } from '@shared/api/admissions'
 import { useAuth } from '@shared/context/AuthContext'
+import { normalizeAdmission } from '@shared/utils/normalizeAdmission'
 import { useToast } from '@shared/components/Toast'
 
 const SORT_OPTIONS = [
@@ -49,6 +50,7 @@ export default function UserDashboardPage() {
   const { isAdmitted, admissionLoaded, currentAdmission, setCurrentAdmission } = useAuth()
   const toast = useToast()
   const [withdrawing, setWithdrawing] = useState(false)
+  const [checking, setChecking] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
 
   const [localSearch, setLocalSearch] = useState(searchParams.get('search') || '')
@@ -77,6 +79,13 @@ export default function UserDashboardPage() {
   const [pagination, setPagination] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // Re-sync admission status on every dashboard visit (catches owner rejection)
+  useEffect(() => {
+    getMyAdmission()
+      .then(res => setCurrentAdmission(normalizeAdmission(res.data)))
+      .catch(() => setCurrentAdmission(null))
+  }, [])
 
   // Fetch whenever URL params change
   useEffect(() => {
@@ -163,25 +172,45 @@ export default function UserDashboardPage() {
                 Your admission request is awaiting owner review. You cannot apply to another PG until this is resolved.
               </p>
             </div>
-            <button
-              onClick={async () => {
-                if (!window.confirm('Withdraw your pending application?')) return
-                setWithdrawing(true)
-                try {
-                  await withdrawAdmission(currentAdmission._id)
-                  setCurrentAdmission(null)
-                  toast('Application withdrawn', 'success')
-                } catch (err) {
-                  toast(err.response?.data?.message || 'Failed to withdraw', 'error')
-                } finally {
-                  setWithdrawing(false)
-                }
-              }}
-              disabled={withdrawing}
-              className="shrink-0 text-xs font-semibold px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg disabled:opacity-50"
-            >
-              {withdrawing ? 'Withdrawing…' : 'Withdraw'}
-            </button>
+            <div className="flex gap-2 shrink-0">
+              <button
+                onClick={async () => {
+                  setChecking(true)
+                  try {
+                    const res = await getMyAdmission()
+                    setCurrentAdmission(normalizeAdmission(res.data))
+                    if (res.data?.status === 'admitted') toast('You have been admitted!', 'success')
+                    else if (!res.data || res.data.status === 'rejected') toast('Application was not approved.', 'info')
+                    else toast('Still pending — check back later.', 'info')
+                  } catch { /* ignore */ } finally {
+                    setChecking(false)
+                  }
+                }}
+                disabled={checking}
+                className="text-xs font-semibold px-3 py-1.5 bg-white hover:bg-amber-50 text-amber-800 border border-amber-200 rounded-lg disabled:opacity-50"
+              >
+                {checking ? 'Checking…' : 'Check Status'}
+              </button>
+              <button
+                onClick={async () => {
+                  if (!window.confirm('Withdraw your pending application?')) return
+                  setWithdrawing(true)
+                  try {
+                    await withdrawAdmission(currentAdmission._id)
+                    setCurrentAdmission(null)
+                    toast('Application withdrawn', 'success')
+                  } catch (err) {
+                    toast(err.response?.data?.message || 'Failed to withdraw', 'error')
+                  } finally {
+                    setWithdrawing(false)
+                  }
+                }}
+                disabled={withdrawing}
+                className="text-xs font-semibold px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg disabled:opacity-50"
+              >
+                {withdrawing ? 'Withdrawing…' : 'Withdraw'}
+              </button>
+            </div>
           </div>
         )}
 

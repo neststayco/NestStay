@@ -1,6 +1,5 @@
 import Testimonial from "../models/Testimonial.js";
 import PG from "../models/pg.js";
-import PGResidency from "../models/pgResidency.js";
 import mongoose from "mongoose";
 import Logger from "../services/logger.service.js";
 
@@ -26,20 +25,6 @@ export const createTestimonial = async (req, res) => {
       return res.status(404).json({ success: false, message: "PG not found" });
     }
 
-    // Only admitted (verified) residents can post
-    const residency = await PGResidency.findOne({
-      userId: req.user.id,
-      pgId,
-      status: "admitted",
-    }).lean();
-
-    if (!residency) {
-      return res.status(403).json({
-        success: false,
-        message: "Only verified residents of this PG can post a testimonial",
-      });
-    }
-
     // One testimonial per user per PG (enforced by unique index too)
     const existing = await Testimonial.findOne({ pgId, createdBy: req.user.id }).lean();
     if (existing) {
@@ -60,8 +45,13 @@ export const createTestimonial = async (req, res) => {
       isVerifiedResident: true,
     });
 
+    const populatedTestimonial = await Testimonial.findById(testimonial._id)
+      .populate("pgId", "name location images slug")
+      .populate("createdBy", "name")
+      .lean();
+
     Logger.event("testimonial.created", { testimonialId: testimonial._id, pgId });
-    return res.status(201).json({ success: true, message: "Testimonial submitted for owner review", data: testimonial });
+    return res.status(201).json({ success: true, message: "Testimonial submitted for owner review", data: populatedTestimonial });
   } catch (error) {
     if (error.code === 11000) {
       return res.status(409).json({ success: false, message: "You have already submitted a testimonial for this PG" });

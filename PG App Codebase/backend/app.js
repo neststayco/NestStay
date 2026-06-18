@@ -60,7 +60,7 @@ app.use(requestLogger);
 // General rate limit on all /api routes (auth routes have stricter per-route limits on top)
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: process.env.NODE_ENV === "production" ? 100 : 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: "Too many requests, please try again later." },

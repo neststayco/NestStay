@@ -9,6 +9,7 @@ import {
   getAdminTestimonials,
 } from "../controllers/testimonial.controller.js";
 import { protect, allowRoles } from "../middleware/auth.middleware.js";
+import { ensureVerifiedResident } from "../middleware/ensureVerifiedResident.middleware.js";
 
 const router = express.Router();
 
@@ -17,7 +18,7 @@ router.get("/featured", getFeaturedTestimonials);
 router.get("/", getPublicTestimonials);
 
 // Authenticated user
-router.post("/", protect, allowRoles("user"), createTestimonial);
+router.post("/", protect, allowRoles("user"), ensureVerifiedResident, createTestimonial);
 router.get("/mine", protect, allowRoles("user"), getMyTestimonials);
 
 // PG owner

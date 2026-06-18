@@ -1,12 +1,21 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getPGAdmissions, decideAdmission, revokeAdmission } from '@shared/api/admissions'
 import { useToast } from '@shared/components/Toast'
+import Pagination from '../../components/Pagination'
+import TabFilter from '../../components/TabFilter'
 
 const STATUS_COLORS = {
   pending:  'bg-yellow-100 text-yellow-700',
   admitted: 'bg-green-100 text-green-700',
   rejected: 'bg-red-100 text-red-700',
 }
+
+const TABS = [
+  { value: '', label: 'All' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'admitted', label: 'Admitted' },
+  { value: 'rejected', label: 'Rejected' },
+]
 
 function RowSkeleton() {
   return (
@@ -21,7 +30,7 @@ function RowSkeleton() {
 function ConfirmRevokeDialog({ guest, onCancel, onConfirm, loading }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center">
+      <div className="bg-white rounded-[20px] shadow-card p-6 w-full max-w-sm text-center">
         <h3 className="font-bold text-gray-900 mb-2">Revoke Admission?</h3>
         <p className="text-sm text-gray-500 mb-5">
           <strong>{guest?.userId?.name}</strong> will lose resident status and will no longer be able to submit complaints.
@@ -45,8 +54,6 @@ function ConfirmRevokeDialog({ guest, onCancel, onConfirm, loading }) {
     </div>
   )
 }
-
-const TABS = ['', 'pending', 'admitted', 'rejected']
 
 export default function OwnerAdmissionsPage() {
   const [admissions, setAdmissions] = useState([])
@@ -110,23 +117,17 @@ export default function OwnerAdmissionsPage() {
     <div className="p-6 max-w-6xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Admissions</h1>
-        <p className="text-gray-500 text-sm mt-1">Review admission requests from guests for your PG</p>
+        <p className="text-gray-500 text-sm mt-0.5">Review admission requests from guests for your PG</p>
       </div>
 
-      <div className="flex items-center gap-3 mb-5 flex-wrap">
-        {TABS.map(s => (
-          <button
-            key={s}
-            onClick={() => { setStatusFilter(s); setPage(1) }}
-            className={`px-3 py-1.5 rounded-[10px] text-sm font-medium transition-colors ${
-              statusFilter === s ? 'bg-[#222121] text-white' : 'bg-white border border-[#e0e0e0] text-[#6c757d] hover:border-[#027fff]'
-            }`}
-          >
-            {s === '' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
-          </button>
-        ))}
+      <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
+        <TabFilter
+          tabs={TABS}
+          value={statusFilter}
+          onChange={s => { setStatusFilter(s); setPage(1) }}
+        />
         {pagination.totalItems !== undefined && (
-          <span className="ml-auto text-sm text-gray-400">{pagination.totalItems} total</span>
+          <span className="text-sm text-gray-400">{pagination.totalItems} total</span>
         )}
       </div>
 
@@ -163,7 +164,7 @@ export default function OwnerAdmissionsPage() {
                       {adm.userId?.name || '—'}
                       {adm.escalatedAt && adm.status === 'pending' && (
                         <span
-                          className="ml-2 text-xs bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded"
+                          className="ml-2 text-xs bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full"
                           title="Our team has been notified and will review this."
                         >
                           Escalated
@@ -218,25 +219,7 @@ export default function OwnerAdmissionsPage() {
         </table>
       </div>
 
-      {pagination.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-          <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-4 py-2 border border-[#e0e0e0] rounded-[10px] disabled:opacity-40 hover:bg-gray-50"
-          >
-            &larr; Prev
-          </button>
-          <span>Page {page} of {pagination.totalPages}</span>
-          <button
-            onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
-            disabled={page === pagination.totalPages}
-            className="px-4 py-2 border border-[#e0e0e0] rounded-[10px] disabled:opacity-40 hover:bg-gray-50"
-          >
-            Next &rarr;
-          </button>
-        </div>
-      )}
+      <Pagination page={page} totalPages={pagination.totalPages} onPageChange={setPage} />
 
       {revokeTarget && (
         <ConfirmRevokeDialog

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { getMyAdmission } from '../api/admissions'
+import { normalizeAdmission } from '../utils/normalizeAdmission'
 
 const AuthContext = createContext(null)
 
@@ -24,7 +25,7 @@ export function AuthProvider({ children }) {
       return
     }
     getMyAdmission()
-      .then(res => setCurrentAdmission(res.data))
+      .then(res => setCurrentAdmission(normalizeAdmission(res.data)))
       .catch(() => setCurrentAdmission(null))
       .finally(() => setAdmissionLoaded(true))
   }, [token, user?.role])

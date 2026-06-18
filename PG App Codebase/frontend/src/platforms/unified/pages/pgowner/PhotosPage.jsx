@@ -48,7 +48,7 @@ export default function OwnerPhotosPage() {
 
   function onUploadSuccess(res) {
     setUploading(false)
-    setImages(prev => [...prev, res.url])
+    setImages(prev => [...prev, { url: res.url, fileId: res.fileId }])
     toast('Photo uploaded', 'success')
   }
 
@@ -57,8 +57,8 @@ export default function OwnerPhotosPage() {
     toast(err?.message || 'Upload failed', 'error')
   }
 
-  function removeImage(url) {
-    setImages(prev => prev.filter(u => u !== url))
+  function removeImage(fileId, url) {
+    setImages(prev => prev.filter(img => (img.fileId || img.url) !== (fileId || url)))
   }
 
   function moveImage(index, direction) {
@@ -86,7 +86,7 @@ export default function OwnerPhotosPage() {
   if (!pgId && !loading) {
     return (
       <div className="p-6">
-        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-[10px] px-4 py-3">
           No PG is linked to your account yet.
         </p>
       </div>
@@ -110,7 +110,7 @@ export default function OwnerPhotosPage() {
       </div>
 
       {!PUBLIC_KEY || !URL_ENDPOINT ? (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm mb-6">
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-[10px] text-sm mb-6">
           ImageKit credentials not configured. Add <code className="font-mono bg-amber-100 px-1 rounded">VITE_IMAGEKIT_PUBLIC_KEY</code> and <code className="font-mono bg-amber-100 px-1 rounded">VITE_IMAGEKIT_URL_ENDPOINT</code> to <code className="font-mono bg-amber-100 px-1 rounded">frontend/.env</code> to enable uploads.
         </div>
       ) : (
@@ -152,15 +152,15 @@ export default function OwnerPhotosPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          {images.map((url, i) => (
-            <div key={url} className="relative group rounded-[10px] overflow-hidden border border-[#e0e0e0] aspect-video bg-gray-100">
+          {images.map((img, i) => (
+            <div key={img.fileId || img.url || i} className="relative group rounded-[10px] overflow-hidden border border-[#e0e0e0] aspect-video bg-gray-100">
               {i === 0 && (
                 <span className="absolute top-2 left-2 z-10 text-xs bg-brand text-black font-semibold px-2 py-0.5 rounded-full">
                   Cover
                 </span>
               )}
               <img
-                src={url}
+                src={img.url}
                 alt={`Photo ${i + 1}`}
                 className="w-full h-full object-cover"
                 onError={(e) => { e.target.src = PLACEHOLDER }}
@@ -170,16 +170,16 @@ export default function OwnerPhotosPage() {
                   onClick={() => moveImage(i, -1)}
                   disabled={i === 0}
                   title="Move left"
-                  className="p-1.5 bg-white/90 rounded-lg disabled:opacity-30 hover:bg-white transition-colors"
+                  className="p-1.5 bg-white/90 rounded-[10px] disabled:opacity-30 hover:bg-white transition-colors"
                 >
                   <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
                 <button
-                  onClick={() => removeImage(url)}
+                  onClick={() => removeImage(img.fileId, img.url)}
                   title="Remove"
-                  className="p-1.5 bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
+                  className="p-1.5 bg-red-500 rounded-[10px] hover:bg-red-600 transition-colors"
                 >
                   <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -189,7 +189,7 @@ export default function OwnerPhotosPage() {
                   onClick={() => moveImage(i, 1)}
                   disabled={i === images.length - 1}
                   title="Move right"
-                  className="p-1.5 bg-white/90 rounded-lg disabled:opacity-30 hover:bg-white transition-colors"
+                  className="p-1.5 bg-white/90 rounded-[10px] disabled:opacity-30 hover:bg-white transition-colors"
                 >
                   <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

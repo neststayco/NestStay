@@ -508,7 +508,7 @@ function FeaturedPGsSection() {
 
 function FeaturedPGCard({ pg }) {
   const [imgError, setImgError] = useState(false)
-  const image = (!imgError && pg.images?.[0]) ? pg.images[0] : null
+  const image = (!imgError && pg.images?.[0]) ? (pg.images[0]?.url || pg.images[0]) : null
   const area = pg.location?.area
   const city = pg.location?.city
   const location = [area, city].filter(Boolean).join(', ') || '—'

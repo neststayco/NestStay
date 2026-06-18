@@ -98,7 +98,7 @@ export default function MyPGPage() {
   const [formError, setFormError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const pgId = currentAdmission?.pgId?._id || currentAdmission?.pgId
+  const pgId = currentAdmission?.pgId
 
   useEffect(() => {
     if (!isAdmitted || !pgId) {
@@ -193,7 +193,7 @@ export default function MyPGPage() {
         {pg.images?.length > 0 && (
           <div className="h-48 rounded-xl overflow-hidden">
             <img
-              src={pg.images[0]}
+              src={pg.images[0]?.url || pg.images[0]}
               alt={pg.name}
               className="w-full h-full object-cover"
               onError={(e) => { e.target.src = 'https://placehold.co/800x400/e2e8f0/94a3b8?text=No+Image' }}
@@ -228,6 +228,7 @@ export default function MyPGPage() {
           </div>
           <Link
             to={`/user/pgs/${pgId}/complaint`}
+            state={{ from: '/user/my-pg' }}
             className="bg-brand hover:bg-brand-light text-black text-sm font-semibold px-4 py-2 rounded-[10px] transition-colors"
           >
             Raise a Complaint
@@ -270,7 +271,7 @@ export default function MyPGPage() {
           </div>
 
           {/* Submission form — only shown when user has no review for this PG yet */}
-          {!myTestimonials.some(t => String(t.pgId) === String(pgId)) && (
+          {!myTestimonials.some(t => String(t.pgId?._id || t.pgId) === String(pgId)) && (
             <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
               <p className="text-sm font-medium text-gray-700 mb-3">Share your experience</p>
               <form onSubmit={handleSubmitTestimonial} className="space-y-3">

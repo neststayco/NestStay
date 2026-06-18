@@ -1,6 +1,5 @@
 import Complaint from "../models/Complaint.js";
 import PG from "../models/pg.js";
-import PGResidency from "../models/pgResidency.js";
 import Logger from "../services/logger.service.js";
 import mongoose from "mongoose";
 
@@ -40,21 +39,6 @@ export const createComplaint = async (req, res) => {
           message: "Please wait 15 minutes before submitting another complaint for this PG to prevent flooding.",
         });
       }
-    }
-
-    // Only verified residents (admitted status) may file complaints
-    const residency = await PGResidency.findOne({
-      userId: req.user.id,
-      pgId,
-      status: "admitted",
-    }).lean();
-
-    if (!residency) {
-      return res.status(403).json({
-        success: false,
-        error: "NOT_VERIFIED_RESIDENT",
-        message: "Only verified residents of this PG can submit complaints.",
-      });
     }
 
     const pgSnapshot = {

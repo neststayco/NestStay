@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getPGAdmissions, revokeAdmission, ownerAddResident } from '@shared/api/admissions'
 import { useToast } from '@shared/components/Toast'
+import Pagination from '../../components/Pagination'
 
 function RowSkeleton() {
   return (
@@ -37,7 +38,7 @@ function AddGuestModal({ onClose, onAdded }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+      <div className="bg-white rounded-[20px] shadow-card w-full max-w-sm">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h3 className="font-bold text-gray-900">Add Guest Directly</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 p-1">
@@ -51,12 +52,12 @@ function AddGuestModal({ onClose, onAdded }) {
             Enter the guest's registered email to admit them directly without needing a request.
           </p>
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-[10px] text-sm">
               {error}
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[#222121] mb-2">
               Guest email <span className="text-red-500">*</span>
             </label>
             <input
@@ -64,7 +65,7 @@ function AddGuestModal({ onClose, onAdded }) {
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="guest@example.com"
-              className="w-full border border-[#e0e0e0] rounded-[10px] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action"
+              className="w-full border border-[#e0e0e0] rounded-[10px] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action focus:border-action bg-white"
               autoFocus
             />
           </div>
@@ -138,7 +139,7 @@ export default function OwnerGuestsPage() {
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Current Guests</h1>
-          <p className="text-gray-500 text-sm mt-1">All currently admitted guests at your PG</p>
+          <p className="text-gray-500 text-sm mt-0.5">All currently admitted guests at your PG</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
@@ -186,7 +187,7 @@ export default function OwnerGuestsPage() {
                     {new Date(g.updatedAt).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                    <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${
                       g.processedBy?.role === 'admin'
                         ? 'bg-purple-100 text-purple-700'
                         : 'bg-action-50 text-action'
@@ -210,25 +211,7 @@ export default function OwnerGuestsPage() {
         </table>
       </div>
 
-      {pagination.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-          <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-4 py-2 border border-[#e0e0e0] rounded-[10px] disabled:opacity-40 hover:bg-gray-50"
-          >
-            &larr; Prev
-          </button>
-          <span>Page {page} of {pagination.totalPages}</span>
-          <button
-            onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
-            disabled={page === pagination.totalPages}
-            className="px-4 py-2 border border-[#e0e0e0] rounded-[10px] disabled:opacity-40 hover:bg-gray-50"
-          >
-            Next &rarr;
-          </button>
-        </div>
-      )}
+      <Pagination page={page} totalPages={pagination.totalPages} onPageChange={setPage} />
 
       {showAddModal && (
         <AddGuestModal

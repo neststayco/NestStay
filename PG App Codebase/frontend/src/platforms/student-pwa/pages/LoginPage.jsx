@@ -4,6 +4,7 @@ import { useAuth } from '@shared/context/AuthContext'
 import { login } from '@shared/api/auth'
 import { normalizeError } from '@shared/api/client'
 import { getMyAdmission } from '@shared/api/admissions'
+import { normalizeAdmission } from '@shared/utils/normalizeAdmission'
 import OfflineBanner from '@shared/components/OfflineBanner'
 import { useOnline } from '@shared/hooks/useOnline'
 
@@ -86,7 +87,7 @@ export default function LoginPage() {
       let isAdmitted = false
       try {
         const admRes = await getMyAdmission()
-        setCurrentAdmission(admRes.data)
+        setCurrentAdmission(normalizeAdmission(admRes.data))
         isAdmitted = admRes.data?.status === 'admitted'
       } catch { /* guest — no active admission */ }
 

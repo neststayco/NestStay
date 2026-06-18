@@ -3,13 +3,30 @@ import Complaint from "../models/Complaint.js";
 import PGResidency from "../models/pgResidency.js";
 import mongoose from "mongoose";
 import Logger from "../services/logger.service.js";
+import { uploadToImageKit, deleteFromImageKit } from "../utils/uploadToImageKit.js";
+import { calculateTrustScore } from "../utils/calculateTrustScore.js";
 
 export const createPG = async (req, res) => {
   try {
-    const { name, slug, description, location, pricing, accommodation, foodType, amenities, images, owner, isVerified } = req.body;
+    let payload;
+    try {
+      payload = JSON.parse(req.body.data || "{}");
+    } catch {
+      return res.status(400).json({ success: false, message: "Invalid form data" });
+    }
+
+    const { name, slug, description, location, pricing, accommodation, foodType, amenities, owner, isVerified } = payload;
 
     if (!name || !slug || !description) {
       return res.status(400).json({ success: false, message: "Name, slug, and description are required" });
+    }
+
+    const files = req.files || [];
+    if (files.length < 3) {
+      return res.status(400).json({ success: false, message: "Minimum 3 images required" });
+    }
+    if (files.length > 10) {
+      return res.status(400).json({ success: false, message: "Maximum 10 images allowed" });
     }
 
     const existingPG = await PG.findOne({ slug });
@@ -17,19 +34,13 @@ export const createPG = async (req, res) => {
       return res.status(400).json({ success: false, message: "A PG with this slug already exists" });
     }
 
+    const uploadedImages = await Promise.all(files.map((f) => uploadToImageKit(f)));
+
     const pg = await PG.create({
-      name,
-      slug,
-      description,
-      location,
-      pricing,
-      accommodation,
-      foodType,
-      amenities,
-      images,
-      owner,
-      isVerified,
-      createdBy: req.user.id
+      name, slug, description, location, pricing, accommodation, foodType, amenities,
+      images: uploadedImages,
+      owner, isVerified,
+      createdBy: req.user.id,
     });
 
     return res.status(201).json({ success: true, message: "PG created successfully", data: pg });
@@ -47,7 +58,48 @@ export const updatePG = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid PG ID" });
     }
 
-    const { name, slug, description, location, pricing, accommodation, foodType, amenities, images, owner, isVerified } = req.body;
+    let updateData;
+    const files = req.files;
+
+    if (files && files.length > 0) {
+      // Multipart with new images — parse text payload from `data` field
+      let payload;
+      try {
+        payload = JSON.parse(req.body.data || "{}");
+      } catch {
+        return res.status(400).json({ success: false, message: "Invalid form data" });
+      }
+
+      if (files.length < 3) {
+        return res.status(400).json({ success: false, message: "Minimum 3 images required" });
+      }
+      if (files.length > 10) {
+        return res.status(400).json({ success: false, message: "Maximum 10 images allowed" });
+      }
+
+      // Delete old images from ImageKit before replacing
+      const existing = await PG.findById(id).select("images").lean();
+      if (existing?.images?.length > 0) {
+        await Promise.allSettled(
+          existing.images.filter((img) => img.fileId).map((img) => deleteFromImageKit(img.fileId))
+        );
+      }
+
+      const uploadedImages = await Promise.all(files.map((f) => uploadToImageKit(f)));
+      updateData = { ...payload, images: uploadedImages };
+    } else if (req.body.data) {
+      // Multipart without new images — keep existing images from payload
+      try {
+        updateData = JSON.parse(req.body.data);
+      } catch {
+        return res.status(400).json({ success: false, message: "Invalid form data" });
+      }
+    } else {
+      // Pure JSON request (e.g. toggle verify)
+      updateData = req.body;
+    }
+
+    const { name, slug, description, location, pricing, accommodation, foodType, amenities, images, owner, isVerified } = updateData;
 
     const pg = await PG.findByIdAndUpdate(
       id,
@@ -74,11 +126,19 @@ export const deletePG = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid PG ID" });
     }
 
-    const pg = await PG.findByIdAndUpdate(id, { isActive: false }, { new: true });
-
+    const pg = await PG.findById(id).lean();
     if (!pg) {
       return res.status(404).json({ success: false, message: "PG not found" });
     }
+
+    // Clean up images from ImageKit
+    if (pg.images?.length > 0) {
+      await Promise.allSettled(
+        pg.images.filter((img) => img.fileId).map((img) => deleteFromImageKit(img.fileId))
+      );
+    }
+
+    await PG.findByIdAndUpdate(id, { isActive: false });
 
     return res.status(200).json({ success: true, message: "PG deactivated successfully" });
   } catch (error) {
@@ -257,7 +317,8 @@ export const getPGDetails = async (req, res) => {
       verifiedResidentsCount,
       totalComplaints: tComplaints,
       verifiedComplaints: vComplaints,
-      unverifiedComplaints: tComplaints - vComplaints
+      unverifiedComplaints: tComplaints - vComplaints,
+      trustScore: calculateTrustScore(vComplaints, tComplaints - vComplaints),
     };
 
     const remainingCapacity = pg.accommodation?.totalCapacity != null

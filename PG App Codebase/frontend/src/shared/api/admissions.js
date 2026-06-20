@@ -15,8 +15,8 @@ export const getAllAdmissions = (params) =>
 export const decideAdmission = (id, decision) =>
   client.patch(`/admissions/${id}/decide`, { decision }).then(r => r.data)
 
-export const revokeAdmission = (id) =>
-  client.patch(`/admissions/${id}/revoke`).then(r => r.data)
+export const removeResident = (id) =>
+  client.patch(`/admissions/${id}/remove-resident`).then(r => r.data)
 
 export const ownerAddResident = (email) =>
   client.post('/admissions/owner-add', { email }).then(r => r.data)

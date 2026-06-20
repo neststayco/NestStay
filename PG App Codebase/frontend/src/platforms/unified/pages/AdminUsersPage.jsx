@@ -2,16 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { getAllUsers, deactivateUser } from '@shared/api/admin'
 import { useToast } from '@shared/components/Toast'
 import RelativeTime from '@shared/components/RelativeTime'
-
-function RowSkeleton() {
-  return (
-    <tr className="animate-pulse">
-      {[1, 2, 3, 4].map(i => (
-        <td key={i} className="px-4 py-3.5"><div className="h-4 bg-gray-200 rounded" /></td>
-      ))}
-    </tr>
-  )
-}
+import { SkeletonTable } from '@shared/components/Skeleton'
 
 function DeactivateModal({ user, onClose, onDeactivated }) {
   const [loading, setLoading] = useState(false)
@@ -146,48 +137,49 @@ export default function AdminUsersPage() {
                 <th className="px-4 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading
-                ? Array.from({ length: 8 }).map((_, i) => <RowSkeleton key={i} />)
-                : users.length === 0
-                ? (
-                  <tr>
-                    <td colSpan={4} className="text-center py-12">
-                      <p className="text-gray-400 text-sm font-medium">
-                        {search ? 'No users match your search' : 'No users registered yet'}
-                      </p>
-                    </td>
-                  </tr>
-                )
-                : users.map(user => (
-                  <tr key={user._id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3.5">
-                      <div className="font-medium text-gray-900">{user.name}</div>
-                      <div className="text-xs text-gray-400 mt-0.5">{user.email}</div>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      {user.isActive
-                        ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Active</span>
-                        : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600">Deactivated</span>
-                      }
-                    </td>
-                    <td className="px-4 py-3.5 text-gray-400 text-xs">
-                      {user.createdAt ? <RelativeTime timestamp={user.createdAt} /> : '—'}
-                    </td>
-                    <td className="px-4 py-3.5 text-right">
-                      {user.isActive && (
-                        <button
-                          onClick={() => setDeactivateTarget(user)}
-                          className="text-xs font-medium px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg"
-                        >
-                          Deactivate
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              }
-            </tbody>
+            {loading
+              ? <SkeletonTable rows={8} cols={4} />
+              : <tbody className="divide-y divide-gray-100">
+                  {users.length === 0
+                    ? (
+                      <tr>
+                        <td colSpan={4} className="text-center py-12">
+                          <p className="text-gray-400 text-sm font-medium">
+                            {search ? 'No users match your search' : 'No users registered yet'}
+                          </p>
+                        </td>
+                      </tr>
+                    )
+                    : users.map(user => (
+                      <tr key={user._id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3.5">
+                          <div className="font-medium text-gray-900">{user.name}</div>
+                          <div className="text-xs text-gray-400 mt-0.5">{user.email}</div>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          {user.isActive
+                            ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Active</span>
+                            : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600">Deactivated</span>
+                          }
+                        </td>
+                        <td className="px-4 py-3.5 text-gray-400 text-xs">
+                          {user.createdAt ? <RelativeTime timestamp={user.createdAt} /> : '—'}
+                        </td>
+                        <td className="px-4 py-3.5 text-right">
+                          {user.isActive && (
+                            <button
+                              onClick={() => setDeactivateTarget(user)}
+                              className="text-xs font-medium px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg"
+                            >
+                              Deactivate
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  }
+                </tbody>
+            }
           </table>
         </div>
 

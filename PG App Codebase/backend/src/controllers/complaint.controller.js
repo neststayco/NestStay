@@ -143,6 +143,29 @@ export const getComplaints = async (req, res) => {
   }
 };
 
+// DELETE /api/complaints/:id — admin permanently deletes a complaint
+export const deleteComplaint = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "Invalid complaint ID format" });
+    }
+
+    const complaint = await Complaint.findByIdAndDelete(id);
+    if (!complaint) {
+      return res.status(404).json({ success: false, message: "Complaint not found" });
+    }
+
+    Logger.event("complaint.deleted", { complaintId: id, deletedBy: req.user.id });
+
+    return res.status(200).json({ success: true, message: "Complaint deleted" });
+  } catch (error) {
+    Logger.error("DELETE_COMPLAINT_ERROR", { error: error.message });
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
 // PATCH /api/complaints/:id — pg_owner updates complaint status
 export const updateComplaintStatus = async (req, res) => {
   try {

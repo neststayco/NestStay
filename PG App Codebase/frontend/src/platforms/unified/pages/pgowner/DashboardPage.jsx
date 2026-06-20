@@ -4,65 +4,35 @@ import { useAuth } from '@shared/context/AuthContext'
 import { getPGAdmissions } from '@shared/api/admissions'
 import { getComplaints } from '@shared/api/complaints'
 import { getPGDetails } from '@shared/api/pgs'
+import PageContainer from '../../components/PageContainer'
+import StatCard from '../../components/StatCard'
+import { SkeletonCard } from '@shared/components/Skeleton'
 
-// design.md Owner Dashboard Mockup tokens:
-// neutral tile:  bg-[#f6f3f2], text-[#1b1c1c] / label text-[#73787a]
-// accent tile:   bg-[#ffdbd0], text-[#3a0b00]  ("New Requests" card bg per design.md)
-// danger tile:   red-50/red-700 (full-seats state — semantic colors per design.md)
-// card titlebar: bg-[#eae8e7]
-
-function StatTile({ label, value, sub, accent, danger }) {
-  if (danger) {
-    return (
-      <div className="p-5 bg-red-50 rounded-xl border border-red-100">
-        <p className="text-xs font-semibold text-red-500 uppercase tracking-wide">{label}</p>
-        <p className="text-3xl font-bold text-red-700 mt-1">{value ?? '—'}</p>
-        {sub && <p className="text-xs text-red-400 mt-1">{sub}</p>}
-      </div>
-    )
-  }
-  if (accent) {
-    return (
-      <div className="p-5 bg-[#ffdbd0] rounded-xl border border-[#E5E7EB]">
-        <p className="text-xs font-semibold text-[#3a0b00] uppercase tracking-wide">{label}</p>
-        <p className="text-3xl font-bold text-[#3a0b00] mt-1">{value ?? '—'}</p>
-        {sub && <p className="text-xs text-[#3a0b00]/60 mt-1">{sub}</p>}
-      </div>
-    )
-  }
-  return (
-    <div className="p-5 bg-[#f6f3f2] rounded-xl border border-[#E5E7EB]">
-      <p className="text-xs font-semibold text-[#73787a] uppercase tracking-wide">{label}</p>
-      <p className="text-3xl font-bold text-[#1b1c1c] mt-1">{value ?? '—'}</p>
-      {sub && <p className="text-xs text-[#73787a] mt-1">{sub}</p>}
-    </div>
-  )
-}
-
-function TileSkeleton() {
-  return <div className="rounded-xl border border-[#E5E7EB] p-5 animate-pulse bg-[#f6f3f2]/60 h-24" />
-}
+const PLACEHOLDER = 'https://placehold.co/400x220/e2e8f0/94a3b8?text=No+Image'
+const SHADOW_CARD = 'rgba(0,0,0,0.08) 0px 4px 10px 0px'
+const SHADOW_ELEVATED = 'rgba(0,0,0,0.10) 0px 8px 24px, rgba(0,0,0,0.04) 0px 2px 6px'
 
 function InfoRow({ label, value, highlight, capitalize }) {
   return (
-    <div>
-      <p className="text-xs font-semibold text-[#73787a] uppercase tracking-wide mb-0.5">{label}</p>
-      <p className={`text-sm ${highlight ? 'font-bold text-[#1b1c1c]' : 'text-[#434849]'} ${capitalize ? 'capitalize' : ''}`}>
+    <div className="bg-[#fbf9f8] rounded-xl px-3.5 py-3 border border-[#E5E7EB]">
+      <p className="text-[10px] font-semibold text-[#73787a] uppercase tracking-wider mb-1">{label}</p>
+      <p className={`text-sm ${highlight ? 'font-bold text-[#1b1c1c]' : 'text-[#434849] font-medium'} ${capitalize ? 'capitalize' : ''}`}>
         {value || '—'}
       </p>
     </div>
   )
 }
 
-function QuickLink({ to, label, icon, urgent }) {
+function QuickAction({ to, label, icon, accent }) {
   return (
     <Link
       to={to}
-      className={`flex items-center gap-2 px-3 py-2 rounded-[10px] border text-sm font-medium transition-colors ${
-        urgent
-          ? 'bg-[#ffdbd0] border-[#E5E7EB] text-[#3a0b00] hover:bg-[#ffd0c0]'
-          : 'bg-white border-[#e0e0e0] text-[#434849] hover:border-action hover:text-action'
+      className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
+        accent
+          ? 'bg-[#e98a76] border-[#e98a76] text-white hover:opacity-90'
+          : 'bg-[#f6f3f2] border-[#E5E7EB] text-[#434849] hover:bg-[#eae8e7] hover:border-[#c8c2bc] hover:text-[#1b1c1c]'
       }`}
+      style={{ boxShadow: accent ? 'rgba(233,138,118,0.25) 0px 4px 12px' : 'rgba(0,0,0,0.04) 0px 2px 6px' }}
     >
       {icon}
       {label}
@@ -89,7 +59,7 @@ export default function OwnerDashboardPage() {
       setError('')
       try {
         const [admittedRes, pendingRes, pgRes, complaintsRes] = await Promise.all([
-          getPGAdmissions({ status: 'admitted', limit: 1 }),
+          getPGAdmissions({ residentStatus: 'active', limit: 1 }),
           getPGAdmissions({ status: 'pending', limit: 1 }),
           getPGDetails(pgId),
           getComplaints({ limit: 1 }),
@@ -108,46 +78,69 @@ export default function OwnerDashboardPage() {
     load()
   }, [pgId])
 
+  const coverImage = pg?.images?.[0]?.url
+
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="mb-7">
-        <h1 className="text-2xl font-bold text-[#1b1c1c]">Dashboard</h1>
-        <p className="text-[#73787a] text-sm mt-0.5">Overview of your PG property</p>
+    <PageContainer size="lg">
+      {/* Page header */}
+      <div className="mb-8 flex items-center gap-3">
+        <div className="w-1 h-8 rounded-full bg-[#e98a76]" />
+        <div>
+          <p className="text-[10px] font-semibold text-[#73787a] uppercase tracking-widest mb-0.5">PG Owner Portal</p>
+          <h1 className="text-xl font-bold text-[#1b1c1c] tracking-tight">Overview</h1>
+        </div>
       </div>
 
       {!pgId && !loading && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-[10px] mb-6 text-sm">
-          No PG is linked to your account yet. Contact the platform admin to get your property set up.
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl mb-6 text-sm">
+          No PG linked to your account. Contact the platform admin to set up your property.
         </div>
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-[10px] mb-6 text-sm">{error}</div>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-sm">{error}</div>
       )}
 
-      {/* KPI tiles — warm palette per design.md Owner Dashboard Mockup */}
+      {/* KPI grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {loading ? (
-          Array.from({ length: 4 }).map((_, i) => <TileSkeleton key={i} />)
+          Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
-            <StatTile
-              label="Admitted Guests"
+            <StatCard
+              label="Admitted"
               value={admitted}
               sub={admitted > 0 ? 'Current residents' : 'No residents yet'}
+              colorClass="bg-green-100 text-green-600"
+              icon={
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              }
             />
-            <StatTile
-              label="New Requests"
+            <StatCard
+              label="Pending"
               value={pending}
               sub={pending > 0 ? 'Awaiting review' : 'All clear'}
-              accent
+              colorClass={pending > 0 ? 'bg-[#ffdbd0] text-[#e98a76]' : 'bg-[#f6f3f2] text-[#73787a]'}
+              icon={
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              }
             />
-            <StatTile
-              label="Total Complaints"
+            <StatCard
+              label="Complaints"
               value={totalComplaints}
               sub={totalComplaints > 0 ? 'On your PG' : 'None yet'}
+              colorClass={totalComplaints > 0 ? 'bg-red-50 text-red-500' : 'bg-[#f6f3f2] text-[#73787a]'}
+              icon={
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              }
             />
-            <StatTile
+            <StatCard
               label="Available Beds"
               value={remainingCapacity ?? '—'}
               sub={
@@ -155,58 +148,82 @@ export default function OwnerDashboardPage() {
                 : remainingCapacity != null ? 'Beds free'
                 : 'Capacity not set'
               }
-              danger={remainingCapacity === 0}
+              colorClass={remainingCapacity === 0 ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-600'}
+              icon={
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+              }
             />
           </>
         )}
       </div>
 
-      {/* PG info card — bg-[#eae8e7] titlebar per design.md */}
+      {/* Property card */}
       {!loading && pg && (
-        <div className="bg-white border border-[#E5E7EB] rounded-[20px] shadow-card overflow-hidden">
-          <div className="bg-[#eae8e7] px-5 py-4 flex items-center justify-between">
-            <div>
-              <h2 className="font-bold text-[#1b1c1c]">{pg.name}</h2>
-              <p className="text-xs text-[#73787a] mt-0.5">
-                {[pg.location?.area, pg.location?.city, pg.location?.state].filter(Boolean).join(', ')}
-              </p>
+        <div
+          className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden"
+          style={{ boxShadow: SHADOW_ELEVATED }}
+        >
+          {/* Cover / header */}
+          {coverImage ? (
+            <div className="h-36 overflow-hidden relative">
+              <img
+                src={coverImage}
+                alt={pg.name}
+                className="w-full h-full object-cover"
+                onError={e => { e.target.src = PLACEHOLDER }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <div className="absolute bottom-4 left-5 right-5 flex items-end justify-between">
+                <div>
+                  <h2 className="font-bold text-white text-base leading-tight drop-shadow">{pg.name}</h2>
+                  <p className="text-white/75 text-xs mt-0.5">
+                    {[pg.location?.area, pg.location?.city].filter(Boolean).join(', ')}
+                  </p>
+                </div>
+                <span className="text-[10px] bg-green-500 text-white font-bold px-2.5 py-1 rounded-full flex-shrink-0 shadow">
+                  Active
+                </span>
+              </div>
             </div>
-            <span className="text-xs bg-green-100 text-green-700 font-semibold px-2.5 py-0.5 rounded-full flex-shrink-0">
-              Active
-            </span>
-          </div>
+          ) : (
+            <div
+              className="px-5 py-4 flex items-center justify-between border-b border-[#E5E7EB]"
+              style={{ background: 'linear-gradient(135deg, #f6f3f2 0%, #fbf9f8 100%)' }}
+            >
+              <div>
+                <h2 className="font-bold text-[#1b1c1c] text-sm">{pg.name}</h2>
+                <p className="text-xs text-[#73787a] mt-0.5">
+                  {[pg.location?.area, pg.location?.city, pg.location?.state].filter(Boolean).join(', ')}
+                </p>
+              </div>
+              <span className="text-[10px] bg-green-100 text-green-700 font-semibold px-2.5 py-1 rounded-full border border-green-200">
+                Active
+              </span>
+            </div>
+          )}
 
+          {/* Details grid */}
           <div className="p-5">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
-              <InfoRow
-                label="Monthly Rent"
-                value={pg.pricing?.rent ? `₹${pg.pricing.rent.toLocaleString('en-IN')}` : null}
-                highlight
-              />
-              <InfoRow
-                label="Deposit"
-                value={pg.pricing?.deposit ? `₹${pg.pricing.deposit.toLocaleString('en-IN')}` : null}
-              />
-              <InfoRow
-                label="Maintenance"
-                value={pg.pricing?.maintenance ? `₹${pg.pricing.maintenance.toLocaleString('en-IN')}/mo` : null}
-              />
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <InfoRow label="Monthly Rent" value={pg.pricing?.rent ? `₹${pg.pricing.rent.toLocaleString('en-IN')}` : null} highlight />
+              <InfoRow label="Deposit" value={pg.pricing?.deposit ? `₹${pg.pricing.deposit.toLocaleString('en-IN')}` : null} />
+              <InfoRow label="Maintenance" value={pg.pricing?.maintenance ? `₹${pg.pricing.maintenance.toLocaleString('en-IN')}/mo` : null} />
               <InfoRow label="Gender" value={pg.accommodation?.gender} capitalize />
-              <InfoRow
-                label="Total Capacity"
-                value={pg.accommodation?.totalCapacity ? `${pg.accommodation.totalCapacity} beds` : null}
-              />
+              <InfoRow label="Total Capacity" value={pg.accommodation?.totalCapacity ? `${pg.accommodation.totalCapacity} beds` : null} />
               <InfoRow label="Food Type" value={pg.accommodation?.foodType} capitalize />
             </div>
 
+            {/* Amenities */}
             {pg.amenities?.length > 0 && (
-              <div className="mt-5 pt-4 border-t border-[#E5E7EB]">
-                <p className="text-xs font-semibold text-[#73787a] uppercase tracking-wide mb-2">Amenities</p>
+              <div className="mt-5 pt-4 border-t border-[#f0f0f0]">
+                <p className="text-[10px] font-semibold text-[#73787a] uppercase tracking-wider mb-2.5">Amenities</p>
                 <div className="flex flex-wrap gap-1.5">
                   {pg.amenities.map(a => (
                     <span
                       key={a}
-                      className="text-xs bg-[#f6f3f2] text-[#434849] border border-[#E5E7EB] rounded-full px-2.5 py-0.5 capitalize"
+                      className="text-xs bg-[#f6f3f2] text-[#434849] border border-[#E5E7EB] rounded-full px-3 py-1 capitalize font-medium"
                     >
                       {a}
                     </span>
@@ -215,59 +232,42 @@ export default function OwnerDashboardPage() {
               </div>
             )}
 
-            <div className="mt-5 pt-4 border-t border-[#E5E7EB]">
-              <p className="text-xs font-semibold text-[#73787a] uppercase tracking-wide mb-2">Quick Actions</p>
+            {/* Quick actions */}
+            <div className="mt-5 pt-4 border-t border-[#f0f0f0]">
+              <p className="text-[10px] font-semibold text-[#73787a] uppercase tracking-wider mb-3">Quick actions</p>
               <div className="flex flex-wrap gap-2">
-                <QuickLink
-                  to="/pgowner/details"
-                  label="Edit settings"
-                  icon={
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  }
-                />
-                <QuickLink
-                  to="/pgowner/location"
-                  label="Update location"
-                  icon={
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  }
-                />
-                <QuickLink
-                  to="/pgowner/photos"
-                  label="Manage photos"
-                  icon={
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  }
-                />
                 {pending > 0 && (
-                  <QuickLink
+                  <QuickAction
                     to="/pgowner/admissions"
-                    label={`Review ${pending} pending request${pending !== 1 ? 's' : ''}`}
-                    urgent
+                    label={`Review ${pending} request${pending !== 1 ? 's' : ''}`}
+                    accent
                     icon={
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
                       </svg>
                     }
                   />
                 )}
+                <QuickAction
+                  to="/pgowner/details"
+                  label="Edit settings"
+                  icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>}
+                />
+                <QuickAction
+                  to="/pgowner/photos"
+                  label="Manage photos"
+                  icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
+                />
+                <QuickAction
+                  to="/pgowner/location"
+                  label="Update location"
+                  icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
+                />
               </div>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </PageContainer>
   )
 }

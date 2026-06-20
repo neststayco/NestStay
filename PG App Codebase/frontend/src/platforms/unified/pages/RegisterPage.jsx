@@ -170,7 +170,7 @@ export default function RegisterPage() {
 
           <div className="flex justify-center mb-8">
             <Link to="/">
-              <img src="/nest-stay-logo.png" alt="Nest Stay" className="h-10 w-auto" />
+              <img src="/logo.png" alt="Nest Stay" className="h-16 w-auto" />
             </Link>
           </div>
 
@@ -221,16 +221,20 @@ export default function RegisterPage() {
                     aria-describedby={emailError ? 'reg-email-err' : undefined}
                   />
                   {emailError && (
-                    <p id="reg-email-err" className="mt-1.5 text-xs text-red-600">{emailError}</p>
+                    <p id="reg-email-err" className="mt-1.5 text-xs text-red-600">
+                      {emailError === 'Please wait before requesting another OTP.' && resendCooldown > 0
+                        ? `Please wait ${resendCooldown}s before requesting another OTP.`
+                        : emailError}
+                    </p>
                   )}
                 </div>
 
                 <button
                   type="submit"
-                  disabled={step1Loading || !isOnline}
+                  disabled={step1Loading || resendCooldown > 0 || !isOnline}
                   className="w-full bg-[#e98a76] hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 text-white font-semibold py-3 rounded-xl transition-all text-sm"
                 >
-                  {step1Loading ? 'Sending OTP…' : 'Continue'}
+                  {step1Loading ? 'Sending OTP…' : resendCooldown > 0 ? `Try again in ${resendCooldown}s` : 'Continue'}
                 </button>
               </form>
             ) : (

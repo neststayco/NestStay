@@ -25,8 +25,15 @@ if (smtpConfigured) {
 class NotificationService {
   static async sendOTPEmail(email, otp, type) {
     try {
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`\n${"─".repeat(50)}`);
+        console.log(`  OTP for : ${email}`);
+        console.log(`  Code    : ${otp}`);
+        console.log(`  Type    : ${type}`);
+        console.log(`${"─".repeat(50)}\n`);
+      }
+
       if (!smtpConfigured) {
-        Logger.info(`[DEV] OTP for ${email} (${type}): ${otp}`);
         return true;
       }
 
@@ -61,30 +68,6 @@ class NotificationService {
     }
   }
 
-  static async notifyAdminEscalation(residency) {
-    try {
-      const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
-      if (!smtpConfigured || !adminEmail) {
-        Logger.info(`[DEV] Escalation notification skipped for residency ${residency._id} — SMTP/admin email not configured`);
-        return true;
-      }
-
-      const ageHours = Math.round((Date.now() - new Date(residency.createdAt).getTime()) / (1000 * 60 * 60));
-
-      await transporter.sendMail({
-        from: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER,
-        to: adminEmail,
-        subject: "Nest Stay — Admission escalation alert",
-        text: `Admission request ${residency._id} for PG ${residency.pgId} (user: ${residency.userId}) has been pending for ${ageHours} hours and has been escalated for admin review.`,
-      });
-
-      Logger.event("escalation.email.sent", { residencyId: residency._id });
-      return true;
-    } catch (error) {
-      Logger.error("notifyAdminEscalation failed", { error: error.message });
-      return false;
-    }
-  }
 }
 
 export default NotificationService;

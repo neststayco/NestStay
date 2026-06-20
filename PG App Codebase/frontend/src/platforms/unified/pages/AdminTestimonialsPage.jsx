@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { getAdminTestimonials, updateTestimonial } from '@shared/api/testimonials'
 import { useToast } from '@shared/components/Toast'
 import OfflineBanner from '@shared/components/OfflineBanner'
+import { SkeletonTable } from '@shared/components/Skeleton'
 import { relativeTime, absoluteDate } from '@shared/utils/relativeTime'
 
 const STATUS_STYLES = {
@@ -27,18 +28,6 @@ function StarRating({ rating }) {
         </svg>
       ))}
     </div>
-  )
-}
-
-function RowSkeleton() {
-  return (
-    <tr className="animate-pulse">
-      {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-        <td key={i} className="px-4 py-3">
-          <div className="h-4 bg-gray-200 rounded w-3/4" />
-        </td>
-      ))}
-    </tr>
   )
 }
 
@@ -180,19 +169,19 @@ export default function AdminTestimonialsPage() {
                 <th className="px-4 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading
-                ? Array.from({ length: 10 }).map((_, i) => <RowSkeleton key={i} />)
-                : testimonials.length === 0
-                ? (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center">
-                      <p className="text-gray-400 text-sm font-medium">No testimonials found</p>
-                      <p className="text-gray-300 text-xs mt-1">
-                        {statusFilter
-                          ? 'Try a different status filter'
-                          : 'No testimonials submitted yet across any PG'}
-                      </p>
+            {loading
+              ? <SkeletonTable rows={10} cols={8} />
+              : <tbody className="divide-y divide-gray-100">
+                  {testimonials.length === 0
+                    ? (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-12 text-center">
+                          <p className="text-gray-400 text-sm font-medium">No testimonials found</p>
+                          <p className="text-gray-300 text-xs mt-1">
+                            {statusFilter
+                              ? 'Try a different status filter'
+                              : 'No testimonials submitted yet across any PG'}
+                          </p>
                     </td>
                   </tr>
                 )
@@ -274,7 +263,8 @@ export default function AdminTestimonialsPage() {
                   </tr>
                 ))
               }
-            </tbody>
+                </tbody>
+            }
           </table>
         </div>
       </div>

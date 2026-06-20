@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { getMyAdmission } from '../api/admissions'
+import { getUserInteractions, toggleSave as apiToggleSave } from '../api/user'
 import { normalizeAdmission } from '../utils/normalizeAdmission'
 
 const AuthContext = createContext(null)
@@ -17,17 +18,25 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem('pg_token'))
   const [currentAdmission, setCurrentAdmission] = useState(null)
   const [admissionLoaded, setAdmissionLoaded] = useState(false)
+  const [savedPGIds, setSavedPGIds] = useState(new Set())
 
   useEffect(() => {
     if (!token || !user || user.role !== 'user') {
       setCurrentAdmission(null)
       setAdmissionLoaded(true)
+      setSavedPGIds(new Set())
       return
     }
     getMyAdmission()
       .then(res => setCurrentAdmission(normalizeAdmission(res.data)))
       .catch(() => setCurrentAdmission(null))
       .finally(() => setAdmissionLoaded(true))
+
+    getUserInteractions()
+      .then(res => {
+        setSavedPGIds(new Set(res.data.savedPGs))
+      })
+      .catch(() => {})
   }, [token, user?.role])
 
   function login(tokenValue, userData) {
@@ -44,12 +53,35 @@ export function AuthProvider({ children }) {
     setUser(null)
     setCurrentAdmission(null)
     setAdmissionLoaded(false)
+    setSavedPGIds(new Set())
   }
 
-  const isAdmitted = currentAdmission?.status === 'admitted'
+  async function toggleSave(pgId) {
+    const wasSaved = savedPGIds.has(pgId)
+    setSavedPGIds(prev => {
+      const next = new Set(prev)
+      wasSaved ? next.delete(pgId) : next.add(pgId)
+      return next
+    })
+    try {
+      await apiToggleSave(pgId)
+    } catch {
+      setSavedPGIds(prev => {
+        const next = new Set(prev)
+        wasSaved ? next.add(pgId) : next.delete(pgId)
+        return next
+      })
+    }
+  }
+
+  const isAdmitted = currentAdmission?.residentStatus === 'active'
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, currentAdmission, setCurrentAdmission, isAdmitted, admissionLoaded }}>
+    <AuthContext.Provider value={{
+      user, token, login, logout,
+      currentAdmission, setCurrentAdmission, isAdmitted, admissionLoaded,
+      savedPGIds, toggleSave,
+    }}>
       {children}
     </AuthContext.Provider>
   )

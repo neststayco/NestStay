@@ -14,7 +14,7 @@ import NotificationService from "../services/notification.service.js";
 import Logger from "../services/logger.service.js";
 
 const OTP_EXPIRY_MS = 10 * 60 * 1000;       // 10 minutes
-const OTP_RESEND_COOLDOWN_MS = 60 * 1000;    // 60 seconds
+const OTP_RESEND_COOLDOWN_MS = process.env.NODE_ENV === "production" ? 60 * 1000 : 10 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
 
 // Used in login timing-attack prevention — compare cost is same as real hash
@@ -59,18 +59,21 @@ export const registerInitiate = async (req, res) => {
       });
     }
 
-    // Invalidate any previous REGISTER OTPs for this email
-    await OTP.deleteMany({ email: normalizedEmail, type: "REGISTER" });
-
     const otp = generateOTP();
     const hashedOtp = await hashOTP(otp);
 
-    await OTP.create({
-      email: normalizedEmail,
-      hashedOtp,
-      type: "REGISTER",
-      expiresAt: new Date(Date.now() + OTP_EXPIRY_MS),
-    });
+    await OTP.findOneAndUpdate(
+      { email: normalizedEmail, type: "REGISTER" },
+      { 
+        $set: { 
+          hashedOtp, 
+          attempts: 0, 
+          expiresAt: new Date(Date.now() + OTP_EXPIRY_MS),
+          createdAt: new Date()
+        } 
+      },
+      { upsert: true, new: true }
+    );
 
     await NotificationService.sendOTPEmail(normalizedEmail, otp, "REGISTER");
 
@@ -138,7 +141,7 @@ export const registerVerify = async (req, res) => {
       const updated = await OTP.findOneAndUpdate(
         { _id: otpDoc._id, attempts: { $lt: MAX_OTP_ATTEMPTS } },
         { $inc: { attempts: 1 } },
-        { returnDocument: "after" }
+        { new: true }
       );
       const attemptsUsed = updated ? updated.attempts : MAX_OTP_ATTEMPTS;
       const remaining = Math.max(0, MAX_OTP_ATTEMPTS - attemptsUsed);
@@ -400,17 +403,21 @@ export const forgotPasswordInitiate = async (req, res) => {
       return res.status(200).json(FP_SUCCESS);
     }
 
-    await OTP.deleteMany({ email: normalizedEmail, type: "FORGOT_PASSWORD" });
-
     const otp = generateOTP();
     const hashedOtp = await hashOTP(otp);
 
-    await OTP.create({
-      email: normalizedEmail,
-      hashedOtp,
-      type: "FORGOT_PASSWORD",
-      expiresAt: new Date(Date.now() + OTP_EXPIRY_MS),
-    });
+    await OTP.findOneAndUpdate(
+      { email: normalizedEmail, type: "FORGOT_PASSWORD" },
+      { 
+        $set: { 
+          hashedOtp, 
+          attempts: 0, 
+          expiresAt: new Date(Date.now() + OTP_EXPIRY_MS),
+          createdAt: new Date()
+        } 
+      },
+      { upsert: true, new: true }
+    );
 
     await NotificationService.sendOTPEmail(normalizedEmail, otp, "FORGOT_PASSWORD");
 
@@ -464,7 +471,7 @@ export const forgotPasswordVerify = async (req, res) => {
       const updated = await OTP.findOneAndUpdate(
         { _id: otpDoc._id, attempts: { $lt: MAX_OTP_ATTEMPTS } },
         { $inc: { attempts: 1 } },
-        { returnDocument: "after" }
+        { new: true }
       );
       const attemptsUsed = updated ? updated.attempts : MAX_OTP_ATTEMPTS;
       const remaining = Math.max(0, MAX_OTP_ATTEMPTS - attemptsUsed);

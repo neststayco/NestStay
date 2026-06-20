@@ -3,41 +3,14 @@ import { getPGDetails, updateMyPGCapacity } from '@shared/api/pgs'
 import { useAuth } from '@shared/context/AuthContext'
 import { useToast } from '@shared/components/Toast'
 import OfflineBanner from '@shared/components/OfflineBanner'
-
-function Skeleton() {
-  return (
-    <div className="animate-pulse space-y-4">
-      <div className="h-6 bg-gray-200 rounded w-40" />
-      <div className="bg-white border border-[#e0e0e0] rounded-[20px] p-6 space-y-4">
-        <div className="grid grid-cols-3 gap-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="h-20 bg-gray-200 rounded-[10px]" />
-          ))}
-        </div>
-        <div className="h-10 bg-gray-200 rounded-[10px] w-48" />
-        <div className="h-10 bg-gray-200 rounded-[10px] w-32" />
-      </div>
-    </div>
-  )
-}
+import PageHeader from '../../components/PageHeader'
+import PageContainer from '../../components/PageContainer'
+import DataCard from '../../components/DataCard'
+import StatCard from '../../components/StatCard'
+import { SkeletonBase } from '@shared/components/Skeleton'
 
 const inputCls =
-  'w-full border border-[#e0e0e0] rounded-[10px] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action focus:border-action bg-gray-50 h-[42px]'
-
-function StatTile({ label, value, accent }) {
-  return (
-    <div
-      className={`rounded-[10px] p-4 ${accent ? 'bg-[#ffdbd0]' : 'bg-gray-50'} border border-[#e0e0e0]`}
-    >
-      <p className={`text-xs font-semibold uppercase tracking-wide mb-1 ${accent ? 'text-[#3a0b00]' : 'text-gray-500'}`}>
-        {label}
-      </p>
-      <p className={`text-2xl font-bold ${accent ? 'text-[#3a0b00]' : 'text-gray-900'}`}>
-        {value ?? '—'}
-      </p>
-    </div>
-  )
-}
+  'w-full border border-[#E5E7EB] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e98a76] focus:border-[#e98a76] bg-white h-[42px]'
 
 export default function OwnerCapacityPage() {
   const { user } = useAuth()
@@ -82,8 +55,7 @@ export default function OwnerCapacityPage() {
       }))
       toast('Capacity updated successfully', 'success')
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to update capacity.'
-      setError(msg)
+      setError(err.response?.data?.message || 'Failed to update capacity.')
     } finally {
       setSaving(false)
     }
@@ -96,78 +68,80 @@ export default function OwnerCapacityPage() {
 
   if (!pgId && !loading) {
     return (
-      <div className="p-6">
-        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-          No PG is linked to your account yet. Contact an admin to link a PG.
+      <PageContainer size="sm">
+        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+          No PG linked to your account yet. Contact an admin.
         </p>
-      </div>
+      </PageContainer>
     )
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <PageContainer size="sm">
       <OfflineBanner />
-
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Capacity</h1>
-        <p className="text-gray-500 text-sm mt-0.5">
-          Set the total number of beds in your PG. This determines how many residents can be admitted.
-        </p>
-      </div>
+      <PageHeader
+        title="Capacity"
+        subtitle="Set total beds to control how many residents can be admitted"
+      />
 
       {loading ? (
-        <Skeleton />
+        <div className="animate-pulse space-y-5">
+          <div className="grid grid-cols-3 gap-4">
+            {[1, 2, 3].map(i => <SkeletonBase key={i} className="h-20 rounded-2xl" />)}
+          </div>
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 space-y-4">
+            <SkeletonBase className="h-10 rounded-xl w-48" />
+            <SkeletonBase className="h-10 rounded-xl w-32" />
+          </div>
+        </div>
       ) : (
         <div className="space-y-5">
           {currentTotal != null && (
             <div className="grid grid-cols-3 gap-4">
-              <StatTile label="Total beds" value={currentTotal} />
-              <StatTile label="Admitted" value={admitted} />
-              <StatTile label="Available" value={remainingCapacity} accent={remainingCapacity === 0} />
+              <StatCard label="Total beds" value={currentTotal} compact />
+              <StatCard label="Admitted" value={admitted} compact />
+              <StatCard label="Available" value={remainingCapacity} compact accent={remainingCapacity === 0} />
             </div>
           )}
 
-          <form
-            onSubmit={handleSave}
-            className="bg-white border border-[#e0e0e0] rounded-[20px] shadow-card p-6 space-y-5"
-          >
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {error}
+          <DataCard title="Update capacity">
+            <form onSubmit={handleSave} className="space-y-5">
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+                  {error}
+                </div>
+              )}
+
+              <div className="max-w-xs">
+                <label className="block text-xs font-semibold text-[#434849] mb-2">
+                  Total capacity (beds) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={totalCapacity}
+                  onChange={e => setTotalCapacity(e.target.value)}
+                  placeholder="e.g. 20"
+                  className={inputCls}
+                  required
+                />
+                <p className="text-xs text-[#73787a] mt-1.5">
+                  Must be ≥ current admitted residents ({admitted ?? 0}).
+                </p>
               </div>
-            )}
 
-            <div className="max-w-xs">
-              <label className="block text-sm font-medium text-[#222121] mb-2">
-                Total capacity (beds) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={totalCapacity}
-                onChange={e => setTotalCapacity(e.target.value)}
-                placeholder="e.g. 20"
-                className={inputCls}
-                required
-              />
-              <p className="text-xs text-gray-400 mt-1">
-                Must be ≥ current admitted residents ({admitted ?? 0}).
-              </p>
-            </div>
-
-            <div className="flex gap-3 pt-2">
               <button
                 type="submit"
                 disabled={saving || totalCapacity === ''}
-                className="bg-brand hover:bg-brand-light disabled:opacity-50 text-black text-sm font-semibold px-6 py-2.5 rounded-[10px] transition-colors"
+                className="inline-flex items-center gap-2 bg-[#1b1c1c] hover:bg-[#2d2d2d] disabled:opacity-40 text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-colors"
               >
                 {saving ? 'Saving…' : 'Save capacity'}
               </button>
-            </div>
-          </form>
+            </form>
+          </DataCard>
         </div>
       )}
-    </div>
+    </PageContainer>
   )
 }

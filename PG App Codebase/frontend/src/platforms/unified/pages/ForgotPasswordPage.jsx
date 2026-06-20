@@ -195,7 +195,7 @@ export default function ForgotPasswordPage() {
 
           <div className="flex justify-center mb-8">
             <Link to="/">
-              <img src="/nest-stay-logo.png" alt="Nest Stay" className="h-10 w-auto" />
+              <img src="/logo.png" alt="Nest Stay" className="h-16 w-auto" />
             </Link>
           </div>
 
@@ -217,7 +217,9 @@ export default function ForgotPasswordPage() {
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-5 text-sm">
-                {error}
+                {error === 'Too many requests. Please wait before trying again.' && resendCooldown > 0
+                  ? `Too many requests. Please wait ${resendCooldown}s before trying again.`
+                  : error}
               </div>
             )}
 
@@ -247,10 +249,10 @@ export default function ForgotPasswordPage() {
 
                 <button
                   type="submit"
-                  disabled={step1Loading || !isOnline}
+                  disabled={step1Loading || resendCooldown > 0 || !isOnline}
                   className="w-full bg-[#e98a76] hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 text-white font-semibold py-3 rounded-xl transition-all text-sm"
                 >
-                  {step1Loading ? 'Sending…' : 'Send reset code'}
+                  {step1Loading ? 'Sending…' : resendCooldown > 0 ? `Try again in ${resendCooldown}s` : 'Send reset code'}
                 </button>
               </form>
             )}

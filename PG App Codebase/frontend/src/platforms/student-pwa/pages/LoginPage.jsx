@@ -88,7 +88,7 @@ export default function LoginPage() {
       try {
         const admRes = await getMyAdmission()
         setCurrentAdmission(normalizeAdmission(admRes.data))
-        isAdmitted = admRes.data?.status === 'admitted'
+        isAdmitted = admRes.data?.residentStatus === 'active'
       } catch { /* guest — no active admission */ }
 
       const next = searchParams.get('next')
@@ -111,7 +111,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
 
           <div className="flex justify-center mb-8">
-            <img src="/nest-stay-logo.png" alt="Nest Stay" className="h-10 w-auto" />
+            <img src="/logo.png" alt="Nest Stay" className="h-16 w-auto" />
           </div>
 
           <div className="bg-white rounded-2xl border border-[#E5E7EB] p-8 shadow-card">

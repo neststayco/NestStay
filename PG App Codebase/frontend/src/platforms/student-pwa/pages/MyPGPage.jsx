@@ -6,6 +6,7 @@ import { getPGDetails } from '@shared/api/pgs'
 import { getMyComplaints } from '@shared/api/complaints'
 import { getMyTestimonials, createTestimonial } from '@shared/api/testimonials'
 import { useToast } from '@shared/components/Toast'
+import { SkeletonPGDetail } from '@shared/components/Skeleton'
 
 const STATUS_COLORS = {
   pending:  'bg-yellow-100 text-yellow-700',
@@ -21,18 +22,6 @@ const TESTIMONIAL_STATUS_LABELS = {
 
 const CONTENT_MIN = 10
 const CONTENT_MAX = 500
-
-function Skeleton() {
-  return (
-    <div className="animate-pulse space-y-4">
-      <div className="h-48 bg-gray-200 rounded-xl" />
-      <div className="h-6 bg-gray-200 rounded w-1/2" />
-      <div className="grid grid-cols-3 gap-3">
-        {[1, 2, 3].map(i => <div key={i} className="h-20 bg-gray-200 rounded-xl" />)}
-      </div>
-    </div>
-  )
-}
 
 function StarDisplay({ rating }) {
   return (
@@ -125,16 +114,7 @@ export default function MyPGPage() {
     load()
   }, [pgId, isAdmitted, navigate])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <main className="max-w-3xl mx-auto px-4 py-8"><Skeleton /></main>
-      </div>
-    )
-  }
-
-  if (error || !pg) {
+  if (!loading && (error || !pg)) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
@@ -187,6 +167,7 @@ export default function MyPGPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+        {loading ? <SkeletonPGDetail /> : <>
         {pg.images?.length > 0 && (
           <div className="h-48 rounded-xl overflow-hidden">
             <img src={pg.images[0]?.url || pg.images[0]} alt={pg.name} className="w-full h-full object-cover"
@@ -328,6 +309,7 @@ export default function MyPGPage() {
             </div>
           )}
         </div>
+        </>}
       </main>
     </div>
   )

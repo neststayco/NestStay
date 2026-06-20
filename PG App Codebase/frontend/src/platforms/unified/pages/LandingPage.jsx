@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getPGList } from '@shared/api/pgs'
 import { getFeaturedTestimonials } from '@shared/api/testimonials'
+import { SkeletonBase } from '@shared/components/Skeleton'
 
 export default function LandingPage() {
   return (
@@ -420,7 +421,6 @@ const FALLBACK_PGS = [
     location: { area: 'Hinjewadi Phase 1', city: 'Pune' },
     pricing: { rent: 7500 },
     images: [],
-    meta: { trustScore: 4.8 },
   },
   {
     _id: 'fp2',
@@ -428,7 +428,6 @@ const FALLBACK_PGS = [
     location: { area: 'Baner', city: 'Pune' },
     pricing: { rent: 9000 },
     images: [],
-    meta: { trustScore: 4.9 },
   },
   {
     _id: 'fp3',
@@ -436,31 +435,17 @@ const FALLBACK_PGS = [
     location: { area: 'Kharadi', city: 'Pune' },
     pricing: { rent: 8200 },
     images: [],
-    meta: { trustScore: 4.7 },
   },
 ]
 
 const PG_PLACEHOLDER = '/pg-placeholder.jpg'
-
-function PGCardSkeleton() {
-  return (
-    <div className="bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden animate-pulse">
-      <div className="h-48 bg-gray-200" />
-      <div className="p-5 space-y-3">
-        <div className="h-5 bg-gray-200 rounded w-2/3" />
-        <div className="h-4 bg-gray-200 rounded w-1/2" />
-        <div className="h-4 bg-gray-200 rounded w-1/3 mt-4" />
-      </div>
-    </div>
-  )
-}
 
 function FeaturedPGsSection() {
   const [pgs, setPgs] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    getPGList({ sortBy: 'trustScore', limit: 3 })
+    getPGList({ limit: 3 })
       .then(res => setPgs(res.data?.length ? res.data : FALLBACK_PGS))
       .catch(() => setPgs(FALLBACK_PGS))
       .finally(() => setLoading(false))
@@ -480,27 +465,56 @@ function FeaturedPGsSection() {
         </div>
 
         {/* Desktop: 3-col grid */}
-        <div className="hidden md:grid md:grid-cols-3 gap-6">
-          {loading
-            ? Array.from({ length: 3 }).map((_, i) => <PGCardSkeleton key={i} />)
-            : pgs.map(pg => <FeaturedPGCard key={pg._id} pg={pg} />)}
-        </div>
+        {loading ? (
+          <div className="hidden md:grid md:grid-cols-3 gap-6 animate-pulse">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden">
+                <SkeletonBase className="w-full h-48 rounded-none" />
+                <div className="p-5 space-y-3">
+                  <SkeletonBase className="h-5 w-2/3" />
+                  <SkeletonBase className="h-4 w-1/2" />
+                  <SkeletonBase className="h-4 w-1/3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="hidden md:grid md:grid-cols-3 gap-6">
+            {pgs.map(pg => <FeaturedPGCard key={pg._id} pg={pg} />)}
+          </div>
+        )}
 
         {/* Mobile: horizontal scroll strip */}
-        <div
-          className="flex md:hidden gap-4 overflow-x-auto pb-3 -mx-6 px-6 snap-x snap-mandatory"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          {loading
-            ? Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex-shrink-0 w-[78vw] snap-start"><PGCardSkeleton /></div>
-              ))
-            : pgs.map(pg => (
-                <div key={pg._id} className="flex-shrink-0 w-[78vw] snap-start">
-                  <FeaturedPGCard pg={pg} />
+        {loading ? (
+          <div
+            className="flex md:hidden gap-4 overflow-x-auto pb-3 -mx-6 px-6 snap-x snap-mandatory animate-pulse"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex-shrink-0 w-[78vw] snap-start">
+                <div className="bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden">
+                  <SkeletonBase className="w-full h-48 rounded-none" />
+                  <div className="p-5 space-y-3">
+                    <SkeletonBase className="h-5 w-2/3" />
+                    <SkeletonBase className="h-4 w-1/2" />
+                    <SkeletonBase className="h-4 w-1/3" />
+                  </div>
                 </div>
-              ))}
-        </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div
+            className="flex md:hidden gap-4 overflow-x-auto pb-3 -mx-6 px-6 snap-x snap-mandatory"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {pgs.map(pg => (
+              <div key={pg._id} className="flex-shrink-0 w-[78vw] snap-start">
+                <FeaturedPGCard pg={pg} />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   )
@@ -515,13 +529,16 @@ function FeaturedPGCard({ pg }) {
   const rent = pg.pricing?.rent
 
   return (
-    <div className="bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden group hover:shadow-card transition-all duration-300 h-full flex flex-col">
-      <div className="relative h-48 overflow-hidden bg-[#f6f3f2] flex items-center justify-center flex-shrink-0">
+    <div
+      className="card-lift bg-white rounded-[20px] border border-[#E5E7EB] overflow-hidden h-full flex flex-col group"
+      style={{ boxShadow: 'rgba(0,0,0,0.05) 0px 2px 8px, rgba(0,0,0,0.02) 0px 0px 1px' }}
+    >
+      <div className="relative h-52 overflow-hidden bg-[#f6f3f2] flex items-center justify-center flex-shrink-0">
         {image ? (
           <img
             src={image}
             alt={pg.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
             onError={() => setImgError(true)}
           />
         ) : (
@@ -530,41 +547,40 @@ function FeaturedPGCard({ pg }) {
             <span className="text-xs text-[#9ca3af]">{pg.location?.area || 'Pune'}</span>
           </div>
         )}
-        <span className="absolute top-3 left-3 bg-[#e98a76] text-white px-3 py-1 rounded-full text-xs font-semibold">
-          VERIFIED
+        {/* Bottom gradient */}
+        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+        <span className="absolute top-3 left-3 inline-flex items-center gap-1 bg-white/95 backdrop-blur-sm text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-green-100"
+          style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}>
+          <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+          </svg>
+          Verified
         </span>
-        {pg.meta?.trustScore > 0 && (
-          <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full flex items-center gap-1">
-            <span
-              className="material-symbols-outlined text-[#e98a76] text-[14px]"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >star</span>
-            <span className="text-xs font-bold text-[#1b1c1c]">{pg.meta.trustScore}</span>
-          </div>
-        )}
       </div>
       <div className="p-5 flex flex-col flex-1">
-        <h3 className="text-base font-semibold text-[#1b1c1c] mb-1">{pg.name}</h3>
-        <div className="flex items-center gap-1 text-[#73787a] text-sm mb-3">
-          <span className="material-symbols-outlined text-[16px]">location_on</span>
+        <h3 className="text-base font-bold text-[#1b1c1c] mb-1 group-hover:text-[#e98a76] transition-colors leading-snug">{pg.name}</h3>
+        <div className="flex items-center gap-1 text-[#73787a] text-sm mb-4">
+          <span className="material-symbols-outlined text-[#9ca3af]" style={{ fontSize: '14px' }}>location_on</span>
           {location}
         </div>
-        <div className="text-xl font-bold text-[#e98a76] mb-4 mt-auto">
-          {rent ? <>&#8377;{rent.toLocaleString('en-IN')}<span className="text-sm font-normal text-[#73787a]">/month</span></> : '—'}
-        </div>
-        <div className="flex gap-2">
-          <Link
-            to="/login"
-            className="flex-1 px-4 py-2.5 border border-[#E5E7EB] rounded-xl text-sm font-semibold text-[#1b1c1c] text-center hover:bg-[#f3f4f6] transition-colors"
-          >
-            View Details
-          </Link>
-          <Link
-            to="/login"
-            className="flex-1 px-4 py-2.5 bg-[#e98a76] text-white rounded-xl text-sm font-semibold text-center hover:opacity-90 transition-all"
-          >
-            Book Visit
-          </Link>
+        <div className="mt-auto">
+          <div className="text-[22px] font-bold text-[#1b1c1c] tracking-tight mb-4">
+            {rent ? <>&#8377;{rent.toLocaleString('en-IN')}<span className="text-xs font-normal text-[#9ca3af] ml-1">/mo</span></> : '—'}
+          </div>
+          <div className="flex gap-2">
+            <Link
+              to="/login"
+              className="flex-1 px-4 py-2.5 border border-[#E5E7EB] rounded-[10px] text-sm font-semibold text-[#434849] text-center hover:bg-[#f6f3f2] hover:border-[#d4cfc9] transition-all"
+            >
+              View Details
+            </Link>
+            <Link
+              to="/login"
+              className="flex-1 px-4 py-2.5 bg-[#e98a76] text-white rounded-[10px] text-sm font-semibold text-center hover:opacity-90 active:scale-[0.97] transition-all btn-glow"
+            >
+              Book Visit
+            </Link>
+          </div>
         </div>
       </div>
     </div>
@@ -615,10 +631,10 @@ function ValuePropSection() {
 // ─── How It Works ─────────────────────────────────────────────────────────────
 
 const STEPS = [
-  { n: '1', title: 'Search',        desc: 'Browse verified properties near your college or workplace' },
-  { n: '2', title: 'Compare',       desc: 'Compare prices, amenities and locations side by side'      },
-  { n: '3', title: 'Schedule Visit', desc: 'Book a property visit at your preferred date and time'    },
-  { n: '4', title: 'Move In',       desc: 'Complete documentation digitally and move in hassle-free'  },
+  { n: '1', title: 'Search',  desc: 'Browse verified properties near your college or workplace' },
+  { n: '2', title: 'Compare', desc: 'Compare prices, amenities and locations side by side'      },
+  { n: '3', title: 'Apply',   desc: 'Submit your admission request online — no visits needed'   },
+  { n: '4', title: 'Move In', desc: 'Complete documentation digitally and move in hassle-free'  },
 ]
 
 function HowItWorksSection() {
@@ -704,25 +720,30 @@ function TestimonialsSection() {
           <span className="text-[#e98a76] text-xs font-bold uppercase tracking-wider mb-2 block">What Residents Say</span>
           <h2 className="text-[28px] font-bold text-[#1b1c1c]">What Students Say</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {loading
-            ? Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="bg-white p-6 rounded-2xl border border-[#E5E7EB] animate-pulse space-y-4">
-                  <div className="flex gap-1">{[...Array(5)].map((_, j) => <div key={j} className="w-4 h-4 bg-gray-200 rounded" />)}</div>
-                  <div className="space-y-2">
-                    <div className="h-3 bg-gray-200 rounded w-full" />
-                    <div className="h-3 bg-gray-200 rounded w-5/6" />
-                  </div>
-                  <div className="flex items-center gap-3 pt-2">
-                    <div className="w-11 h-11 bg-gray-200 rounded-full" />
-                    <div className="space-y-1.5">
-                      <div className="h-3 bg-gray-200 rounded w-24" />
-                      <div className="h-2.5 bg-gray-200 rounded w-16" />
-                    </div>
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-pulse">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-white p-6 rounded-2xl border border-[#E5E7EB] space-y-4">
+                <div className="flex gap-1">
+                  {[...Array(5)].map((_, j) => <SkeletonBase key={j} className="w-4 h-4 rounded" />)}
+                </div>
+                <div className="space-y-2">
+                  <SkeletonBase className="h-3 rounded w-full" />
+                  <SkeletonBase className="h-3 rounded w-5/6" />
+                </div>
+                <div className="flex items-center gap-3 pt-2">
+                  <SkeletonBase className="w-11 h-11 rounded-full" />
+                  <div className="space-y-1.5">
+                    <SkeletonBase className="h-3 rounded w-24" />
+                    <SkeletonBase className="h-2.5 rounded w-16" />
                   </div>
                 </div>
-              ))
-            : testimonials.length > 0
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {testimonials.length > 0
               ? testimonials.map((t, idx) => {
                   const name = t.createdBy?.name || 'Resident'
                   const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
@@ -750,7 +771,8 @@ function TestimonialsSection() {
                   )
                 })
               : null}
-        </div>
+          </div>
+        )}
       </div>
     </section>
   )

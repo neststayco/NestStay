@@ -6,11 +6,16 @@ import OfflineBanner from '@shared/components/OfflineBanner'
 import { relativeTime, absoluteDate } from '@shared/utils/relativeTime'
 import Pagination from '../../components/Pagination'
 import TabFilter from '../../components/TabFilter'
+import PageHeader from '../../components/PageHeader'
+import EmptyState from '../../components/EmptyState'
+import PageContainer from '../../components/PageContainer'
+import TableWrapper from '../../components/TableWrapper'
+import { SkeletonTable } from '@shared/components/Skeleton'
 
-const STATUS_COLORS = {
-  pending:  'bg-yellow-100 text-yellow-700',
-  approved: 'bg-green-100 text-green-700',
-  rejected: 'bg-gray-100 text-gray-500',
+const STATUS_STYLES = {
+  pending:  'bg-amber-50 text-amber-700 border-amber-200',
+  approved: 'bg-green-50 text-green-700 border-green-200',
+  rejected: 'bg-[#f6f3f2] text-[#73787a] border-[#E5E7EB]',
 }
 
 const STATUS_LABELS = {
@@ -33,24 +38,6 @@ const TABS = [
   { value: 'approved', label: 'Acknowledged' },
   { value: 'rejected', label: 'Dismissed' },
 ]
-
-function RelativeTime({ isoString }) {
-  return (
-    <span title={absoluteDate(isoString)} className="text-xs text-gray-400 whitespace-nowrap">
-      {relativeTime(isoString)}
-    </span>
-  )
-}
-
-function RowSkeleton() {
-  return (
-    <tr className="animate-pulse">
-      {[1, 2, 3, 4, 5, 6].map(i => (
-        <td key={i} className="px-4 py-3"><div className="h-4 bg-gray-200 rounded w-3/4" /></td>
-      ))}
-    </tr>
-  )
-}
 
 export default function OwnerComplaintsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -123,137 +110,121 @@ export default function OwnerComplaintsPage() {
     }
   }
 
-  const showingFrom = pagination.totalItems
-    ? ((pagination.currentPage - 1) * (pagination.limit || 15)) + 1 : 0
-  const showingTo = pagination.totalItems
-    ? Math.min(pagination.currentPage * (pagination.limit || 15), pagination.totalItems) : 0
-
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <PageContainer size="xl">
       <OfflineBanner />
-
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Complaints</h1>
-        <p className="text-gray-500 text-sm mt-0.5">Acknowledge resolved ones or dismiss invalid ones.</p>
-      </div>
+      <PageHeader title="Complaints" subtitle="Acknowledge resolved issues or dismiss invalid ones" />
 
       <div className="flex items-center gap-3 mb-5 flex-wrap">
-        <TabFilter
-          tabs={TABS}
-          value={statusFilter}
-          onChange={s => updateParams({ status: s })}
-        />
+        <TabFilter tabs={TABS} value={statusFilter} onChange={s => updateParams({ status: s })} />
 
         <label className="flex items-center gap-2 ml-1 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={verifiedOnly}
-            onChange={e => updateParams({ verifiedOnly: e.target.checked ? 'true' : '' })}
-            className="w-4 h-4 accent-action"
-          />
-          <span className="text-sm text-gray-600">Verified residents only</span>
+          <div
+            onClick={() => updateParams({ verifiedOnly: !verifiedOnly ? 'true' : '' })}
+            className={`relative rounded-full transition-colors cursor-pointer flex-shrink-0 ${verifiedOnly ? 'bg-[#e98a76]' : 'bg-[#E5E7EB]'}`}
+            style={{ width: '2rem', height: '1.125rem' }}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform ${verifiedOnly ? 'translate-x-3.5' : ''}`} />
+          </div>
+          <span className="text-sm text-[#434849]">Verified residents only</span>
         </label>
 
         {pagination.totalItems !== undefined && (
-          <span className="ml-auto text-sm text-gray-400">{pagination.totalItems} total</span>
+          <span className="ml-auto text-xs text-[#73787a] font-medium bg-[#f6f3f2] px-3 py-1.5 rounded-full">
+            {pagination.totalItems} total
+          </span>
         )}
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-[10px] text-sm text-red-700 flex items-center justify-between gap-3">
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-center justify-between gap-3">
           <span>{error}</span>
           <button onClick={fetchComplaints} className="text-sm font-medium underline shrink-0">Retry</button>
         </div>
       )}
 
-      {pagination.totalItems > 0 && (
-        <p className="text-xs text-gray-400 mb-3">
-          Showing {showingFrom}–{showingTo} of {pagination.totalItems} complaints
-        </p>
-      )}
-
-      <div className="bg-white rounded-[20px] border border-[#e0e0e0] shadow-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Type</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Description</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Flags</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Filed</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading
-                ? Array.from({ length: 8 }).map((_, i) => <RowSkeleton key={i} />)
-                : complaints.length === 0
-                ? (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center">
-                      <p className="text-gray-400 text-sm font-medium">No complaints found</p>
-                      <p className="text-gray-300 text-xs mt-1">
-                        {statusFilter || verifiedOnly ? 'Try a different filter' : 'No complaints filed for your PG yet'}
-                      </p>
-                    </td>
-                  </tr>
-                )
-                : complaints.map(c => (
-                  <tr key={c._id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-gray-800 capitalize whitespace-nowrap">
-                      {TYPE_LABELS[c.type] || c.type}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 max-w-[240px]">
-                      <p className="truncate" title={c.description}>{c.description}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-1 flex-wrap">
-                        {c.isVerifiedResident && (
-                          <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">Verified</span>
-                        )}
-                        {c.isAnonymous && (
-                          <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">Anon</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[c.status] || 'bg-gray-100 text-gray-600'}`}>
-                        {STATUS_LABELS[c.status] || c.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <RelativeTime isoString={c.createdAt} />
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {c.status === 'pending' && (
-                        <div className="flex gap-2 justify-end">
-                          <button
-                            onClick={() => handleAction(c._id, 'approved')}
-                            disabled={!!acting}
-                            className="text-xs px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-[10px] disabled:opacity-50 transition-colors"
-                          >
-                            {acting === c._id + 'approved' ? '…' : 'Acknowledge'}
-                          </button>
-                          <button
-                            onClick={() => handleAction(c._id, 'rejected')}
-                            disabled={!!acting}
-                            className="text-xs px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-[10px] disabled:opacity-50 transition-colors"
-                          >
-                            {acting === c._id + 'rejected' ? '…' : 'Dismiss'}
-                          </button>
-                        </div>
+      <TableWrapper>
+        <table className="w-full text-sm">
+          <thead className="border-b border-[#f0f0f0]">
+            <tr>
+              <th className="px-4 py-3 text-left text-[10px] font-semibold text-[#73787a] uppercase tracking-wider bg-[#f6f3f2]">Type</th>
+              <th className="px-4 py-3 text-left text-[10px] font-semibold text-[#73787a] uppercase tracking-wider bg-[#f6f3f2]">Description</th>
+              <th className="px-4 py-3 text-left text-[10px] font-semibold text-[#73787a] uppercase tracking-wider bg-[#f6f3f2]">Flags</th>
+              <th className="px-4 py-3 text-left text-[10px] font-semibold text-[#73787a] uppercase tracking-wider bg-[#f6f3f2]">Status</th>
+              <th className="px-4 py-3 text-left text-[10px] font-semibold text-[#73787a] uppercase tracking-wider bg-[#f6f3f2]">Filed</th>
+              <th className="px-4 py-3 bg-[#f6f3f2]" />
+            </tr>
+          </thead>
+          {loading
+            ? <SkeletonTable rows={8} cols={6} />
+            : <tbody className="divide-y divide-[#f6f6f6]">
+                {complaints.length === 0
+                  ? (
+                    <tr><td colSpan={6}>
+                      <EmptyState
+                    icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>}
+                    title="No complaints found"
+                    description={statusFilter || verifiedOnly ? 'Try a different filter' : 'No complaints filed for your PG yet'}
+                  />
+                </td></tr>
+              )
+              : complaints.map(c => (
+                <tr key={c._id} className="hover:bg-[#fbf9f8] transition-colors">
+                  <td className="px-4 py-3.5 font-semibold text-[#1b1c1c] capitalize whitespace-nowrap text-sm">
+                    {TYPE_LABELS[c.type] || c.type}
+                  </td>
+                  <td className="px-4 py-3.5 text-[#73787a] max-w-[220px]">
+                    <p className="truncate text-sm" title={c.description}>{c.description}</p>
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <div className="flex gap-1 flex-wrap">
+                      {c.isVerifiedResident && (
+                        <span className="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded-full font-semibold">Verified</span>
                       )}
-                    </td>
-                  </tr>
-                ))
-              }
-            </tbody>
-          </table>
-        </div>
-      </div>
+                      {c.isAnonymous && (
+                        <span className="text-[10px] bg-[#f6f3f2] text-[#73787a] border border-[#E5E7EB] px-1.5 py-0.5 rounded-full font-semibold">Anon</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${STATUS_STYLES[c.status] || 'bg-[#f6f3f2] text-[#73787a] border-[#E5E7EB]'}`}>
+                      {STATUS_LABELS[c.status] || c.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <span title={absoluteDate(c.createdAt)} className="text-xs text-[#73787a] whitespace-nowrap">
+                      {relativeTime(c.createdAt)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3.5 text-right">
+                    {c.status === 'pending' && (
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={() => handleAction(c._id, 'approved')}
+                          disabled={!!acting}
+                          className="text-xs px-3 py-1.5 bg-[#e98a76] hover:opacity-90 text-white rounded-lg font-semibold disabled:opacity-40 transition-all whitespace-nowrap"
+                        >
+                          {acting === c._id + 'approved' ? '…' : 'Acknowledge'}
+                        </button>
+                        <button
+                          onClick={() => handleAction(c._id, 'rejected')}
+                          disabled={!!acting}
+                          className="text-xs px-3 py-1.5 border border-[#E5E7EB] hover:border-red-200 hover:bg-red-50 hover:text-red-600 text-[#73787a] rounded-lg font-medium disabled:opacity-40 transition-colors"
+                        >
+                          {acting === c._id + 'rejected' ? '…' : 'Dismiss'}
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))
+            }
+              </tbody>
+          }
+        </table>
+      </TableWrapper>
 
       <Pagination page={page} totalPages={pagination.totalPages} onPageChange={setPage} />
-    </div>
+    </PageContainer>
   )
 }

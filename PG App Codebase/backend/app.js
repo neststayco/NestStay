@@ -3,7 +3,6 @@ import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import mongoSanitize from "express-mongo-sanitize";
-import rateLimit from "express-rate-limit";
 import complaintRoutes from "./src/routes/complaint.routes.js";
 import testimonialRoutes from "./src/routes/testimonial.routes.js";
 import imagekitRoutes from "./src/routes/imagekit.routes.js";
@@ -12,6 +11,7 @@ import pgRoutes from "./src/routes/pg.routes.js";
 import pgResidencyRoutes from "./src/routes/pgResidency.routes.js";
 import adminRoutes from "./src/routes/admin.routes.js";
 import admissionRoutes from "./src/routes/admission.routes.js";
+import userRoutes from "./src/routes/user.routes.js";
 import requestLogger from "./src/middleware/requestLogger.middleware.js";
 import Logger from "./src/services/logger.service.js";
 
@@ -57,15 +57,6 @@ app.use((req, res, next) => {
 
 app.use(requestLogger);
 
-// General rate limit on all /api routes (auth routes have stricter per-route limits on top)
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === "production" ? 100 : 1000,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, message: "Too many requests, please try again later." },
-});
-
 app.get("/", (req, res) => {
   res.send("API is running...");
 });
@@ -80,8 +71,6 @@ app.get("/health", (req, res) => {
   });
 });
 
-app.use("/api", generalLimiter);
-
 app.use("/api/auth", authRoutes);
 app.use("/api/complaints", complaintRoutes);
 app.use("/api/pgs", pgRoutes);
@@ -90,6 +79,7 @@ app.use("/api/admissions", admissionRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/testimonials", testimonialRoutes);
 app.use("/api/imagekit", imagekitRoutes);
+app.use("/api/user", userRoutes);
 
 app.use((req, res, next) => {
   res.status(404).json({ message: "Route not found" });

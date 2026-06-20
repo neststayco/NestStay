@@ -3,7 +3,6 @@ import mongoose from 'mongoose'
 import User from '../src/models/user.js'
 import PG from '../src/models/pg.js'
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/pg-app'
 
 const PGS = [
   {
@@ -53,8 +52,7 @@ const PGS = [
 ]
 
 async function seed() {
-  await mongoose.connect(MONGO_URI)
-  console.log('Connected:', MONGO_URI)
+  await mongoose.connect('mongodb+srv://db_user:nestconnect1@cluster0.hmfd4oy.mongodb.net/Neststay_DB')
 
   await Promise.all([User.deleteMany({}), PG.deleteMany({})])
   console.log('Cleared users + pgs')

@@ -4,6 +4,7 @@ import {
   getMyComplaints,
   getComplaints,
   updateComplaintStatus,
+  deleteComplaint,
 } from "../controllers/complaint.controller.js";
 import { protect, allowRoles } from "../middleware/auth.middleware.js";
 import { ensureVerifiedResident } from "../middleware/ensureVerifiedResident.middleware.js";
@@ -14,5 +15,6 @@ router.post("/", protect, allowRoles("user"), ensureVerifiedResident, createComp
 router.get("/mine", protect, allowRoles("user"), getMyComplaints);
 router.get("/", protect, allowRoles("admin", "pg_owner"), getComplaints);
 router.patch("/:id", protect, allowRoles("pg_owner"), updateComplaintStatus);
+router.delete("/:id", protect, allowRoles("admin"), deleteComplaint);
 
 export default router;

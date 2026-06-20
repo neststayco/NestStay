@@ -5,6 +5,7 @@ import { getPGDetails } from '@shared/api/pgs'
 import { getPublicTestimonials, createTestimonial } from '@shared/api/testimonials'
 import { useAuth } from '@shared/context/AuthContext'
 import { useToast } from '@shared/components/Toast'
+import { SkeletonPGDetail } from '@shared/components/Skeleton'
 
 const PLACEHOLDER = 'https://placehold.co/800x400/e2e8f0/94a3b8?text=No+Image'
 
@@ -56,19 +57,6 @@ function TestimonialCard({ t }) {
         </div>
       </div>
       <p className="text-sm text-gray-700 leading-relaxed">{t.content}</p>
-    </div>
-  )
-}
-
-function Skeleton() {
-  return (
-    <div className="animate-pulse space-y-4">
-      <div className="h-56 bg-gray-200 rounded-xl" />
-      <div className="h-6 bg-gray-200 rounded w-2/3" />
-      <div className="h-4 bg-gray-200 rounded w-1/3" />
-      <div className="grid grid-cols-3 gap-3">
-        {[1, 2, 3].map((i) => <div key={i} className="h-20 bg-gray-200 rounded-xl" />)}
-      </div>
     </div>
   )
 }
@@ -125,15 +113,6 @@ export default function PGDetailPage() {
     load()
   }, [id])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <main className="max-w-3xl mx-auto px-4 py-8"><Skeleton /></main>
-      </div>
-    )
-  }
-
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -148,14 +127,17 @@ export default function PGDetailPage() {
     )
   }
 
-  const { pg, userContext, remainingCapacity } = data
-  const images = pg.images?.length > 0 ? pg.images.map(img => img?.url || img) : [PLACEHOLDER]
+  const pg = data?.pg
+  const userContext = data?.userContext
+  const remainingCapacity = data?.remainingCapacity
+  const images = pg?.images?.length > 0 ? pg.images.map(img => img?.url || img) : [PLACEHOLDER]
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+        {loading ? <SkeletonPGDetail /> : <>
         <Link to="/" className="text-sm text-action hover:underline inline-flex items-center gap-1">
           &larr; All PGs
         </Link>
@@ -402,6 +384,7 @@ export default function PGDetailPage() {
             </div>
           )}
         </div>
+        </>}
       </main>
     </div>
   )

@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getPGList, createPG, updatePG, deletePG } from '@shared/api/pgs'
 import PGImageUploader from '@shared/components/PGImageUploader'
+import { SkeletonTable } from '@shared/components/Skeleton'
 
 function slugify(name) {
   return name.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
@@ -391,16 +392,6 @@ function ConfirmDialog({ pg, onCancel, onConfirm, loading }) {
   )
 }
 
-function RowSkeleton() {
-  return (
-    <tr className="animate-pulse">
-      {Array.from({ length: 7 }).map((_, i) => (
-        <td key={i} className="px-4 py-3.5"><div className="h-3 bg-gray-200 rounded" /></td>
-      ))}
-    </tr>
-  )
-}
-
 export default function PGManagementPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = parseInt(searchParams.get('page') || '1', 10)
@@ -414,6 +405,9 @@ export default function PGManagementPage() {
   const [confirmTarget, setConfirmTarget] = useState(null)
   const [deactivating, setDeactivating] = useState(false)
   const [togglingVerify, setTogglingVerify] = useState(null)
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const searchTimer = useRef(null)
 
   function setPage(p) {
     setSearchParams(prev => {
@@ -424,11 +418,13 @@ export default function PGManagementPage() {
     }, { replace: false })
   }
 
-  const fetch = useCallback(async () => {
+  const loadPGs = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      const res = await getPGList({ page, limit: 12 })
+      const params = { page, limit: 12 }
+      if (debouncedSearch) params.search = debouncedSearch
+      const res = await getPGList(params)
       setPgs(res.data)
       setPagination(res.pagination)
     } catch {
@@ -436,9 +432,17 @@ export default function PGManagementPage() {
     } finally {
       setLoading(false)
     }
-  }, [page])
+  }, [page, debouncedSearch])
 
-  useEffect(() => { fetch() }, [fetch])
+  function handleSearchChange(e) {
+    const val = e.target.value
+    setSearch(val)
+    setPage(1)
+    clearTimeout(searchTimer.current)
+    searchTimer.current = setTimeout(() => setDebouncedSearch(val), 400)
+  }
+
+  useEffect(() => { loadPGs() }, [loadPGs])
 
   function handleSaved(pg, isEdit) {
     if (isEdit) {
@@ -453,7 +457,7 @@ export default function PGManagementPage() {
   async function handleToggleVerify(pg) {
     setTogglingVerify(pg._id)
     try {
-      const res = await updatePG(pg._id, { ...pg, isVerified: !pg.isVerified })
+      const res = await updatePG(pg._id, { isVerified: !pg.isVerified })
       setPgs(prev => prev.map(p => p._id === pg._id ? res.data : p))
     } catch {
       setError('Failed to update verification status.')
@@ -479,25 +483,35 @@ export default function PGManagementPage() {
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-start justify-between gap-4 mb-5">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">PG Listings</h1>
           <p className="text-gray-500 text-sm mt-0.5">
             Manage PG properties on the platform
             <span className="ml-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
-              Showing active PGs only
+              Active PGs only
             </span>
           </p>
         </div>
         <button
           onClick={() => { setEditTarget(null); setFormOpen(true) }}
-          className="flex items-center gap-2 bg-brand hover:bg-brand-light text-black text-sm font-semibold px-4 py-2.5 rounded-[10px] transition-colors"
+          className="flex items-center gap-2 bg-brand hover:bg-brand-light text-black text-sm font-semibold px-4 py-2.5 rounded-[10px] transition-colors whitespace-nowrap"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           Add PG
         </button>
+      </div>
+
+      <div className="mb-4">
+        <input
+          type="text"
+          value={search}
+          onChange={handleSearchChange}
+          placeholder="Search by name or location…"
+          className="w-full max-w-sm border border-[#e0e0e0] rounded-[10px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action focus:border-action bg-gray-50"
+        />
       </div>
 
       {error && (
@@ -518,15 +532,16 @@ export default function PGManagementPage() {
                 <th className="px-4 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading ? (
-                Array.from({ length: 8 }).map((_, i) => <RowSkeleton key={i} />)
-              ) : pgs.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-12 text-gray-400 text-sm">No PGs found</td>
-                </tr>
-              ) : (
-                pgs.map(pg => (
+            {loading
+              ? <SkeletonTable rows={8} cols={7} />
+              : <tbody className="divide-y divide-gray-100">
+                  {pgs.length === 0
+                    ? (
+                      <tr>
+                        <td colSpan={7} className="text-center py-12 text-gray-400 text-sm">No PGs found</td>
+                      </tr>
+                    )
+                    : pgs.map(pg => (
                   <tr key={pg._id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3.5">
                       <div className="font-medium text-gray-900 max-w-[160px] truncate">{pg.name}</div>
@@ -576,9 +591,9 @@ export default function PGManagementPage() {
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
+                ))}
+                </tbody>
+            }
           </table>
         </div>
 

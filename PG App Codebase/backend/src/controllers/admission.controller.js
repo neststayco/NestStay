@@ -23,10 +23,11 @@ export const createAdmissionRequest = async (req, res) => {
       return res.status(404).json({ success: false, message: "PG not found or inactive" });
     }
 
-    // Check no active admission exists for this user anywhere
+    // Block if user already has an active admission or pending request
     const existingActiveAnywhere = await PGResidency.findOne({
       userId,
-      status: { $in: ["pending", "admitted"] },
+      status: { $in: ["pending", "approved"] },
+      residentStatus: { $ne: "removed" },
     }).lean();
 
     if (existingActiveAnywhere) {
@@ -60,7 +61,8 @@ export const getMyAdmission = async (req, res) => {
   try {
     const admission = await PGResidency.findOne({
       userId: req.user.id,
-      status: { $in: ["pending", "admitted"] },
+      status: { $in: ["pending", "approved"] },
+      residentStatus: { $ne: "removed" },
     })
       .populate("pgId", "name location images slug")
       .lean();
@@ -79,7 +81,7 @@ export const getMyAdmission = async (req, res) => {
 export const getPGAdmissions = async (req, res) => {
   try {
     const pgId = req.user.pgId;
-    const { status, page = 1, limit = 15 } = req.query;
+    const { status, residentStatus, search, page = 1, limit = 15 } = req.query;
 
     if (!pgId) {
       return res.status(400).json({ success: false, message: "No PG linked to this owner account" });
@@ -87,6 +89,13 @@ export const getPGAdmissions = async (req, res) => {
 
     const filter = { pgId };
     if (status) filter.status = status;
+    if (residentStatus) filter.residentStatus = residentStatus;
+
+    if (search && search.trim()) {
+      const regex = new RegExp(search.trim(), "i");
+      const matchingUserIds = await User.find({ $or: [{ name: regex }, { email: regex }] }).distinct("_id");
+      filter.userId = { $in: matchingUserIds };
+    }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
@@ -119,14 +128,17 @@ export const getPGAdmissions = async (req, res) => {
 // GET /api/admissions — admin gets all admissions
 export const getAllAdmissions = async (req, res) => {
   try {
-    const { status, pgId, escalated, page = 1, limit = 15 } = req.query;
+    const { status, residentStatus, search, pgId, page = 1, limit = 15 } = req.query;
 
     const filter = {};
     if (status) filter.status = status;
+    if (residentStatus) filter.residentStatus = residentStatus;
     if (pgId && mongoose.isValidObjectId(pgId)) filter.pgId = pgId;
-    if (escalated === "true") {
-      filter.escalatedAt = { $ne: null };
-      filter.status = "pending";
+
+    if (search && search.trim()) {
+      const regex = new RegExp(search.trim(), "i");
+      const matchingUserIds = await User.find({ $or: [{ name: regex }, { email: regex }] }).distinct("_id");
+      filter.userId = { $in: matchingUserIds };
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -135,7 +147,7 @@ export const getAllAdmissions = async (req, res) => {
       PGResidency.find(filter)
         .populate("userId", "name email")
         .populate("pgId", "name location.city location.area")
-        .sort({ escalatedAt: -1, createdAt: -1 })
+        .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))
         .lean(),
@@ -158,7 +170,7 @@ export const getAllAdmissions = async (req, res) => {
   }
 };
 
-// PATCH /api/admissions/:id/decide — owner or admin decides on an admission
+// PATCH /api/admissions/:id/decide — owner or admin approves/rejects a pending admission
 export const decideAdmission = async (req, res) => {
   try {
     const { id } = req.params;
@@ -169,8 +181,8 @@ export const decideAdmission = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid admission ID" });
     }
 
-    if (!["admitted", "rejected"].includes(decision)) {
-      return res.status(400).json({ success: false, message: "decision must be 'admitted' or 'rejected'" });
+    if (!["approved", "rejected"].includes(decision)) {
+      return res.status(400).json({ success: false, message: "decision must be 'approved' or 'rejected'" });
     }
 
     const admission = await PGResidency.findById(id);
@@ -178,7 +190,6 @@ export const decideAdmission = async (req, res) => {
       return res.status(404).json({ success: false, message: "Admission request not found" });
     }
 
-    // pg_owner can only act on their own PG
     if (actorRole === "pg_owner") {
       if (!admission.pgId.equals(req.user.pgId)) {
         return res.status(403).json({ success: false, message: "Not authorized for this admission" });
@@ -194,6 +205,11 @@ export const decideAdmission = async (req, res) => {
       role: actorRole === "admin" ? "admin" : "owner",
       userId: req.user.id,
     };
+
+    // Approval creates an active resident — admission stays approved permanently
+    if (decision === "approved") {
+      admission.residentStatus = "active";
+    }
 
     await admission.save();
 
@@ -238,7 +254,8 @@ export const ownerAddResident = async (req, res) => {
 
     const existingActive = await PGResidency.findOne({
       userId: guest._id,
-      status: { $in: ["pending", "admitted"] },
+      status: { $in: ["pending", "approved"] },
+      residentStatus: { $ne: "removed" },
     }).lean();
 
     if (existingActive) {
@@ -251,7 +268,8 @@ export const ownerAddResident = async (req, res) => {
     const admission = await PGResidency.create({
       userId: guest._id,
       pgId,
-      status: "admitted",
+      status: "approved",
+      residentStatus: "active",
       processedBy: { role: "owner", userId: req.user.id },
     });
 
@@ -298,9 +316,7 @@ export const withdrawAdmission = async (req, res) => {
       });
     }
 
-    admission.status = "rejected";
-    admission.revokedAt = new Date();
-    admission.revokedBy = userId;
+    admission.status = "withdrawn";
     await admission.save();
 
     Logger.event("admission.withdrawn", { admissionId: id, userId });
@@ -312,8 +328,9 @@ export const withdrawAdmission = async (req, res) => {
   }
 };
 
-// PATCH /api/admissions/:id/revoke — admin or pg_owner revokes an admission
-export const revokeAdmission = async (req, res) => {
+// PATCH /api/admissions/:id/remove-resident — owner/admin removes an active resident
+// Admission status is NEVER modified — only residentStatus changes
+export const removeResident = async (req, res) => {
   try {
     const { id } = req.params;
     const actorRole = req.user.role;
@@ -331,25 +348,24 @@ export const revokeAdmission = async (req, res) => {
       return res.status(403).json({ success: false, message: "Not authorized for this admission" });
     }
 
-    if (admission.status !== "admitted") {
-      return res.status(400).json({ success: false, message: "Can only revoke admitted guests" });
+    if (admission.residentStatus !== "active") {
+      return res.status(400).json({ success: false, message: "Resident is not currently active" });
     }
 
-    admission.status = "rejected";
-    admission.revokedAt = new Date();
-    admission.revokedBy = req.user.id;
+    admission.residentStatus = "removed";
+    admission.residentRemovedAt = new Date();
 
     await admission.save();
 
-    Logger.event("admission.revoked", { admissionId: id, by: actorRole });
+    Logger.event("resident.removed", { admissionId: id, by: actorRole });
 
     return res.status(200).json({
       success: true,
-      message: "Admission revoked",
+      message: "Resident removed",
       data: admission,
     });
   } catch (error) {
-    Logger.error("REVOKE_ADMISSION_ERROR", { error: error.message });
+    Logger.error("REMOVE_RESIDENT_ERROR", { error: error.message });
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };

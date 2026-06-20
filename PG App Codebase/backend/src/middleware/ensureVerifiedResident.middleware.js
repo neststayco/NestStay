@@ -12,7 +12,7 @@ export const ensureVerifiedResident = async (req, res, next) => {
     const residency = await PGResidency.findOne({
       userId: req.user.id,
       pgId,
-      status: "admitted",
+      residentStatus: "active",
     }).lean();
 
     if (!residency) {

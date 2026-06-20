@@ -79,7 +79,7 @@ export const deactivateUser = async (req, res) => {
 // GET /api/admin/complaints/stats
 export const getGlobalStats = async (req, res) => {
   try {
-    const [stats, totalAdmitted, totalPending, escalated] = await Promise.all([
+    const [stats, totalAdmitted, totalPending] = await Promise.all([
       Complaint.aggregate([
         {
           $group: {
@@ -111,9 +111,8 @@ export const getGlobalStats = async (req, res) => {
           },
         },
       ]),
-      PGResidency.countDocuments({ status: "admitted" }),
+      PGResidency.countDocuments({ residentStatus: "active" }),
       PGResidency.countDocuments({ status: "pending" }),
-      PGResidency.countDocuments({ status: "pending", escalatedAt: { $ne: null } }),
     ]);
 
     const result = stats.length > 0
@@ -133,7 +132,6 @@ export const getGlobalStats = async (req, res) => {
         ...result,
         totalAdmitted,
         totalPendingAdmissions: totalPending,
-        escalatedAdmissions: escalated,
       },
     });
   } catch (error) {

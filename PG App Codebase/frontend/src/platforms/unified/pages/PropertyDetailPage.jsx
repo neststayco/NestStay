@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import PublicNavbar from '../components/PublicNavbar'
 import { getPGDetails } from '@shared/api/pgs'
+import { SkeletonPGDetail } from '@shared/components/Skeleton'
 
 function WhatsAppIcon() {
   return (
@@ -77,26 +78,6 @@ function ImageGallery({ images, name }) {
           ))}
         </div>
       )}
-    </div>
-  )
-}
-
-function LoadingSkeleton() {
-  return (
-    <div className="min-h-screen bg-[#fbf9f8]">
-      <PublicNavbar />
-      <main className="pt-14 max-w-[1280px] mx-auto px-4 lg:px-16 py-8">
-        <div className="animate-pulse space-y-5">
-          <div className="h-4 bg-gray-200 rounded w-32" />
-          <div className="h-72 bg-gray-200 rounded-2xl" />
-          <div className="h-6 bg-gray-200 rounded w-1/2" />
-          <div className="h-4 bg-gray-200 rounded w-1/3" />
-          <div className="grid grid-cols-3 gap-3">
-            {[1, 2, 3].map(i => <div key={i} className="h-20 bg-gray-200 rounded-2xl" />)}
-          </div>
-          <div className="h-32 bg-gray-200 rounded-2xl" />
-        </div>
-      </main>
     </div>
   )
 }
@@ -187,21 +168,26 @@ export default function PropertyDetailPage() {
       .finally(() => setLoading(false))
   }, [id])
 
-  if (loading) return <LoadingSkeleton />
   if (error) return <ErrorState error={error} onBack={() => navigate(-1)} />
 
-  const { pg, trust, remainingCapacity } = data
-  const images = pg.images?.length > 0 ? pg.images.map(img => img?.url || img) : []
-  const locationStr = [pg.location?.area, pg.location?.city, pg.location?.state].filter(Boolean).join(', ')
-  const whatsappMsg = encodeURIComponent(
+  const pg = data?.pg
+  const remainingCapacity = data?.remainingCapacity
+  const images = pg?.images?.length > 0 ? pg.images.map(img => img?.url || img) : []
+  const locationStr = [pg?.location?.area, pg?.location?.city, pg?.location?.state].filter(Boolean).join(', ')
+  const whatsappMsg = pg ? encodeURIComponent(
     `Hi! I'm interested in ${pg.name}${pg.location?.area ? ` in ${pg.location.area}` : ''}. Can you share more details? (via NestStay)`
-  )
+  ) : ''
 
   return (
     <div className="min-h-screen bg-[#fbf9f8]">
       <PublicNavbar />
 
       <main className="pt-14 pb-28 lg:pb-8">
+        {loading ? (
+          <div className="max-w-[1280px] mx-auto px-4 lg:px-16 py-8">
+            <SkeletonPGDetail />
+          </div>
+        ) : (<>
         <div className="max-w-[1280px] mx-auto px-4 lg:px-16 pt-5 pb-3">
           <button
             onClick={() => navigate(-1)}
@@ -237,12 +223,6 @@ export default function PropertyDetailPage() {
                     <span>{locationStr || 'Pune'}</span>
                   </div>
                 </div>
-                {pg.meta?.trustScore > 0 && (
-                  <div className="flex-shrink-0 flex items-center gap-1 bg-[#fef3f0] px-3 py-1.5 rounded-xl">
-                    <span className="material-symbols-outlined text-[#e98a76] text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                    <span className="text-sm font-bold text-[#1b1c1c]">{pg.meta.trustScore}</span>
-                  </div>
-                )}
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 border-t border-gray-100">
@@ -338,30 +318,6 @@ export default function PropertyDetailPage() {
               </a>
             )}
 
-            {/* Trust & complaints */}
-            {trust && (
-              <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5">
-                <h2 className="text-sm font-bold text-[#1b1c1c] uppercase tracking-wide mb-3">Trust Score</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                  <div className="bg-green-50 border border-green-100 rounded-xl p-3">
-                    <p className="text-xl font-bold text-green-700">{trust.verifiedResidentsCount}</p>
-                    <p className="text-xs text-green-600 mt-0.5">Verified residents</p>
-                  </div>
-                  <div className={`rounded-xl p-3 border ${trust.totalComplaints === 0 ? 'bg-gray-50 border-gray-100' : 'bg-amber-50 border-amber-100'}`}>
-                    <p className={`text-xl font-bold ${trust.totalComplaints === 0 ? 'text-gray-700' : 'text-amber-700'}`}>{trust.totalComplaints}</p>
-                    <p className={`text-xs mt-0.5 ${trust.totalComplaints === 0 ? 'text-gray-500' : 'text-amber-600'}`}>Total complaints</p>
-                  </div>
-                  <div className={`rounded-xl p-3 border ${trust.verifiedComplaints === 0 ? 'bg-gray-50 border-gray-100' : 'bg-red-50 border-red-100'}`}>
-                    <p className={`text-xl font-bold ${trust.verifiedComplaints === 0 ? 'text-gray-700' : 'text-red-600'}`}>{trust.verifiedComplaints}</p>
-                    <p className={`text-xs mt-0.5 ${trust.verifiedComplaints === 0 ? 'text-gray-500' : 'text-red-500'}`}>Verified complaints</p>
-                  </div>
-                  <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
-                    <p className="text-xl font-bold text-gray-600">{trust.unverifiedComplaints}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Unverified</p>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Register CTA strip */}
             <div className="bg-[#101e22] rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -384,10 +340,11 @@ export default function PropertyDetailPage() {
             <ContactCard pg={pg} whatsappMsg={whatsappMsg} />
           </div>
         </div>
+        </>)}
       </main>
 
       {/* Mobile sticky contact bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-white border-t border-[#E5E7EB] px-4 py-3">
+      {!loading && <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-white border-t border-[#E5E7EB] px-4 py-3">
         <div className="flex gap-2 max-w-[1280px] mx-auto">
           <a
             href={`https://wa.me/919970114079?text=${whatsappMsg}`}
@@ -412,7 +369,7 @@ export default function PropertyDetailPage() {
             Enquire
           </Link>
         </div>
-      </div>
+      </div>}
     </div>
   )
 }

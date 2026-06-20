@@ -4,7 +4,6 @@ import PGResidency from "../models/pgResidency.js";
 import mongoose from "mongoose";
 import Logger from "../services/logger.service.js";
 import { uploadToImageKit, deleteFromImageKit } from "../utils/uploadToImageKit.js";
-import { calculateTrustScore } from "../utils/calculateTrustScore.js";
 
 export const createPG = async (req, res) => {
   try {
@@ -157,8 +156,8 @@ export const getPGList = async (req, res) => {
       matchFilter.$text = { $search: search.trim() };
     }
 
-    if (city) matchFilter["location.city"] = city;
-    if (area) matchFilter["location.area"] = area;
+    if (city) matchFilter["location.city"] = { $regex: city.trim(), $options: "i" };
+    if (area) matchFilter["location.area"] = { $regex: area.trim(), $options: "i" };
     if (gender) matchFilter["accommodation.gender"] = gender;
     if (foodType) matchFilter.foodType = foodType;
 
@@ -169,18 +168,14 @@ export const getPGList = async (req, res) => {
     }
 
     if (amenities) {
-      const amenitiesList = amenities.split(",");
-      matchFilter.amenities = { $all: amenitiesList };
+      const amenitiesList = amenities.split(",").map(a => a.trim()).filter(Boolean);
+      if (amenitiesList.length) matchFilter.amenities = { $all: amenitiesList };
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     let sortStage = { createdAt: -1 };
-    if (sortBy === "trustScore") {
-      sortStage = { "meta.trustScore": -1 };
-    } else if (sortBy === "complaints") {
-      sortStage = { "meta.complaintCount": -1 };
-    } else if (sortBy === "price") {
+    if (sortBy === "price") {
       sortStage = { "pricing.rent": 1 };
     }
 
@@ -188,67 +183,29 @@ export const getPGList = async (req, res) => {
       { $match: matchFilter },
       {
         $lookup: {
-          from: "complaints",
-          localField: "_id",
-          foreignField: "pgId",
-          as: "complaints"
-        }
-      },
-      {
-        $lookup: {
           from: "pgresidencies",
           let: { pgId: "$_id" },
           pipeline: [
-            { $match: { $expr: { $and: [{ $eq: ["$pgId", "$$pgId"] }, { $eq: ["$status", "admitted"] }] } } }
+            { $match: { $expr: { $and: [{ $eq: ["$pgId", "$$pgId"] }, { $eq: ["$residentStatus", "active"] }] } } }
           ],
           as: "admittedResidents"
         }
       },
       {
         $addFields: {
-          complaintCount: { $size: "$complaints" },
-          verifiedComplaints: {
-            $size: {
-              $filter: {
-                input: "$complaints",
-                as: "c",
-                cond: { $eq: ["$$c.isVerifiedResident", true] }
-              }
-            }
-          },
-          occupancy: { $size: "$admittedResidents" }
-        }
-      },
-      {
-        $addFields: {
-          unverifiedComplaints: { $subtract: ["$complaintCount", "$verifiedComplaints"] },
+          occupancy: { $size: "$admittedResidents" },
           remainingCapacity: {
             $cond: {
               if: { $ifNull: ["$accommodation.totalCapacity", false] },
-              then: { $max: [0, { $subtract: ["$accommodation.totalCapacity", "$occupancy"] }] },
+              then: { $max: [0, { $subtract: ["$accommodation.totalCapacity", { $size: "$admittedResidents" }] }] },
               else: null
             }
           }
         }
       },
       {
-        $addFields: {
-          "meta.complaintCount": "$complaintCount",
-          "meta.trustScore": {
-            $max: [
-              0,
-              { $subtract: [{ $multiply: ["$verifiedComplaints", 2] }, "$unverifiedComplaints"] }
-            ]
-          }
-        }
-      },
-      {
         $project: {
-          complaints: 0,
           admittedResidents: 0,
-          verifiedComplaints: 0,
-          unverifiedComplaints: 0,
-          complaintCount: 0,
           occupancy: 0
         }
       },
@@ -285,44 +242,19 @@ export const getPGDetails = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid PG ID format" });
     }
 
-    const [pg, complaintStats, verifiedResidentsCount] = await Promise.all([
+    const [pg, activeResidentCount] = await Promise.all([
       PG.findOne({ _id: pgId, isActive: true })
         .select("-owner.phone -owner.email")
         .lean(),
-
-      Complaint.aggregate([
-        { $match: { pgId: new mongoose.Types.ObjectId(pgId) } },
-        {
-          $group: {
-            _id: null,
-            totalComplaints: { $sum: 1 },
-            verifiedComplaints: {
-              $sum: { $cond: [{ $eq: ["$isVerifiedResident", true] }, 1, 0] }
-            }
-          }
-        }
-      ]),
-
-      PGResidency.countDocuments({ pgId, status: "admitted" })
+      PGResidency.countDocuments({ pgId, residentStatus: "active" })
     ]);
 
     if (!pg) {
       return res.status(404).json({ success: false, message: "PG not found or inactive" });
     }
 
-    const tComplaints = complaintStats[0]?.totalComplaints || 0;
-    const vComplaints = complaintStats[0]?.verifiedComplaints || 0;
-
-    const trustMetrics = {
-      verifiedResidentsCount,
-      totalComplaints: tComplaints,
-      verifiedComplaints: vComplaints,
-      unverifiedComplaints: tComplaints - vComplaints,
-      trustScore: calculateTrustScore(vComplaints, tComplaints - vComplaints),
-    };
-
     const remainingCapacity = pg.accommodation?.totalCapacity != null
-      ? Math.max(0, pg.accommodation.totalCapacity - verifiedResidentsCount)
+      ? Math.max(0, pg.accommodation.totalCapacity - activeResidentCount)
       : null;
 
     let userContext = {
@@ -334,18 +266,20 @@ export const getPGDetails = async (req, res) => {
       const activeAdmission = await PGResidency.findOne({
         userId: req.user.id,
         pgId,
-        status: { $in: ["pending", "admitted"] },
+        status: { $in: ["pending", "approved"] },
+        residentStatus: { $ne: "removed" },
       }).lean();
       if (activeAdmission) {
         userContext.admissionStatus = activeAdmission.status;
-        userContext.isAdmitted = activeAdmission.status === "admitted";
+        userContext.isAdmitted = activeAdmission.residentStatus === "active";
       }
 
       const admissionElsewhere = activeAdmission
         ? null
         : await PGResidency.findOne({
             userId: req.user.id,
-            status: { $in: ["pending", "admitted"] },
+            status: { $in: ["pending", "approved"] },
+            residentStatus: { $ne: "removed" },
           }).lean();
       userContext.hasActiveAdmissionElsewhere = Boolean(admissionElsewhere);
     }
@@ -353,7 +287,6 @@ export const getPGDetails = async (req, res) => {
     return res.status(200).json({
       success: true,
       pg,
-      trust: trustMetrics,
       remainingCapacity,
       userContext
     });
@@ -422,7 +355,7 @@ export const updateMyPGDetails = async (req, res) => {
       return res.status(400).json({ success: false, message: "No PG linked to this owner account" });
     }
 
-    const { description, pricing, amenities } = req.body;
+    const { description, pricing, amenities, foodType } = req.body;
     const update = {};
 
     if (description !== undefined) {
@@ -453,6 +386,13 @@ export const updateMyPGDetails = async (req, res) => {
         return res.status(400).json({ success: false, message: "amenities must be an array of strings" });
       }
       update.amenities = amenities.map(a => String(a).trim()).filter(Boolean);
+    }
+
+    if (foodType !== undefined) {
+      if (!["veg", "non-veg", "both", null].includes(foodType)) {
+        return res.status(400).json({ success: false, message: "foodType must be 'veg', 'non-veg', 'both', or null" });
+      }
+      update.foodType = foodType;
     }
 
     if (Object.keys(update).length === 0) {

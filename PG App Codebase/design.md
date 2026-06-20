@@ -2,89 +2,54 @@
 
 ## Overview
 
-**Theme name:** Nest Stay — Warm Minimalism (v2, Stitch-informed).
+**Theme name:** Nest Stay — Warm Minimalism (v3, unified).
 
-Built on **Tailwind CSS v3** with a custom theme extension. No third-party component library — all UI is hand-crafted JSX. No CSS-in-JS, no CSS Modules. Tokens live in `tailwind.config.js`; landing page uses Tailwind arbitrary values (`bg-[#...]`) for the new palette to keep admin/owner pages unaffected.
+Built on **Tailwind CSS v3** with a custom theme extension. No third-party component library — all UI is hand-crafted JSX. No CSS-in-JS, no CSS Modules. Tokens live in `tailwind.config.js`; warm palette values use Tailwind arbitrary values (`bg-[#...]`) consistently across all surfaces.
 
-The UI has two distinct visual registers:
-
-- **Landing page / public surface** — warm off-white base, dark navy accent sections, salmon-coral CTA, glass navbar, rounded-2xl/3xl cards, Material Symbols Outlined icons.
-- **App shell (admin, owner, user)** — neutral whites and slate, tighter spacing, left sidebar, `action` (blue) token for interactive states.
+The UI has **one unified visual register** — the Warm Minimalism system — applied to the landing page, user dashboard, and all authenticated surfaces.
 
 ---
 
 ## Colors
 
-### Landing Page Palette (arbitrary values, not Tailwind tokens)
-
-These are used directly in `LandingPage.jsx` via `bg-[#...]` / `text-[#...]` to avoid affecting app shell pages.
+### Warm Minimalism Palette (universal — all surfaces)
 
 | Role | Hex | Usage |
 |---|---|---|
-| **Page background** | `#fbf9f8` | Root `<div>`, hero, owner section bg |
-| **Dark section bg** | `#101e22` | Value prop section, CTA section |
-| **Accent / CTA** | `#e98a76` | Primary buttons, active nav link underline, icon highlights, price text, star ratings |
-| **Accent light** | `#ffdbd0` | Avatar bg (PM), floating badge icon bg, dashboard "New Requests" card bg, owner section decorative blur |
-| **Text primary** | `#1b1c1c` | All headings, card names |
+| **Page background** | `#fbf9f8` | Root `<div>`, hero, all page backgrounds |
+| **Dark section bg** | `#101e22` | Value prop section, CTA section, dark cards |
+| **Accent / CTA** | `#e98a76` | Primary buttons, active nav underline, icon highlights, price text, star ratings |
+| **Accent light** | `#ffdbd0` | Avatar bg, floating badge icon bg, dashboard highlight cards, decorative blur |
+| **Text primary** | `#1b1c1c` | All headings, card names, labels |
 | **Text body** | `#434849` | Body copy, nav links, card descriptions |
-| **Text muted** | `#73787a` | Outline icons, location text, footer muted, trust-bar label |
-| **On-dark muted** | `#bac9ce` | Body text on dark `#101e22` sections |
+| **Text muted** | `#73787a` | Outline icons, location text, footer muted, captions |
+| **On-dark muted** | `#bac9ce` | Body text on `#101e22` sections |
 | **On-dark light** | `#ffdbd0` | Eyebrow labels on dark sections |
 | **Border / stroke** | `#E5E7EB` | All card borders, nav bottom border, section dividers |
-| **Surface low** | `#f6f3f2` | Trust bar bg, testimonials bg, dashboard stat card bg, newsletter input bg |
-| **Surface mid** | `#eae8e7` | Owner dashboard titlebar bg, decorative rotated div |
-| **Surface hover** | `#f0eded` | Sign In button hover, mobile menu toggle hover |
+| **Surface low** | `#f6f3f2` | Trust bar bg, testimonials bg, stat card bg, input bg |
+| **Surface mid** | `#eae8e7` | Titlebar bg, decorative rotated div |
+| **Surface hover** | `#f0eded` | Ghost button hover, mobile menu toggle hover |
 | **Footer bg** | `#e4e2e1` | Footer background |
-| **Dashboard accent** | `#3a0b00` | Text on `#ffdbd0` dashboard card |
-| **Dark on-dark muted** | `#bac9ce` | Body text inside `#101e22` value prop & CTA sections |
+| **Dashboard accent text** | `#3a0b00` | Text on `#ffdbd0` dashboard highlight cards |
 
 #### Navbar background (inline style)
 ```jsx
 style={{ backdropFilter: 'blur(8px)', backgroundColor: 'rgba(251,249,248,0.85)' }}
 ```
 
-### Tailwind Token Colors (used in landing page)
+### Tailwind Token Colors
 
-Some Tailwind config tokens are still used where they match closely enough:
-
-| Token | Value | Landing usage |
+| Token | Value | Usage |
 |---|---|---|
-| `tertiary-fixed` | `#f0e0cd` | Hero eyebrow badge background |
-| `on-tertiary-fixed-variant` | `#4f4538` | Hero eyebrow badge text |
+| `tertiary-fixed` | `#f0e0cd` | Eyebrow badge background |
+| `on-tertiary-fixed-variant` | `#4f4538` | Eyebrow badge text |
 | `primary-fixed` | `#ffdad3` | Avatar bg (AS) |
 | `primary` | `#954737` | Avatar text (AS) |
 | `on-tertiary-fixed` | `#221a0f` | Avatar text (SK) |
 | `shadow-card` | `rgba(0,0,0,0.08) 0px 4px 10px` | Card + search bar shadow |
 | `shadow-ambient` | `rgba(42,54,59,0.12) 0px 12px 32px` | Value prop image shadow |
 
-### Custom Design Tokens (app shell — unchanged)
-
-#### Brand & Action
-
-| Token | Value | Usage |
-|---|---|---|
-| `brand` | `#ffe785` | Admin/Login primary CTA button |
-| `brand-light` | `#ffd94d` | Hover state for brand button |
-| `action` | `#027fff` | Active sidebar nav items, badge counts, focus rings |
-| `action-light` | `#0d6efd` | Hover variant |
-| `action-50` | `#e8f4ff` | Stat card background (blue) |
-| `action-100` | `#c7e2ff` | Stat card border (blue) |
-
-#### Warm Minimalism Palette (legacy — app shell only)
-
-| Token | Value | Usage |
-|---|---|---|
-| `canvas` | `#FECEA1` | Legacy owner section background |
-| `charcoal` | `#2A363B` | Primary text on light surfaces (app shell) |
-| `charcoal-dark` | `#1A2328` | Search button hover |
-| `charcoal-deep` | `#0C1A1E` | Legacy navbar bg (now replaced by glass on landing) |
-| `coral` | `#F5847C` | Legacy accent (replaced by `#e98a76` on landing) |
-| `coral-hover` | `#E8736B` | Coral hover state |
-| `warm-50` | `#FFF8F5` | Lightest warm surface |
-| `warm-100` | `#F9F3EE` | Section backgrounds |
-| `warm-200` | `#F5ECE7` | Card borders on warm backgrounds |
-
-### Semantic Colors (Tailwind stock)
+### Semantic Colors
 
 | Semantic | Classes | Usage |
 |---|---|---|
@@ -94,17 +59,7 @@ Some Tailwind config tokens are still used where they match closely enough:
 | Error / Danger | `red-50`–`red-700` | Error alerts, full-seats badge |
 | Warning | `amber-50`–`amber-800` | Escalation alerts |
 | Info | `blue-50`, `blue-600` | Beds-left badge |
-| Rating | `yellow-400` | Star icons (app shell only; landing uses `#e98a76` stars) |
-
-### App Shell Colors (Sidebar — unchanged)
-
-| Class | Usage |
-|---|---|
-| `slate-900` | Sidebar background |
-| `slate-700` | Sidebar section borders |
-| `slate-800` | Nav item hover background |
-| `slate-400` | Inactive nav icon/text |
-| `slate-500` | User email in sidebar footer |
+| Rating stars | `text-[#e98a76]` with `fontVariationSettings: "'FILL' 1"` | All star icons |
 
 ---
 
@@ -137,11 +92,11 @@ fontFamily: {
 }
 ```
 
-Montserrat loaded via Google Fonts at weights 400, 500, 600, 700. Plus Jakarta Sans also imported in `index.css` (available but not the primary landing font).
+Montserrat loaded via Google Fonts at weights 400, 500, 600, 700. Plus Jakarta Sans also imported in `index.css` (available but not the primary font).
 
 ### Icon Font
 
-Material Symbols Outlined — loaded via Google Fonts in `index.css`. Used for all landing page icons (location_on, search, payments, verified, check_circle, star, thumb_up, arrow_forward, etc.).
+Material Symbols Outlined — loaded via Google Fonts in `index.css`. Used for all icons (location_on, search, payments, verified, check_circle, star, thumb_up, arrow_forward, etc.).
 
 ```jsx
 <span className="material-symbols-outlined text-[#e98a76]">verified</span>
@@ -149,19 +104,19 @@ Material Symbols Outlined — loaded via Google Fonts in `index.css`. Used for a
 <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
 ```
 
-### Font Size Scale (Landing)
+### Font Size Scale
 
 | Class | Size | Usage |
 |---|---|---|
 | `text-xs` / `text-[10px]` | 12px / 10px | Eyebrow labels, badges, captions, footer links |
 | `text-sm` | 14px | Nav links, body copy, buttons, card content |
 | `text-lg` | 18px | Hero body paragraph |
-| `text-2xl` | 24px | Floating stat number (4.9/5), footer brand names |
+| `text-2xl` | 24px | Floating stat number, footer brand names |
 | `text-[32px]` | 32px | Section H2 headings |
 | `text-[40px]` / `text-[48px]` | 40–48px | Hero H1 (mobile/desktop), CTA H2 |
 | `text-[48px]` | 48px | Stats section numbers |
 
-### Font Weights (Landing)
+### Font Weights
 
 | Weight | Usage |
 |---|---|
@@ -234,9 +189,9 @@ className="max-w-[1280px] mx-auto px-6 lg:px-16"
 
 | Element | Value |
 |---|---|
-| Landing navbar height | `h-20` (80px) |
-| Landing main top offset | `pt-20` |
-| Landing container max-width | `max-w-[1280px]` |
+| Navbar height | `h-20` (80px) |
+| Main top offset | `pt-20` |
+| Container max-width | `max-w-[1280px]` |
 | Hero image aspect ratio | `4/5` (portrait) |
 | Value prop image aspect ratio | `aspect-square` |
 | PG card image height | `h-64` |
@@ -250,11 +205,11 @@ className="max-w-[1280px] mx-auto px-6 lg:px-16"
 | Class | Value | Usage |
 |---|---|---|
 | `rounded-xl` | 12px | Navbar "Sign In" button, search "Search" button |
-| `rounded-2xl` | 16px | Search bar container, PG cards, testimonial cards, owner dashboard, floating badges |
+| `rounded-2xl` | 16px | Search bar, PG cards, testimonial cards, owner dashboard, floating badges, dashboard cards |
 | `rounded-[2rem]` | 32px | Owner dashboard mockup |
 | `rounded-[2.5rem]` | 40px | Hero portrait image |
 | `rounded-[3rem]` | 48px | Value prop image, CTA section container |
-| `rounded-full` | 9999px | Hero eyebrow badge, trust badge pills, status pills, avatar circles |
+| `rounded-full` | 9999px | Eyebrow badge, trust badge pills, status pills, avatar circles |
 | `rounded-lg` | 8px | Mobile hamburger hover, newsletter send button |
 
 ### Border Styles
@@ -263,7 +218,7 @@ className="max-w-[1280px] mx-auto px-6 lg:px-16"
 |---|---|
 | Standard card / section divider | `border-[#E5E7EB]` |
 | Navbar bottom | `border-b border-[#E5E7EB]` |
-| "Sign In" ghost button | `border border-[#73787a]` |
+| Ghost button | `border border-[#73787a]` |
 | Ghost CTA (dark bg) | `border border-[#c3c7c9]` |
 | Owner sign-in button | `border border-[#E5E7EB]` |
 
@@ -278,12 +233,12 @@ card:    'rgba(0,0,0,0.08) 0px 4px 10px 0px'       // cards, search bar
 ambient: 'rgba(42,54,59,0.12) 0px 12px 32px 0px'   // value prop image
 ```
 
-### Elevation Map (Landing)
+### Elevation Map
 
 | Level | Shadow | Usage |
 |---|---|---|
 | 0 — flat | none | Section backgrounds |
-| 1 — card | `shadow-card` | PG cards, search bar, floating rating badge, owner dashboard |
+| 1 — card | `shadow-card` | PG cards, search bar, floating badge, dashboard cards |
 | 2 — elevated | `shadow-ambient` | Value prop image |
 | 3 — overlay | `shadow-lg` | Mobile menu dropdown |
 
@@ -297,10 +252,9 @@ className="hover:shadow-card transition-all duration-300"
 
 ## Components
 
-### Navbar (Landing)
+### Navbar (Universal — glass blur)
 
 ```jsx
-// Glass blur, fixed, light
 <nav
   className="fixed top-0 left-0 right-0 z-50 border-b border-[#E5E7EB]"
   style={{ backdropFilter: 'blur(8px)', backgroundColor: 'rgba(251,249,248,0.85)' }}
@@ -318,7 +272,7 @@ className="hover:shadow-card transition-all duration-300"
 className="bg-[#e98a76] text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 active:scale-95 transition-all"
 // Large variant (CTA section):
 className="bg-[#e98a76] text-white px-10 py-5 rounded-2xl text-sm font-semibold hover:opacity-90 transition-all"
-// Owner section:
+// Owner / dashboard section:
 className="bg-[#e98a76] text-white px-8 py-4 rounded-2xl text-sm font-semibold hover:opacity-90 transition-all"
 ```
 
@@ -337,7 +291,7 @@ className="bg-transparent border border-[#c3c7c9] text-white px-10 py-5 rounded-
 className="bg-black text-white px-8 py-3 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-[#e98a76] transition-colors"
 ```
 
-#### Owner secondary button
+#### Secondary surface button
 ```jsx
 className="bg-[#f0eded] text-[#1b1c1c] px-8 py-4 rounded-2xl text-sm font-semibold border border-[#E5E7EB] hover:bg-[#eae8e7] transition-all"
 ```
@@ -345,6 +299,19 @@ className="bg-[#f0eded] text-[#1b1c1c] px-8 py-4 rounded-2xl text-sm font-semibo
 #### Value prop CTA (on dark)
 ```jsx
 className="inline-flex items-center gap-3 bg-white text-black px-8 py-4 rounded-2xl text-sm font-semibold hover:bg-[#ffdbd0] transition-colors"
+```
+
+### Form Elements
+
+```jsx
+// Input
+className="w-full border border-[#E5E7EB] rounded-2xl px-4 py-3 text-sm text-[#1b1c1c] bg-[#fbf9f8] placeholder-[#73787a] focus:outline-none focus:ring-2 focus:ring-[#e98a76] focus:border-[#e98a76] transition-colors"
+
+// Label
+className="block text-sm font-semibold text-[#1b1c1c] mb-2"
+
+// Error
+className="bg-[#ffdbd0] border border-[#e98a76]/30 text-[#3a0b00] px-4 py-3 rounded-2xl text-sm"
 ```
 
 ### Search Bar
@@ -368,6 +335,7 @@ className="w-full border-none focus:ring-0 bg-transparent text-sm outline-none"
 ```jsx
 // Outer
 className="bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden group hover:shadow-card transition-all duration-300"
+style={{ boxShadow: 'rgba(0,0,0,0.08) 0px 4px 10px 0px' }}
 
 // Image container
 className="relative h-64 overflow-hidden"
@@ -405,6 +373,27 @@ className="absolute -bottom-6 -left-6 bg-white p-6 rounded-2xl shadow-card borde
 // Label: text-xs font-bold text-[#73787a]
 ```
 
+### Dashboard Stat Card
+
+```jsx
+// Neutral tile
+className="p-5 bg-[#f6f3f2] rounded-2xl border border-[#E5E7EB]"
+// Label: text-sm text-[#73787a] font-medium
+// Value: text-2xl font-bold text-[#1b1c1c]
+
+// Accent tile (highlight)
+className="p-5 bg-[#ffdbd0] rounded-2xl border border-[#E5E7EB]"
+// Label / value: text-[#3a0b00]
+```
+
+### Dashboard Activity Row
+
+```jsx
+className="flex items-center justify-between py-3 border-b border-[#E5E7EB]"
+// Positive amount: text-green-600 font-bold
+// Status pill: bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full text-xs font-bold
+```
+
 ### Owner Dashboard Mockup
 
 ```jsx
@@ -414,18 +403,14 @@ className="bg-white rounded-[2rem] border border-[#E5E7EB] shadow-card overflow-
 // Titlebar
 className="bg-[#eae8e7] p-4 flex items-center justify-between"
 // Traffic light dots: w-3 h-3 rounded-full (red-400, yellow-400, green-400)
+```
 
-// Stat tile — neutral
-className="p-4 bg-[#f6f3f2] rounded-xl"
+### Toast Notifications
 
-// Stat tile — accent
-className="p-4 bg-[#ffdbd0] rounded-xl"
-// Text on accent: text-[#3a0b00]
-
-// Activity row
-className="flex items-center justify-between py-3 border-b border-[#E5E7EB]"
-// Positive amount: text-green-600 font-bold
-// Status pill: bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-bold
+```jsx
+className="pointer-events-auto flex items-start gap-3 bg-white border border-[#E5E7EB] shadow-card rounded-2xl px-4 py-3 min-w-[260px] max-w-sm animate-slide-in"
+// Icons: green-500 (success), red-500 (error), text-[#e98a76] (info)
+// Duration: 3500ms auto-dismiss
 ```
 
 ### CTA Section (Dark)
@@ -491,6 +476,22 @@ className="py-12 border-y border-[#E5E7EB]"
 
 ---
 
+## Images
+
+| Context | Source |
+|---|---|
+| Landing hero | `https://picsum.photos/seed/neststay-hero/600/750` |
+| Value prop | `https://picsum.photos/seed/neststay-coliving/600/600` |
+| PG card 1 | `https://picsum.photos/seed/pg-collective/600/400` |
+| PG card 2 | `https://picsum.photos/seed/pg-zenith/600/400` |
+| PG card 3 | `https://picsum.photos/seed/pg-loft/600/400` |
+| Real PG images | Served from `pg.images[0]` URL |
+| Fallback | `https://placehold.co/400x220/f6f3f2/73787a?text=No+Image` |
+
+All images use `object-cover` inside fixed-height containers.
+
+---
+
 ## Motion
 
 ### Custom Keyframes (tailwind.config.js)
@@ -514,7 +515,7 @@ className="py-12 border-y border-[#E5E7EB]"
 | `transition-all` | Ghost buttons, nav links |
 | `transition-all duration-300` | Card hover (shadow) |
 | `transition-transform duration-500` | Image zoom on card hover |
-| `hover:opacity-90` | Primary salmon CTA buttons (preferred over color shift) |
+| `hover:opacity-90` | Primary salmon CTA buttons |
 | `active:scale-95` | "Book a Tour" button press feedback |
 
 ### Scroll Behavior
@@ -536,94 +537,13 @@ html { scroll-behavior: smooth; }  /* index.css */
 
 ---
 
-## App Shell (Admin / Owner / User — unchanged)
-
-### Navigation
-
-#### User App Navbar (sticky, light)
-```jsx
-className="bg-white border-b border-[#e0e0e0] sticky top-0 z-10"
-style={{ boxShadow: 'rgba(33,37,41,0.05) 0px 2px 8px' }}
-// Height: h-[84px], Container: max-w-6xl mx-auto px-4
-```
-
-#### Admin/Owner Sidebar
-```jsx
-className="w-56 flex-shrink-0 bg-slate-900 flex flex-col h-screen"
-// Active item:   bg-action text-white
-// Inactive item: text-slate-400 hover:text-white hover:bg-slate-800
-// Item shape:    flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
-```
-
-### Form Elements
-
-```jsx
-// Input
-className="w-full border border-[#e0e0e0] rounded-[10px] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action focus:border-action bg-white h-[42px]"
-
-// Label
-className="block text-sm font-medium text-[#222121] mb-2"
-
-// Error
-className="bg-red-50 border border-[#f44336]/30 text-[#f44336] px-4 py-3 rounded-[10px] text-sm"
-
-// Primary button (admin/login — brand yellow)
-className="w-full bg-brand hover:bg-brand-light disabled:bg-[#e0e0e0] disabled:text-[#6c757d] text-black font-semibold py-2.5 rounded-[10px] transition-colors text-sm h-[42px]"
-```
-
-### Toast Notifications
-
-```jsx
-// Individual toast
-className="pointer-events-auto flex items-start gap-3 bg-white border border-gray-200 shadow-lg rounded-xl px-4 py-3 min-w-[260px] max-w-sm animate-slide-in"
-// Icons: green-500 (success), red-500 (error), blue-500 (info)
-// Duration: 3500ms auto-dismiss
-```
-
-### Admin Stat Card
-
-```jsx
-className={`rounded-xl border p-5 ${colorClass}`}
-// blue:   bg-action-50 border-action-100 text-action
-// yellow: bg-yellow-50 border-yellow-100 text-yellow-700
-// green:  bg-green-50 border-green-100 text-green-700
-// red:    bg-red-50 border-red-100 text-red-700
-// purple: bg-purple-50 border-purple-100 text-purple-700
-```
-
-### PGCard (Shared Component)
-
-```jsx
-className="group block bg-white rounded-[20px] border border-[#e0e0e0] overflow-hidden hover:shadow-md hover:border-[#d0d0d0] transition-all"
-style={{ boxShadow: 'rgba(0,0,0,0.08) 0px 4px 10px 0px' }}
-// Image: h-44, Body: p-4
-```
-
----
-
-## Images
-
-| Context | Source |
-|---|---|
-| Landing hero | `https://picsum.photos/seed/neststay-hero/600/750` |
-| Value prop | `https://picsum.photos/seed/neststay-coliving/600/600` |
-| PG card 1 | `https://picsum.photos/seed/pg-collective/600/400` |
-| PG card 2 | `https://picsum.photos/seed/pg-zenith/600/400` |
-| PG card 3 | `https://picsum.photos/seed/pg-loft/600/400` |
-| Real PG images | Served from `pg.images[0]` URL |
-| Fallback | `https://placehold.co/400x220/e2e8f0/94a3b8?text=No+Image` |
-
-All images use `object-cover` inside fixed-height containers.
-
----
-
 ## Tooling
 
 | Concern | Choice |
 |---|---|
 | CSS framework | Tailwind CSS v3 |
 | Component library | None — all hand-crafted JSX |
-| Design tokens | `tailwind.config.js` (`theme.extend`) + arbitrary values in landing page |
+| Design tokens | `tailwind.config.js` (`theme.extend`) + arbitrary values |
 | Icon system | Material Symbols Outlined (Google Fonts, variable font) |
 | Fonts | Montserrat (primary), Plus Jakarta Sans (imported, available) |
 | Animation | Tailwind `keyframes` + `animation` in config |

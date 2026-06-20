@@ -20,6 +20,7 @@ import UserPGDetailPage from './pages/user/PGDetailPage'
 import UserMyPGPage from './pages/user/MyPGPage'
 import UserComplaintFormPage from './pages/user/ComplaintFormPage'
 import UserAdmissionFormPage from './pages/user/AdmissionFormPage'
+import UserSavedPGsPage from './pages/user/SavedPGsPage'
 import OwnerDashboardPage from './pages/pgowner/DashboardPage'
 import OwnerAdmissionsPage from './pages/pgowner/AdmissionsPage'
 import OwnerStudentsPage from './pages/pgowner/StudentsPage'
@@ -63,6 +64,7 @@ export default function App() {
               {/* User area */}
               <Route element={<RequireRole roles={["user"]} />}>
                 <Route path="/user"                   element={<UserDashboardPage />} />
+                <Route path="/user/saved"              element={<UserSavedPGsPage />} />
                 <Route path="/user/my-pg"              element={<UserMyPGPage />} />
                 <Route path="/user/pgs/:id"            element={<UserPGDetailPage />} />
                 <Route path="/user/pgs/:id/complaint"  element={<UserComplaintFormPage />} />

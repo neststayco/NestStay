@@ -3,6 +3,7 @@ import { getAllOwners, createOwner, updateOwner, resetOwnerPassword } from '@sha
 import { getPGList } from '@shared/api/pgs'
 import { useToast } from '@shared/components/Toast'
 import RelativeTime from '@shared/components/RelativeTime'
+import { SkeletonTable } from '@shared/components/Skeleton'
 import CopyButton from '@shared/components/CopyButton'
 
 const inputCls = 'w-full border border-[#e0e0e0] rounded-[10px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action focus:border-action bg-gray-50'
@@ -191,22 +192,13 @@ function ReassignModal({ owner, pgs, onClose, onUpdated }) {
   )
 }
 
-function RowSkeleton() {
-  return (
-    <tr className="animate-pulse">
-      {[1, 2, 3, 4, 5].map(i => (
-        <td key={i} className="px-4 py-3.5"><div className="h-4 bg-gray-200 rounded" /></td>
-      ))}
-    </tr>
-  )
-}
-
 export default function OwnersPage() {
   const [owners, setOwners] = useState([])
   const [pgs, setPgs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [is403, setIs403] = useState(false)
+  const [search, setSearch] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [resetTarget, setResetTarget] = useState(null)
   const [reassignTarget, setReassignTarget] = useState(null)
@@ -244,9 +236,18 @@ export default function OwnersPage() {
     setOwners(prev => prev.map(o => o._id === owner._id ? owner : o))
   }
 
+  const q = search.trim().toLowerCase()
+  const filteredOwners = q
+    ? owners.filter(o =>
+        o.name?.toLowerCase().includes(q) ||
+        o.email?.toLowerCase().includes(q) ||
+        o.pgId?.name?.toLowerCase().includes(q)
+      )
+    : owners
+
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">PG Owners</h1>
           <p className="text-gray-500 text-sm mt-0.5">Manage owner accounts and their PG assignments</p>
@@ -260,6 +261,26 @@ export default function OwnersPage() {
           </svg>
           Add Owner
         </button>
+      </div>
+
+      <div className="relative mb-5 max-w-xs">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+        </svg>
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search by name, email or PG…"
+          className="w-full pl-9 pr-8 py-2 text-sm border border-[#e0e0e0] rounded-[10px] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+        {search && (
+          <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {error && (
@@ -292,19 +313,23 @@ export default function OwnersPage() {
                 <th className="px-4 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading
-                ? Array.from({ length: 5 }).map((_, i) => <RowSkeleton key={i} />)
-                : owners.length === 0
-                ? (
-                  <tr>
-                    <td colSpan={5} className="text-center py-12">
-                      <p className="text-gray-400 text-sm font-medium">No owner accounts yet</p>
-                      <p className="text-gray-300 text-xs mt-1">Create the first owner to link them to a PG</p>
-                    </td>
-                  </tr>
-                )
-                : owners.map(owner => (
+            {loading
+              ? <SkeletonTable rows={5} cols={5} />
+              : <tbody className="divide-y divide-gray-100">
+                  {filteredOwners.length === 0
+                    ? (
+                      <tr>
+                        <td colSpan={5} className="text-center py-12">
+                          <p className="text-gray-400 text-sm font-medium">
+                            {search ? 'No owners match your search' : 'No owner accounts yet'}
+                          </p>
+                          <p className="text-gray-300 text-xs mt-1">
+                            {search ? 'Try a different name or email' : 'Create the first owner to link them to a PG'}
+                          </p>
+                        </td>
+                      </tr>
+                    )
+                    : filteredOwners.map(owner => (
                   <tr key={owner._id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3.5">
                       <div className="font-medium text-gray-900">{owner.name}</div>
@@ -349,7 +374,8 @@ export default function OwnersPage() {
                   </tr>
                 ))
               }
-            </tbody>
+                </tbody>
+            }
           </table>
         </div>
       </div>

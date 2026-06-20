@@ -8,12 +8,11 @@ import { getMyAdmission, withdrawAdmission } from '@shared/api/admissions'
 import { useAuth } from '@shared/context/AuthContext'
 import { useToast } from '@shared/components/Toast'
 import { normalizeAdmission } from '@shared/utils/normalizeAdmission'
+import { SkeletonBase } from '@shared/components/Skeleton'
 
 const SORT_OPTIONS = [
   { value: '', label: 'Newest first' },
   { value: 'price', label: 'Price: low to high' },
-  { value: 'trustScore', label: 'Highest trust score' },
-  { value: 'complaints', label: 'Fewest complaints' },
 ]
 
 const GENDER_OPTIONS = [
@@ -31,20 +30,7 @@ const FOOD_OPTIONS = [
 ]
 
 const inputCls =
-  'border border-[#e0e0e0] rounded-[10px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action bg-gray-50'
-
-function Skeleton() {
-  return (
-    <div className="bg-white rounded-[20px] border border-[#e0e0e0] shadow-card overflow-hidden animate-pulse">
-      <div className="h-44 bg-gray-200" />
-      <div className="p-4 space-y-3">
-        <div className="h-4 bg-gray-200 rounded w-3/4" />
-        <div className="h-3 bg-gray-200 rounded w-1/2" />
-        <div className="h-4 bg-gray-200 rounded w-1/3" />
-      </div>
-    </div>
-  )
-}
+  'border border-[#E5E7EB] rounded-[10px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e98a76] focus:border-[#e98a76] bg-white text-[#1b1c1c] placeholder-[#9ca3af] transition-colors'
 
 export default function PGListPage() {
   const { currentAdmission, setCurrentAdmission } = useAuth()
@@ -139,7 +125,7 @@ export default function PGListPage() {
   const hasFilters = search || city || area || gender || foodType || minPrice || maxPrice || amenities || sortBy
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#fbf9f8]">
       <OfflineBanner />
       <Navbar />
 
@@ -159,7 +145,7 @@ export default function PGListPage() {
                   try {
                     const res = await getMyAdmission()
                     setCurrentAdmission(normalizeAdmission(res.data))
-                    if (res.data?.status === 'admitted') toast('You have been admitted!', 'success')
+                    if (res.data?.residentStatus === 'active') toast('You have been admitted!', 'success')
                     else if (!res.data || res.data.status === 'rejected') toast('Application was not approved.', 'info')
                     else toast('Still pending — check back later.', 'info')
                   } catch { /* ignore */ } finally {
@@ -195,13 +181,14 @@ export default function PGListPage() {
         )}
 
         <div className="mb-5">
-          <h1 className="text-2xl font-bold text-gray-900">Find a PG</h1>
-          <p className="text-gray-500 text-sm mt-0.5">
-            Discover verified PGs with transparent complaint records
+          <h1 className="text-2xl font-bold text-[#1b1c1c]">Find a PG</h1>
+          <p className="text-[#73787a] text-sm mt-0.5">
+            Discover verified PGs across your city
           </p>
         </div>
 
-        <div className="bg-white border border-[#e0e0e0] rounded-[20px] shadow-card p-4 mb-6 space-y-3">
+        <div className="bg-white border border-[#E5E7EB] rounded-[20px] p-4 mb-6 space-y-3"
+          style={{ boxShadow: 'rgba(0,0,0,0.05) 0px 4px 20px' }}>
           <input
             type="text"
             placeholder="Search by name, area, or amenity…"
@@ -279,12 +266,12 @@ export default function PGListPage() {
           </div>
 
           {hasFilters && (
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-gray-400">Filters active</p>
+            <div className="flex items-center justify-between pt-1 border-t border-[#f6f3f2]">
+              <p className="text-xs text-[#73787a] font-medium">Filters active</p>
               <button
                 type="button"
                 onClick={clearFilters}
-                className="text-sm text-gray-500 hover:text-gray-800 underline"
+                className="text-xs font-semibold text-[#e98a76] hover:text-[#c0431e] transition-colors"
               >
                 Clear all
               </button>
@@ -302,26 +289,41 @@ export default function PGListPage() {
         )}
 
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} />)}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-[20px] border border-[#e0e0e0] shadow-card overflow-hidden">
+                <SkeletonBase className="w-full h-44 rounded-none" />
+                <div className="p-4 space-y-3">
+                  <SkeletonBase className="h-4 w-3/4" />
+                  <SkeletonBase className="h-3 w-1/2" />
+                  <SkeletonBase className="h-4 w-1/3" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : pgs.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
-            <div className="text-4xl mb-3">🏠</div>
-            <p className="font-medium text-gray-600">No PGs found</p>
-            <p className="text-sm mt-1">
-              {hasFilters ? 'Try adjusting or clearing your filters' : 'No active PG listings yet'}
+          <div className="text-center py-16">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#fff3ee] flex items-center justify-center">
+              <span className="material-symbols-outlined text-[#e98a76]" style={{ fontSize: '28px' }}>search_off</span>
+            </div>
+            <p className="font-bold text-[#1b1c1c] text-base mb-1">No PGs found</p>
+            <p className="text-sm text-[#73787a] max-w-xs mx-auto">
+              {hasFilters ? 'Try adjusting or clearing your filters.' : 'No active PG listings yet — check back soon.'}
             </p>
             {hasFilters && (
-              <button onClick={clearFilters} className="mt-3 text-sm text-action underline">
+              <button
+                onClick={clearFilters}
+                className="mt-4 text-sm font-semibold text-[#e98a76] border border-[#ffdbd0] bg-[#fff3ee] hover:bg-[#ffdbd0] px-4 py-2 rounded-full transition-colors"
+              >
                 Clear filters
               </button>
             )}
           </div>
         ) : (
           <>
-            <p className="text-xs text-gray-400 mb-3">
-              {pagination?.totalItems ?? pgs.length} PG{(pagination?.totalItems ?? pgs.length) !== 1 ? 's' : ''} found
+            <p className="text-sm text-[#73787a] mb-4 font-medium">
+              <span className="text-[#1b1c1c] font-bold">{pagination?.totalItems ?? pgs.length}</span>{' '}
+              PG{(pagination?.totalItems ?? pgs.length) !== 1 ? 's' : ''} found
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {pgs.map(pg => (
@@ -334,17 +336,17 @@ export default function PGListPage() {
                 <button
                   onClick={() => setPage(Math.max(1, page - 1))}
                   disabled={page === 1}
-                  className="px-3 py-1.5 text-sm border border-[#e0e0e0] rounded-[10px] hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="inline-flex items-center gap-1 px-4 py-2 text-sm font-medium border border-[#E5E7EB] rounded-full bg-white hover:bg-[#f6f3f2] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   ← Prev
                 </button>
-                <span className="text-sm text-gray-600 px-2">
-                  Page {pagination.currentPage} of {pagination.totalPages}
+                <span className="text-sm text-[#73787a] px-2 font-medium">
+                  {pagination.currentPage} / {pagination.totalPages}
                 </span>
                 <button
                   onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
                   disabled={page === pagination.totalPages}
-                  className="px-3 py-1.5 text-sm border border-[#e0e0e0] rounded-[10px] hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="inline-flex items-center gap-1 px-4 py-2 text-sm font-medium border border-[#E5E7EB] rounded-full bg-white hover:bg-[#f6f3f2] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   Next →
                 </button>

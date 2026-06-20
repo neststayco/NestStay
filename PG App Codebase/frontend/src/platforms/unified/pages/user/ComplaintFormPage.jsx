@@ -30,7 +30,7 @@ function SuccessState({ pgName, backPath }) {
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <Link
           to={backPath}
-          className="bg-brand hover:bg-brand-light text-black text-sm font-semibold px-5 py-2.5 rounded-[10px] transition-colors"
+          className="bg-[#e98a76] hover:opacity-90 text-white text-sm font-semibold px-5 py-2.5 rounded-[10px] transition-colors"
         >
           Back to {pgName || 'PG'}
         </Link>
@@ -93,19 +93,20 @@ export default function ComplaintFormPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#fbf9f8]">
       <UserNavbar />
 
       <main className="max-w-xl mx-auto px-4 py-6">
         <Link
           to={backPath}
-          className="text-sm text-action hover:underline inline-flex items-center gap-1 mb-5"
+          className="text-sm text-[#e98a76] hover:underline inline-flex items-center gap-1 mb-5"
         >
           &larr; Back to PG
         </Link>
 
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-          <div className="bg-red-50 border-b border-red-100 px-6 py-4">
+        <div className="bg-white border border-[#E5E7EB] rounded-[20px] overflow-hidden"
+          style={{ boxShadow: 'rgba(0,0,0,0.04) 0px 4px 20px' }}>
+          <div className="bg-[#fff8f5] border-b border-[#f0ddd5] px-6 py-4">
             <h1 className="text-lg font-bold text-gray-900">Raise a Complaint</h1>
             {pgName && (
               <p className="text-sm text-gray-500 mt-0.5">
@@ -151,7 +152,7 @@ export default function ComplaintFormPage() {
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value)}
-                  className="w-full border border-[#e0e0e0] rounded-[10px] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action bg-gray-50"
+                  className="w-full border border-[#E5E7EB] rounded-[10px] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e98a76] focus:border-[#e98a76] transition-shadow bg-gray-50"
                 >
                   {COMPLAINT_TYPES.map((t) => (
                     <option key={t.value} value={t.value} disabled={t.value === ''}>
@@ -170,7 +171,7 @@ export default function ComplaintFormPage() {
                   onChange={(e) => setDescription(e.target.value)}
                   rows={5}
                   placeholder="Describe the issue in detail…"
-                  className="w-full border border-[#e0e0e0] rounded-[10px] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action resize-none"
+                  className="w-full border border-[#E5E7EB] rounded-[10px] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e98a76] focus:border-[#e98a76] transition-shadow resize-none"
                 />
                 <p className={`text-xs mt-1 ${description.length < 5 && description.length > 0 ? 'text-red-500' : 'text-gray-400'}`}>
                   {description.length} chars (min 5)
@@ -190,13 +191,13 @@ export default function ComplaintFormPage() {
                 />
               </div>
 
-              <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-[10px] border border-[#e0e0e0]">
+              <div className="flex items-start gap-3 p-4 bg-[#f6f3f2] rounded-[14px] border border-[#E5E7EB]">
                 <button
                   type="button"
                   role="switch"
                   aria-checked={isAnonymous}
                   onClick={() => setIsAnonymous((v) => !v)}
-                  className={`relative flex-shrink-0 w-10 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-action mt-0.5 ${isAnonymous ? 'bg-action' : 'bg-gray-300'}`}
+                  className={`relative flex-shrink-0 w-10 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#e98a76] mt-0.5 ${isAnonymous ? 'bg-[#e98a76]' : 'bg-gray-300'}`}
                   style={{ height: '22px' }}
                 >
                   <span
@@ -223,7 +224,7 @@ export default function ComplaintFormPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white text-sm font-medium py-2.5 rounded-[10px] transition-colors"
+                  className="flex-1 bg-[#e98a76] hover:opacity-90 active:scale-[0.98] disabled:opacity-50 text-white text-sm font-semibold py-2.5 rounded-[10px] transition-all"
                 >
                   {loading ? 'Submitting…' : 'Submit complaint'}
                 </button>

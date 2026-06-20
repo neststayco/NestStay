@@ -41,10 +41,11 @@ export default function AdmissionFormPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[#fbf9f8]">
         <UserNavbar />
         <main className="max-w-lg mx-auto px-4 py-12 text-center">
-          <div className="bg-white border border-gray-200 rounded-2xl p-8">
+          <div className="bg-white border border-[#E5E7EB] rounded-[20px] p-8"
+            style={{ boxShadow: 'rgba(0,0,0,0.04) 0px 4px 20px' }}>
             <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -55,7 +56,7 @@ export default function AdmissionFormPage() {
               Your admission request has been sent to the PG owner. You&apos;ll be notified once they review it.
               If no response in 5 days, our team will step in.
             </p>
-            <Link to="/user" className="text-sm text-action hover:underline">
+            <Link to="/user" className="text-sm text-[#e98a76] hover:underline">
               &larr; Back to listings
             </Link>
           </div>
@@ -65,20 +66,21 @@ export default function AdmissionFormPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#fbf9f8]">
       <UserNavbar />
       <main className="max-w-lg mx-auto px-4 py-8">
-        <Link to={`/user/pgs/${id}`} className="text-sm text-action hover:underline inline-flex items-center gap-1 mb-6">
+        <Link to={`/user/pgs/${id}`} className="text-sm text-[#e98a76] hover:underline inline-flex items-center gap-1 mb-6">
           &larr; Back to PG
         </Link>
 
-        <div className="bg-white border border-gray-200 rounded-2xl p-6">
+        <div className="bg-white border border-[#E5E7EB] rounded-[20px] p-6"
+          style={{ boxShadow: 'rgba(0,0,0,0.04) 0px 4px 20px' }}>
           <h1 className="text-xl font-bold text-gray-900 mb-1">Apply for Admission</h1>
           {!loadingPG && pgName && (
             <p className="text-sm text-gray-500 mb-5">{pgName}</p>
           )}
 
-          <div className="bg-action-50 border border-action-100 rounded-[10px] p-4 mb-5 text-sm text-[#222121]">
+          <div className="bg-[#fff3ee] border border-[#ffdbd0] rounded-[10px] p-4 mb-5 text-sm text-[#222121]">
             The PG owner will review your request and admit or reject you. Once admitted, your complaints will carry verified-resident credibility.
           </div>
 
@@ -92,14 +94,14 @@ export default function AdmissionFormPage() {
                 onChange={(e) => setMoveInNote(e.target.value)}
                 rows={3}
                 placeholder="Briefly describe when you moved in or any relevant context…"
-                className="w-full border border-[#e0e0e0] rounded-[10px] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action resize-none"
+                className="w-full border border-[#E5E7EB] rounded-[10px] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e98a76] focus:border-[#e98a76] transition-shadow resize-none"
               />
             </div>
 
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="w-full bg-brand hover:bg-brand-light disabled:opacity-60 text-black font-semibold py-2.5 rounded-[10px] transition-colors text-sm h-[42px]"
+              className="w-full bg-[#e98a76] hover:opacity-90 active:scale-[0.98] disabled:opacity-60 text-white font-semibold py-2.5 rounded-[10px] transition-all text-sm h-[42px]"
             >
               {loading ? 'Submitting…' : 'Submit Admission Request'}
             </button>

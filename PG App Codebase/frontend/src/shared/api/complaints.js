@@ -22,3 +22,8 @@ export async function updateComplaintStatus(id, { status }) {
   const { data } = await client.patch(`/complaints/${id}`, { status })
   return data
 }
+
+export async function deleteComplaint(id) {
+  const { data } = await client.delete(`/complaints/${id}`)
+  return data
+}

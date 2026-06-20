@@ -5,7 +5,7 @@ import {
   getPGAdmissions,
   getAllAdmissions,
   decideAdmission,
-  revokeAdmission,
+  removeResident,
   ownerAddResident,
   withdrawAdmission,
 } from "../controllers/admission.controller.js";
@@ -25,8 +25,10 @@ router.post("/owner-add", protect, allowRoles("pg_owner"), ownerAddResident);
 // Admin routes
 router.get("/", protect, allowRoles("admin"), getAllAdmissions);
 
-// Shared decide + revoke (role enforcement inside controller)
+// Shared decide (role enforcement inside controller)
 router.patch("/:id/decide", protect, allowRoles("pg_owner", "admin"), decideAdmission);
-router.patch("/:id/revoke", protect, allowRoles("pg_owner", "admin"), revokeAdmission);
+
+// Resident removal — only changes residentStatus, never admission status
+router.patch("/:id/remove-resident", protect, allowRoles("pg_owner", "admin"), removeResident);
 
 export default router;

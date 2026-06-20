@@ -1,7 +1,6 @@
 import "dotenv/config";
 import app from "./app.js";
 import connectDB from "./src/config/db.js";
-import { runEscalationJob } from "./src/jobs/escalation.job.js";
 
 const REQUIRED_ENV = ["MONGO_URI", "JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET"];
 
@@ -12,10 +11,7 @@ for (const key of REQUIRED_ENV) {
   }
 }
 
-connectDB().then(() => {
-  runEscalationJob();
-  setInterval(runEscalationJob, 60 * 60 * 1000);
-});
+connectDB();
 
 const PORT = process.env.PORT || 5000;
 

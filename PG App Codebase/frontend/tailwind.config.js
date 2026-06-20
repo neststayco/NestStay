@@ -81,9 +81,14 @@ export default {
         sans: ["Montserrat", "'Helvetica Neue'", "Helvetica", "Arial", "sans-serif"],
       },
       boxShadow: {
-        card: 'rgba(0,0,0,0.08) 0px 4px 10px 0px',
-        ambient: 'rgba(42,54,59,0.12) 0px 12px 32px 0px',
-        warm: 'rgba(245,132,124,0.25) 0px 8px 24px 0px',
+        card:        'rgba(0,0,0,0.06) 0px 2px 8px 0px, rgba(0,0,0,0.04) 0px 0px 1px 0px',
+        'card-hover':'rgba(0,0,0,0.14) 0px 16px 48px 0px, rgba(0,0,0,0.06) 0px 4px 12px 0px',
+        ambient:     'rgba(42,54,59,0.12) 0px 12px 32px 0px',
+        warm:        'rgba(245,132,124,0.25) 0px 8px 24px 0px',
+        float:       'rgba(0,0,0,0.16) 0px 24px 64px 0px, rgba(0,0,0,0.08) 0px 4px 16px 0px',
+        glow:        'rgba(233,138,118,0.30) 0px 8px 32px 0px, rgba(233,138,118,0.10) 0px 2px 8px 0px',
+        subtle:      'rgba(0,0,0,0.04) 0px 2px 8px 0px, rgba(0,0,0,0.02) 0px 1px 2px 0px',
+        inner:       'inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.06)',
       },
       keyframes: {
         'slide-in': {
@@ -94,10 +99,20 @@ export default {
           from: { opacity: '0', transform: 'translateY(24px)' },
           to:   { opacity: '1', transform: 'translateY(0)' },
         },
+        'scale-in': {
+          from: { opacity: '0', transform: 'scale(0.96)' },
+          to:   { opacity: '1', transform: 'scale(1)' },
+        },
+        'pulse-dot': {
+          '0%, 100%': { opacity: '1' },
+          '50%':      { opacity: '0.5' },
+        },
       },
       animation: {
         'slide-in': 'slide-in 0.2s ease-out',
-        'fade-up': 'fade-up 0.6s ease-out both',
+        'fade-up':  'fade-up 0.6s ease-out both',
+        'scale-in': 'scale-in 0.18s cubic-bezier(0.16,1,0.3,1)',
+        'pulse-dot':'pulse-dot 1.8s ease-in-out infinite',
       },
     },
   },

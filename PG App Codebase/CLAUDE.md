@@ -175,7 +175,6 @@ See `.env.example` for all required vars. No fallback secrets — missing `JWT_A
 - [x] JWT rotated access+refresh with HttpOnly cookie
 - [ ] Set real `JWT_ACCESS_SECRET` + `JWT_REFRESH_SECRET` in prod environment
 - [ ] Configure SMTP vars in prod (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM_EMAIL`)
-- [ ] Add auto-escalation job: mark `PGResidency` records as `escalatedAt` when owner hasn't acted within N hours
 
 ## Product Context
 

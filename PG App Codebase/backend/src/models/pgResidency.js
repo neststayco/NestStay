@@ -5,27 +5,29 @@ const pgResidencySchema = new mongoose.Schema(
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     pgId:   { type: mongoose.Schema.Types.ObjectId, ref: "PG",   required: true },
 
+    // Admission lifecycle — never reverts once approved
     status: {
       type: String,
-      enum: ["pending", "admitted", "rejected"],
+      enum: ["pending", "approved", "rejected", "withdrawn"],
       default: "pending",
     },
 
-    // Who approved/rejected: "owner" | "admin"
+    // Residency lifecycle — independent from admission status
+    residentStatus: {
+      type: String,
+      enum: ["active", "removed", null],
+      default: null,
+    },
+
+    residentRemovedAt: { type: Date, default: null },
+
+    // Who processed the admission: "owner" | "admin"
     processedBy: {
       role:   { type: String, enum: ["owner", "admin"], default: null },
       userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     },
 
-    // Move-in note submitted by user (replaces old proofDocument URL)
     moveInNote: { type: String, trim: true, default: "" },
-
-    // Set when owner hasn't acted and request escalates to software admin
-    escalatedAt: { type: Date, default: null },
-
-    // Set when admission is revoked (user moves out)
-    revokedAt: { type: Date, default: null },
-    revokedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   },
   { timestamps: true }
 );
@@ -33,6 +35,7 @@ const pgResidencySchema = new mongoose.Schema(
 pgResidencySchema.index({ userId: 1, pgId: 1 });
 pgResidencySchema.index({ pgId: 1, status: 1 });
 pgResidencySchema.index({ userId: 1, status: 1 });
+pgResidencySchema.index({ pgId: 1, residentStatus: 1 });
 
 const PGResidency = mongoose.model("PGResidency", pgResidencySchema);
 export default PGResidency;

@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import PublicNavbar from '../components/PublicNavbar'
 import { getPGList } from '@shared/api/pgs'
+import { SkeletonBase } from '@shared/components/Skeleton'
 
 const AREAS = ['Hinjewadi', 'Baner', 'Kharadi', 'Wakad', 'Kalyani Nagar', 'Viman Nagar', 'Pimpri-Chinchwad', 'Hadapsar']
 
 const SELECT_ARROW = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2373787a' d='M6 8L1 3h10z'/%3E%3C/svg%3E\")"
 
 function buildApiParams(sp, pageNum) {
-  const params = { sortBy: 'trustScore', limit: 12 }
+  const params = { limit: 12 }
   const collegeVal = sp.get('college')
   const areaVal = sp.get('area')
   const budgetVal = sp.get('budget')
@@ -22,22 +23,6 @@ function buildApiParams(sp, pageNum) {
   if (genderVal) params.gender = genderVal
   if (pageNum > 1) params.page = pageNum
   return params
-}
-
-function PGCardSkeleton() {
-  return (
-    <div className="bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden animate-pulse">
-      <div className="h-48 bg-gray-200" />
-      <div className="p-5 space-y-3">
-        <div className="h-5 bg-gray-200 rounded w-2/3" />
-        <div className="h-4 bg-gray-200 rounded w-1/2" />
-        <div className="flex gap-2 mt-4">
-          <div className="h-4 bg-gray-200 rounded w-1/3" />
-          <div className="h-4 bg-gray-200 rounded w-1/4" />
-        </div>
-      </div>
-    </div>
-  )
 }
 
 function PublicPGCard({ pg }) {
@@ -70,12 +55,6 @@ function PublicPGCard({ pg }) {
         <span className="absolute top-3 left-3 bg-[#e98a76] text-white px-3 py-1 rounded-full text-xs font-semibold">
           VERIFIED
         </span>
-        {pg.meta?.trustScore > 0 && (
-          <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full flex items-center gap-1">
-            <span className="material-symbols-outlined text-[#e98a76] text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-            <span className="text-xs font-bold text-[#1b1c1c]">{pg.meta.trustScore}</span>
-          </div>
-        )}
         {pg.accommodation?.gender && (
           <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-medium text-[#434849] capitalize">
             {pg.accommodation.gender}
@@ -314,13 +293,29 @@ export default function PropertiesPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {loading
-            ? Array.from({ length: 6 }).map((_, i) => <PGCardSkeleton key={i} />)
-            : pgs.length > 0
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 animate-pulse">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden">
+                <SkeletonBase className="w-full h-48 rounded-none" />
+                <div className="p-5 space-y-3">
+                  <SkeletonBase className="h-5 w-2/3" />
+                  <SkeletonBase className="h-4 w-1/2" />
+                  <div className="flex gap-2 mt-4">
+                    <SkeletonBase className="h-4 w-1/3" />
+                    <SkeletonBase className="h-4 w-1/4" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {pgs.length > 0
               ? pgs.map(pg => <PublicPGCard key={pg._id} pg={pg} />)
               : <EmptyState hasFilters={activeFilters.length > 0} onClear={clearAll} />}
-        </div>
+          </div>
+        )}
 
         {hasMore && !loading && (
           <div className="flex justify-center mt-10">

@@ -112,7 +112,7 @@ export default function LoginPage() {
           {/* Logo */}
           <div className="flex justify-center mb-8">
             <Link to="/">
-              <img src="/nest-stay-logo.png" alt="Nest Stay" className="h-10 w-auto" />
+              <img src="/logo.png" alt="Nest Stay" className="h-16 w-auto" />
             </Link>
           </div>
 

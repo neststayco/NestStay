@@ -1,76 +1,52 @@
-import { useState, useEffect, useCallback } from 'react'
-import { getPGAdmissions, decideAdmission, revokeAdmission } from '@shared/api/admissions'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { getPGAdmissions, decideAdmission } from '@shared/api/admissions'
 import { useToast } from '@shared/components/Toast'
 import Pagination from '../../components/Pagination'
 import TabFilter from '../../components/TabFilter'
-
-const STATUS_COLORS = {
-  pending:  'bg-yellow-100 text-yellow-700',
-  admitted: 'bg-green-100 text-green-700',
-  rejected: 'bg-red-100 text-red-700',
-}
+import PageHeader from '../../components/PageHeader'
+import EmptyState from '../../components/EmptyState'
+import StatusBadge from '../../components/StatusBadge'
+import PageContainer from '../../components/PageContainer'
+import TableWrapper from '../../components/TableWrapper'
+import { SkeletonTable } from '@shared/components/Skeleton'
 
 const TABS = [
   { value: '', label: 'All' },
   { value: 'pending', label: 'Pending' },
-  { value: 'admitted', label: 'Admitted' },
+  { value: 'approved', label: 'Approved' },
   { value: 'rejected', label: 'Rejected' },
+  { value: 'withdrawn', label: 'Withdrawn' },
 ]
-
-function RowSkeleton() {
-  return (
-    <tr className="animate-pulse">
-      {[1, 2, 3, 4, 5].map(i => (
-        <td key={i} className="px-4 py-3"><div className="h-4 bg-gray-200 rounded w-3/4" /></td>
-      ))}
-    </tr>
-  )
-}
-
-function ConfirmRevokeDialog({ guest, onCancel, onConfirm, loading }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white rounded-[20px] shadow-card p-6 w-full max-w-sm text-center">
-        <h3 className="font-bold text-gray-900 mb-2">Revoke Admission?</h3>
-        <p className="text-sm text-gray-500 mb-5">
-          <strong>{guest?.userId?.name}</strong> will lose resident status and will no longer be able to submit complaints.
-        </p>
-        <div className="flex gap-3">
-          <button
-            onClick={onCancel}
-            className="flex-1 border border-[#e0e0e0] text-gray-700 hover:bg-gray-50 text-sm font-medium py-2 rounded-[10px]"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={loading}
-            className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white text-sm font-medium py-2 rounded-[10px]"
-          >
-            {loading ? 'Revoking…' : 'Revoke'}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 export default function OwnerAdmissionsPage() {
   const [admissions, setAdmissions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState({})
-  const [revokeTarget, setRevokeTarget] = useState(null)
-  const [revoking, setRevoking] = useState(false)
   const toast = useToast()
+  const searchTimer = useRef(null)
+
+  function handleSearchChange(val) {
+    setSearch(val)
+    clearTimeout(searchTimer.current)
+    searchTimer.current = setTimeout(() => {
+      setDebouncedSearch(val)
+      setPage(1)
+    }, 350)
+  }
 
   const fetchAdmissions = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      const res = await getPGAdmissions({ status: statusFilter || undefined, page, limit: 15 })
+      const params = { page, limit: 15 }
+      if (statusFilter) params.status = statusFilter
+      if (debouncedSearch.trim()) params.search = debouncedSearch.trim()
+      const res = await getPGAdmissions(params)
       setAdmissions(res.data)
       setPagination(res.pagination)
     } catch {
@@ -78,7 +54,7 @@ export default function OwnerAdmissionsPage() {
     } finally {
       setLoading(false)
     }
-  }, [statusFilter, page])
+  }, [statusFilter, debouncedSearch, page])
 
   useEffect(() => { fetchAdmissions() }, [fetchAdmissions])
 
@@ -87,7 +63,7 @@ export default function OwnerAdmissionsPage() {
     try {
       await decideAdmission(id, decision)
       setAdmissions(prev => prev.map(a =>
-        a._id === id ? { ...a, status: decision, _deciding: false } : a
+        a._id === id ? { ...a, status: decision, residentStatus: decision === 'approved' ? 'active' : null, _deciding: false } : a
       ))
       toast(`Guest ${decision}`, 'success')
     } catch (err) {
@@ -96,139 +72,116 @@ export default function OwnerAdmissionsPage() {
     }
   }
 
-  async function handleRevoke() {
-    if (!revokeTarget) return
-    setRevoking(true)
-    try {
-      await revokeAdmission(revokeTarget._id)
-      setAdmissions(prev => prev.map(a =>
-        a._id === revokeTarget._id ? { ...a, status: 'rejected' } : a
-      ))
-      toast('Admission revoked', 'success')
-      setRevokeTarget(null)
-    } catch (err) {
-      toast(err.response?.data?.message || 'Failed to revoke', 'error')
-    } finally {
-      setRevoking(false)
-    }
-  }
-
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Admissions</h1>
-        <p className="text-gray-500 text-sm mt-0.5">Review admission requests from guests for your PG</p>
+    <PageContainer size="xl">
+      <PageHeader title="Admissions" subtitle="Review guest requests for your PG" />
+
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <TabFilter tabs={TABS} value={statusFilter} onChange={s => { setStatusFilter(s); setPage(1) }} />
+        {pagination.totalItems !== undefined && (
+          <span className="text-xs text-[#73787a] font-medium bg-[#f6f3f2] px-3 py-1.5 rounded-full">
+            {pagination.totalItems} total
+          </span>
+        )}
       </div>
 
-      <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
-        <TabFilter
-          tabs={TABS}
-          value={statusFilter}
-          onChange={s => { setStatusFilter(s); setPage(1) }}
+      <div className="relative mb-5 max-w-xs">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#b0b0b0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+        </svg>
+        <input
+          type="text"
+          value={search}
+          onChange={e => handleSearchChange(e.target.value)}
+          placeholder="Search by name or email…"
+          className="w-full pl-9 pr-8 py-2 text-sm border border-[#E5E7EB] rounded-xl bg-[#fbf9f8] focus:outline-none focus:ring-2 focus:ring-[#e98a76] focus:border-[#e98a76]"
         />
-        {pagination.totalItems !== undefined && (
-          <span className="text-sm text-gray-400">{pagination.totalItems} total</span>
+        {search && (
+          <button onClick={() => handleSearchChange('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#b0b0b0] hover:text-[#434849]">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         )}
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-[10px] text-sm text-red-700">{error}</div>
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={fetchAdmissions} className="text-sm font-medium underline shrink-0 ml-3">Retry</button>
+        </div>
       )}
 
-      <div className="bg-white rounded-[20px] border border-[#e0e0e0] shadow-card overflow-hidden">
+      <TableWrapper>
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="border-b border-[#f0f0f0]">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Guest</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Move-in Note</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Applied</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
-              <th className="px-4 py-3" />
+              <th className="px-4 py-3 text-left text-[10px] font-semibold text-[#73787a] uppercase tracking-wider bg-[#f6f3f2]">Guest</th>
+              <th className="px-4 py-3 text-left text-[10px] font-semibold text-[#73787a] uppercase tracking-wider bg-[#f6f3f2]">Move-in note</th>
+              <th className="px-4 py-3 text-left text-[10px] font-semibold text-[#73787a] uppercase tracking-wider bg-[#f6f3f2]">Applied</th>
+              <th className="px-4 py-3 text-left text-[10px] font-semibold text-[#73787a] uppercase tracking-wider bg-[#f6f3f2]">Status</th>
+              <th className="px-4 py-3 bg-[#f6f3f2]" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
-            {loading
-              ? Array.from({ length: 6 }).map((_, i) => <RowSkeleton key={i} />)
-              : admissions.length === 0
-              ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-gray-400">
-                    No admission requests found
-                  </td>
-                </tr>
+          {loading
+            ? <SkeletonTable rows={6} cols={5} />
+            : <tbody className="divide-y divide-[#f6f6f6]">
+                {admissions.length === 0
+                  ? (
+                    <tr><td colSpan={5}>
+                      <EmptyState
+                    icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" /></svg>}
+                    title="No admissions found"
+                    description={statusFilter ? 'Try a different filter' : 'No requests for your PG yet'}
+                  />
+                </td></tr>
               )
               : admissions.map(adm => (
-                <tr key={adm._id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-gray-800">
+                <tr key={adm._id} className="hover:bg-[#fbf9f8] transition-colors">
+                  <td className="px-4 py-3.5">
+                    <p className="font-semibold text-[#1b1c1c] text-sm">
                       {adm.userId?.name || '—'}
-                      {adm.escalatedAt && adm.status === 'pending' && (
-                        <span
-                          className="ml-2 text-xs bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full"
-                          title="Our team has been notified and will review this."
-                        >
-                          Escalated
-                        </span>
-                      )}
                     </p>
-                    <p className="text-xs text-gray-400">{adm.userId?.email}</p>
+                    <p className="text-xs text-[#73787a] mt-0.5">{adm.userId?.email}</p>
                   </td>
-                  <td className="px-4 py-3 text-gray-500 max-w-[200px]">
-                    <p className="truncate">{adm.moveInNote || <span className="text-gray-300 italic">—</span>}</p>
+                  <td className="px-4 py-3.5 text-[#73787a] max-w-[180px]">
+                    <p className="truncate text-sm">{adm.moveInNote || <span className="italic text-[#b0b0b0]">—</span>}</p>
                   </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">
+                  <td className="px-4 py-3.5 text-[#73787a] text-xs whitespace-nowrap">
                     {new Date(adm.createdAt).toLocaleDateString()}
                   </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[adm.status] || 'bg-gray-100 text-gray-600'}`}>
-                      {adm.status}
-                    </span>
+                  <td className="px-4 py-3.5">
+                    <StatusBadge status={adm.status} />
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3.5 text-right">
                     {adm.status === 'pending' && (
                       <div className="flex items-center gap-2 justify-end">
                         <button
                           onClick={() => handleDecide(adm._id, 'rejected')}
                           disabled={adm._deciding}
-                          className="text-xs px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-[10px] disabled:opacity-50"
+                          className="text-xs px-3 py-1.5 border border-[#E5E7EB] hover:border-red-200 hover:bg-red-50 hover:text-red-600 text-[#73787a] rounded-lg font-medium disabled:opacity-40 transition-colors"
                         >
                           Reject
                         </button>
                         <button
-                          onClick={() => handleDecide(adm._id, 'admitted')}
+                          onClick={() => handleDecide(adm._id, 'approved')}
                           disabled={adm._deciding}
-                          className="text-xs px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-600 rounded-[10px] disabled:opacity-50"
+                          className="text-xs px-3 py-1.5 bg-[#e98a76] hover:opacity-90 text-white rounded-lg font-semibold disabled:opacity-40 transition-all"
                         >
-                          {adm._deciding ? '…' : 'Admit'}
+                          {adm._deciding ? '…' : 'Approve'}
                         </button>
                       </div>
-                    )}
-                    {adm.status === 'admitted' && (
-                      <button
-                        onClick={() => setRevokeTarget(adm)}
-                        className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-600 rounded-[10px]"
-                      >
-                        Revoke
-                      </button>
                     )}
                   </td>
                 </tr>
               ))
             }
-          </tbody>
+              </tbody>
+          }
         </table>
-      </div>
+      </TableWrapper>
 
       <Pagination page={page} totalPages={pagination.totalPages} onPageChange={setPage} />
-
-      {revokeTarget && (
-        <ConfirmRevokeDialog
-          guest={revokeTarget}
-          onCancel={() => setRevokeTarget(null)}
-          onConfirm={handleRevoke}
-          loading={revoking}
-        />
-      )}
-    </div>
+    </PageContainer>
   )
 }

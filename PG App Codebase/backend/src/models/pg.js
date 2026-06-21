@@ -4,7 +4,7 @@ const pgSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     slug: { type: String, unique: true, required: true },
-    description: { type: String, required: true },
+    description: { type: String, default: "" },
     location: {
       country: String,
       state: String,
@@ -36,6 +36,29 @@ const pgSchema = new mongoose.Schema(
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     isActive: { type: Boolean, default: true },
     isVerified: { type: Boolean, default: false },
+    ownerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    verificationStatus: {
+      type: String,
+      enum: ["draft", "pending_review", "approved", "rejected", "suspended"],
+      default: "approved",
+    },
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    reviewedAt: {
+      type: Date,
+      default: null,
+    },
+    rejectionReason: {
+      type: String,
+      default: null,
+    },
   },
   { timestamps: true }
 );

@@ -8,6 +8,9 @@ import {
   resetOwnerPassword,
   getAllUsers,
   deactivateUser,
+  getPendingPGs,
+  approvePG,
+  rejectPG,
 } from "../controllers/admin.controller.js";
 import { protect, allowRoles } from "../middleware/auth.middleware.js";
 
@@ -26,5 +29,9 @@ router.post("/owners", createPGOwner);
 router.get("/owners", getAllPGOwners);
 router.patch("/owners/:id", updatePGOwner);
 router.patch("/owners/:id/password", resetOwnerPassword);
+
+router.get("/pending-pgs", getPendingPGs);
+router.patch("/pending-pgs/:id/approve", approvePG);
+router.patch("/pending-pgs/:id/reject", rejectPG);
 
 export default router;

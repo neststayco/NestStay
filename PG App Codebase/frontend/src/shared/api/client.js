@@ -37,6 +37,12 @@ client.interceptors.response.use(
         const { data } = await client.post('/auth/refresh', {}, { _isRetry: true })
         const newToken = data.accessToken
         localStorage.setItem('pg_token', newToken)
+        if (data.data) {
+          localStorage.setItem('pg_user', JSON.stringify(data.data))
+        }
+        window.dispatchEvent(new CustomEvent('auth:updated', {
+          detail: { token: newToken, user: data.data || null },
+        }))
         isRefreshing = false
 
         // Drain the queue

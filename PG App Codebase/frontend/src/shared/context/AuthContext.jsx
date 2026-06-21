@@ -21,6 +21,26 @@ export function AuthProvider({ children }) {
   const [savedPGIds, setSavedPGIds] = useState(new Set())
 
   useEffect(() => {
+    function handleAuthUpdated(event) {
+      const nextToken = event.detail?.token ?? localStorage.getItem('pg_token')
+      const nextUser = event.detail?.user ?? (() => {
+        try {
+          const saved = localStorage.getItem('pg_user')
+          return saved ? JSON.parse(saved) : null
+        } catch {
+          return null
+        }
+      })()
+
+      setToken(nextToken)
+      setUser(nextUser)
+    }
+
+    window.addEventListener('auth:updated', handleAuthUpdated)
+    return () => window.removeEventListener('auth:updated', handleAuthUpdated)
+  }, [])
+
+  useEffect(() => {
     if (!token || !user || user.role !== 'user') {
       setCurrentAdmission(null)
       setAdmissionLoaded(true)
@@ -44,6 +64,14 @@ export function AuthProvider({ children }) {
     localStorage.setItem('pg_user', JSON.stringify(userData))
     setToken(tokenValue)
     setUser(userData)
+  }
+
+  function updateUser(updates) {
+    setUser(prev => {
+      const next = { ...prev, ...updates }
+      localStorage.setItem('pg_user', JSON.stringify(next))
+      return next
+    })
   }
 
   function logout() {
@@ -78,7 +106,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      user, token, login, logout,
+      user, token, login, logout, updateUser,
       currentAdmission, setCurrentAdmission, isAdmitted, admissionLoaded,
       savedPGIds, toggleSave,
     }}>

@@ -40,10 +40,9 @@ A backend API for a **PG (Paying Guest accommodation) discovery and complaint ma
 - [x] Per-route rate limiting: `loginLimiter`, `refreshLimiter`, `registerInitiateLimiter`, `registerVerifyLimiter`, `forgotInitiateLimiter`, `forgotVerifyLimiter`, `resetPasswordLimiter`
 
 #### PG Discovery & Listings
-- [x] `GET /api/pgs` — public listing with filters: `search` (MongoDB `$text`), `city`, `area`, `gender`, `minPrice`, `maxPrice`, `amenities` (`$all`), `sortBy` (createdAt / trustScore / complaintCount / price), pagination (`page`, `limit`)
-- [x] Trust score computation inline in aggregation pipeline: `max(0, verifiedComplaints × 2 − unverifiedComplaints)`
-- [x] `GET /api/pgs/:id` — PG detail with parallel fetch: PG doc + complaint stats + verified resident count
-- [x] User context injection on detail endpoint (`isVerifiedResident`, `hasAppliedForVerification`) via `optionalAuth`
+- [x] `GET /api/pgs` — public listing with filters: `search` (MongoDB `$text`), `city`/`area` (case-insensitive regex), `gender`, `foodType`, `minPrice`, `maxPrice`, `amenities` (comma-split, trimmed, `$all`), `sortBy` (`price` only), pagination (`page`, `limit`). No trust/complaint sort options.
+- [x] `GET /api/pgs/:id` — PG detail returns `{ pg, remainingCapacity, userContext }`. No complaint stats or trust metrics.
+- [x] User context injection on detail endpoint (`isAdmitted`, `hasActiveAdmissionElsewhere`, `admissionStatus`) via `optionalAuth`
 - [x] Sensitive field exclusion (`owner.phone`, `owner.email`) at query level
 - [x] `POST /api/pgs` — admin PG creation with slug uniqueness check
 - [x] `PATCH /api/pgs/:id` — admin PG update
@@ -70,8 +69,8 @@ A backend API for a **PG (Paying Guest accommodation) discovery and complaint ma
 - [x] `GET /api/admissions/mine` — user fetches their active admission (pending or admitted), populated with PG details
 - [x] `POST /api/admissions/:id/withdraw` — user withdraws their own pending admission
 - [x] `POST /api/admissions/owner-add` — pg_owner manually admits a resident directly (bypasses pending flow)
-- [x] `GET /api/admissions/pg` — pg_owner fetches admissions for their PG (scoped to `req.user.pgId`), with status filter and pagination
-- [x] `GET /api/admissions` — admin fetches all admissions with filters: `status`, `pgId`, `escalated=true`, pagination; sorted by escalatedAt then createdAt
+- [x] `GET /api/admissions/pg` — pg_owner fetches admissions for their PG (scoped to `req.user.pgId`), with `status` filter, `search` (name/email regex via User lookup), pagination
+- [x] `GET /api/admissions` — admin fetches all admissions with filters: `status`, `pgId`, `escalated=true`, `search` (name/email regex via User lookup), pagination; sorted by escalatedAt then createdAt
 - [x] `PATCH /api/admissions/:id/decide` — pg_owner or admin sets status to `admitted` or `rejected`; owner scoped to their PG
 - [x] `PATCH /api/admissions/:id/revoke` — pg_owner or admin revokes an admitted student; sets `revokedAt`/`revokedBy`
 - [x] `processedBy` field tracks whether owner or admin made the decision
@@ -159,8 +158,8 @@ Shared code lives in `frontend/src/shared/` and is accessed via the `@shared` pa
 
 | Screen | Route | Status |
 |---|---|---|
-| PG Browse (keyword search + filters + pagination; pending admission banner with withdraw) | `/user` | ✅ Complete |
-| PG Detail (gallery, pricing, trust stats, Apply/Complaint CTAs) | `/user/pgs/:id` | ✅ Complete |
+| PG Browse (keyword search + filter chips + amenity pills + pagination; pending admission banner with withdraw) | `/user` | ✅ Complete |
+| PG Detail (gallery with arrows/dots, pricing stat blocks, amenity tags with icons, dominant Apply CTA, resident reviews) | `/user/pgs/:id` | ✅ Complete |
 | Admission Form | `/user/pgs/:id/apply` | ✅ Complete |
 | Complaint Form (type, char counter, anon toggle) | `/user/pgs/:id/complaint` | ✅ Complete |
 | My PG (admitted resident dashboard + my complaints list) | `/user/my-pg` | ✅ Complete |
@@ -177,7 +176,7 @@ Shared code lives in `frontend/src/shared/` and is accessed via the `@shared` pa
 | Photos (image gallery management via ImageKit) | `/pgowner/photos` | ✅ Complete |
 | Location (map coordinates update) | `/pgowner/location` | ✅ Complete |
 | Capacity (total beds update) | `/pgowner/capacity` | ✅ Complete |
-| Details (description, pricing, amenities) | `/pgowner/details` | ✅ Complete |
+| Details (description, pricing, amenities, food type) | `/pgowner/details` | ✅ Complete |
 
 Shared infrastructure: auth context (with admission tracking), axios client with interceptors, Toast notifications, ErrorBoundary, role-based `RequireRole` guard.
 
@@ -547,7 +546,7 @@ Two-step OTP email registration. Role assignment is server-enforced (new account
 Refresh token is set as an HttpOnly cookie (`refreshToken`), not returned in the body.
 
 ### PG Module
-Most complex controller. Key: trust score aggregation, soft delete, sensitive field exclusion, parallel fetch on detail, `optionalAuth` user context injection.
+Most complex controller. Key: soft delete, sensitive field exclusion, parallel fetch on detail (pg + remainingCapacity via pgresidencies aggregation + userContext), `optionalAuth` user context injection. Trust score removed — no complaint aggregation on list or detail.
 
 ### Complaint Module
 Anti-spam cooldown per `userId+pgId` (15 min). `isVerifiedResident` stamped at creation time. `pgSnapshot` denormalizes PG details. Event emitted on approval. `getComplaints` is shared between admin and pg_owner — when called by a pg_owner, the controller reads `req.user.pgId` to scope results automatically.
@@ -584,11 +583,13 @@ Fields:
   password     String (required, bcrypt-hashed, 10 rounds)
   role         String (enum: ["user","admin","student","pg_owner"], default: "user")
   pgId         ObjectId → PG (default: null — only set for pg_owner accounts)
+  savedPGs     [ObjectId → PG] (user's saved/bookmarked PGs)
   createdAt    Date (auto)
   updatedAt    Date (auto)
 
 Instance Method: matchPassword(enteredPassword) → Boolean
 Pre-save Hook: hashes password if modified
+Note: savedPGs toggled via atomic $addToSet/$pull (findByIdAndUpdate) — never .save() — to avoid triggering the bcrypt pre-save hook.
 ```
 
 ### PG
@@ -612,6 +613,7 @@ Fields:
   accommodation.roomTypes      [String]
   accommodation.totalCapacity  Number
   amenities                    [String]
+  foodType                     String (enum: veg|non-veg|both, nullable)
   images                       [String] (URLs)
   owner.name                   String
   owner.phone                  String (excluded from public API)
@@ -745,6 +747,12 @@ npm run build:student # → dist-student/
 - **pgSnapshot pattern**: Complaints snapshot PG details at creation time
 - **Owner scoping via `req.user.pgId`**: pg_owner routes never trust client-provided pgId
 
+### Intentionally Removed Features
+
+- **Trust score** — removed entirely. No complaint aggregation on list or detail. No trust/complaint sort options. No UI badges.
+- **Like PG** — removed. Only Save PG remains (`savedPGs` on User, atomic toggle).
+- **Schedule Visit** — never existed as a real feature; removed from landing page How It Works section.
+
 ### Technical Debt & Known Gaps
 
 - **No input validation library**: Manual `if (!field)` checks only — no Joi/Zod/express-validator
@@ -769,7 +777,6 @@ The unified frontend handles all three via role-based routing in a single React 
 
 - **`pg_owner` role uses underscore**: The backend enum is `"pg_owner"` — never `"pgowner"`. The frontend `RequireRole` prop, `LoginPage` redirect, and `RegisterPage` redirect all must use the exact string `"pg_owner"`.
 - **Admission and verified-resident are the same model**: `PGResidency` with `status: "admitted"` is what makes a user a "verified resident" for complaint weighting. There is no separate verification step.
-- **Trust score on both list and detail**: `getPGList` computes trust score in an aggregation pipeline. `getPGDetails` also computes trust metrics (verifiedComplaints, unverifiedComplaints, trustScore), plus `remainingCapacity` and the requesting user's admission status via parallel fetches.
 - **`getComplaints` auto-scopes for owners**: When called with a `pg_owner` JWT, the controller reads `req.user.pgId` and adds it to the filter. The client doesn't need to pass `pgId`.
 - **Single active admission per user**: Enforced in the controller via `findOne({ userId, status: { $in: ["pending","admitted"] } })`. The database does not enforce this — no unique index.
 - **`processedBy` vs `verifiedBy`**: The old `pgResidency` model used `verifiedBy` (admin ID). The new admission model uses `processedBy: { role, userId }` to track whether owner or admin acted.

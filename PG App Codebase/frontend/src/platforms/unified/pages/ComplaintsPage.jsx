@@ -24,7 +24,7 @@ const TYPE_COLORS = {
   cleanliness: 'bg-blue-100 text-blue-700',
   security:    'bg-red-100 text-red-700',
   management:  'bg-purple-100 text-purple-700',
-  other:       'bg-gray-100 text-gray-600',
+  other:       'bg-[#f6f3f2] text-[#73787a]',
 }
 
 function StatusBadge({ status }) {
@@ -50,11 +50,11 @@ const DetailPanel = memo(function DetailPanel({ complaint, onAction, acting, onD
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <div className="px-6 py-4 border-b border-[#f0f0f0] flex-shrink-0">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h2 className="font-bold text-gray-900 text-sm">{pgName}</h2>
-            <p className="text-xs text-gray-400 mt-0.5">ID: {complaint._id}</p>
+            <h2 className="font-bold text-[#1b1c1c] text-sm">{pgName}</h2>
+            <p className="text-xs text-[#73787a] mt-0.5">ID: {complaint._id}</p>
           </div>
           <StatusBadge status={complaint.status} />
         </div>
@@ -62,36 +62,41 @@ const DetailPanel = memo(function DetailPanel({ complaint, onAction, acting, onD
 
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-gray-50 rounded-xl p-3">
-            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1">Type</p>
+          <div className="bg-[#f6f3f2] rounded-xl p-3">
+            <p className="text-[10px] text-[#73787a] font-semibold uppercase tracking-wide mb-1">Type</p>
             <TypeChip type={complaint.type} />
           </div>
-          <div className="bg-gray-50 rounded-xl p-3">
-            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1">Filed</p>
-            <p className="text-xs font-medium text-gray-700" title={absoluteDate(complaint.createdAt)}>
+          <div className="bg-[#f6f3f2] rounded-xl p-3">
+            <p className="text-[10px] text-[#73787a] font-semibold uppercase tracking-wide mb-1">Filed</p>
+            <p className="text-xs font-medium text-[#434849]" title={absoluteDate(complaint.createdAt)}>
               {relativeTime(complaint.createdAt)}
             </p>
           </div>
-          <div className="bg-gray-50 rounded-xl p-3">
-            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1">Submitted by</p>
-            <p className="text-xs font-medium text-gray-700">{submitter}</p>
+          <div className="bg-[#f6f3f2] rounded-xl p-3">
+            <p className="text-[10px] text-[#73787a] font-semibold uppercase tracking-wide mb-1">Submitted by</p>
+            <p className="text-xs font-medium text-[#434849]">{submitter}</p>
             {!complaint.isAnonymous && complaint.createdBy?.email && (
-              <p className="text-xs text-gray-400 mt-0.5 truncate">{complaint.createdBy.email}</p>
+              <p className="text-xs text-[#73787a] mt-0.5 truncate">{complaint.createdBy.email}</p>
             )}
           </div>
-          <div className="bg-gray-50 rounded-xl p-3">
-            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1">Flags</p>
+          <div className="bg-[#f6f3f2] rounded-xl p-3">
+            <p className="text-[10px] text-[#73787a] font-semibold uppercase tracking-wide mb-1">Flags</p>
             <div className="space-y-1">
-              {complaint.isAnonymous && <p className="text-xs text-gray-500">Anonymous</p>}
-              {complaint.isVerifiedResident && <p className="text-xs text-purple-600 font-medium">✓ Verified resident</p>}
-              {!complaint.isAnonymous && !complaint.isVerifiedResident && <p className="text-xs text-gray-400">—</p>}
+              {complaint.isAnonymous && <p className="text-xs text-[#73787a]">Anonymous</p>}
+              {complaint.isVerifiedResident && (
+                <span className="inline-flex items-center gap-1 text-xs text-green-700 font-medium">
+                  <span className="material-symbols-outlined" style={{ fontSize: '12px', fontVariationSettings: "'FILL' 1" }}>verified</span>
+                  Verified resident
+                </span>
+              )}
+              {!complaint.isAnonymous && !complaint.isVerifiedResident && <p className="text-xs text-[#73787a]">—</p>}
             </div>
           </div>
         </div>
 
         <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Description</p>
-          <p className="text-sm text-gray-800 leading-relaxed bg-gray-50 rounded-xl p-4">
+          <p className="text-xs font-semibold text-[#73787a] uppercase tracking-wide mb-2">Description</p>
+          <p className="text-sm text-[#1b1c1c] leading-relaxed bg-[#f6f3f2] rounded-xl p-4">
             {complaint.description}
           </p>
         </div>
@@ -109,7 +114,7 @@ const DetailPanel = memo(function DetailPanel({ complaint, onAction, acting, onD
         )}
       </div>
 
-      <div className="px-6 py-4 border-t border-gray-100 flex-shrink-0">
+      <div className="px-6 py-4 border-t border-[#f0f0f0] flex-shrink-0">
         {complaint.status === 'pending' && (
           <div className="flex gap-3 mb-3">
             <button
@@ -130,10 +135,10 @@ const DetailPanel = memo(function DetailPanel({ complaint, onAction, acting, onD
         )}
         {confirmDelete ? (
           <div className="flex items-center gap-3">
-            <p className="text-sm text-gray-600 flex-1">Delete permanently?</p>
+            <p className="text-sm text-[#434849] flex-1">Delete permanently?</p>
             <button
               onClick={() => setConfirmDelete(false)}
-              className="text-sm px-3 py-1.5 border border-[#e0e0e0] rounded-[10px] hover:bg-gray-50 text-gray-600 transition-colors"
+              className="text-sm px-3 py-1.5 border border-[#E5E7EB] rounded-[10px] hover:bg-[#f6f3f2] text-[#434849] transition-colors"
             >
               Cancel
             </button>
@@ -161,14 +166,11 @@ const DetailPanel = memo(function DetailPanel({ complaint, onAction, acting, onD
 function EmptyDetail() {
   return (
     <div className="h-full flex flex-col items-center justify-center text-center p-8">
-      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
+      <div className="w-12 h-12 bg-[#f6f3f2] rounded-2xl flex items-center justify-center mb-3">
+        <span className="material-symbols-outlined text-[#b0b0b0]" style={{ fontSize: '22px' }}>report</span>
       </div>
-      <p className="text-sm font-medium text-gray-400">Select a complaint</p>
-      <p className="text-xs text-gray-300 mt-1">Click any row to view details and take action</p>
+      <p className="text-sm font-medium text-[#73787a]">Select a complaint</p>
+      <p className="text-xs text-[#b0b0b0] mt-1">Click any row to view details and take action</p>
     </div>
   )
 }
@@ -177,9 +179,9 @@ function MobileModal({ complaint, onClose, onAction, acting, onDelete, deleting 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
-          <h2 className="font-bold text-gray-900">Complaint Detail</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 p-1">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#f0f0f0] flex-shrink-0">
+          <h2 className="font-bold text-[#1b1c1c]">Complaint Detail</h2>
+          <button onClick={onClose} className="text-[#73787a] hover:text-[#1b1c1c] p-1">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -293,14 +295,14 @@ export default function ComplaintsPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-100 bg-white flex-shrink-0">
+      <div className="px-6 py-4 border-b border-[#f0f0f0] bg-white flex-shrink-0">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Complaint Resolution</h1>
-            <p className="text-gray-500 text-xs mt-0.5">Review and action complaints from guests</p>
+            <h1 className="text-xl font-bold text-[#1b1c1c]">Complaint Resolution</h1>
+            <p className="text-[#73787a] text-xs mt-0.5">Review and action complaints from guests</p>
           </div>
           {pendingCount > 0 && (
-            <span className="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-1 rounded-full border border-yellow-200 whitespace-nowrap">
+            <span className="bg-yellow-50 text-yellow-700 text-xs font-bold px-2.5 py-1 rounded-full border border-yellow-200 whitespace-nowrap">
               {pendingCount} pending
             </span>
           )}
@@ -310,7 +312,7 @@ export default function ComplaintsPage() {
           <select
             value={statusFilter}
             onChange={e => updateParams({ status: e.target.value })}
-            className="border border-[#e0e0e0] rounded-[10px] px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-action bg-white"
+            className="border border-[#E5E7EB] rounded-[10px] px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e98a76] focus:border-[#e98a76] bg-white text-[#434849]"
           >
             <option value="">All statuses</option>
             <option value="pending">Pending</option>
@@ -323,19 +325,19 @@ export default function ComplaintsPage() {
               type="checkbox"
               checked={verifiedOnly}
               onChange={e => updateParams({ verifiedOnly: e.target.checked ? 'true' : '' })}
-              className="w-4 h-4 accent-action"
+              className="w-4 h-4 accent-[#e98a76]"
             />
-            <span className="text-sm text-gray-700">Verified residents only</span>
+            <span className="text-sm text-[#434849]">Verified residents only</span>
           </label>
 
           {(statusFilter || verifiedOnly) && (
-            <button onClick={() => setSearchParams({})} className="text-sm text-gray-400 hover:text-gray-700 underline">
+            <button onClick={() => setSearchParams({})} className="text-xs font-semibold text-[#e98a76] hover:text-[#c0431e] transition-colors">
               Clear
             </button>
           )}
 
           {pagination && (
-            <span className="ml-auto text-xs text-gray-400">
+            <span className="ml-auto text-xs text-[#73787a]">
               {pagination.totalItems === 0 ? 'No results' : `${pagination.totalItems} complaints`}
             </span>
           )}
@@ -352,12 +354,12 @@ export default function ComplaintsPage() {
       {/* Split panel */}
       <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Left: complaint list */}
-        <div className="w-full md:w-2/5 border-r border-gray-100 overflow-y-auto flex-shrink-0">
+        <div className="w-full md:w-2/5 border-r border-[#f0f0f0] overflow-y-auto flex-shrink-0">
           {loading
             ? (
               <div className="animate-pulse">
                 {Array.from({ length: 12 }).map((_, i) => (
-                  <div key={i} className="px-4 py-3.5 border-b border-gray-100">
+                  <div key={i} className="px-4 py-3.5 border-b border-[#f0f0f0]">
                     <SkeletonLine width="w-3/4" height="h-3" className="mb-2" />
                     <SkeletonLine width="w-1/2" height="h-3" />
                   </div>
@@ -367,8 +369,9 @@ export default function ComplaintsPage() {
             : complaints.length === 0
             ? (
               <div className="flex flex-col items-center justify-center py-16 text-center px-6">
-                <p className="text-gray-400 text-sm font-medium">No complaints found</p>
-                <p className="text-gray-300 text-xs mt-1">
+                <span className="material-symbols-outlined text-[#c5c8c9] mb-2" style={{ fontSize: '28px' }}>inbox</span>
+                <p className="text-[#73787a] text-sm font-medium">No complaints found</p>
+                <p className="text-[#b0b0b0] text-xs mt-1">
                   {statusFilter || verifiedOnly ? 'Try clearing your filters' : 'All quiet'}
                 </p>
               </div>
@@ -383,41 +386,44 @@ export default function ComplaintsPage() {
                     setSelectedId(c._id)
                     setMobileOpen(true)
                   }}
-                  className={`w-full text-left px-4 py-3.5 border-b border-gray-100 transition-colors ${
-                    isSelected ? 'bg-action-50 border-l-2 border-l-action' : 'hover:bg-gray-50'
+                  className={`w-full text-left px-4 py-3.5 border-b border-[#f0f0f0] transition-colors ${
+                    isSelected ? 'bg-[#fff3ee] border-l-2 border-l-[#e98a76]' : 'hover:bg-[#fbf9f8]'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <span className="text-sm font-medium text-gray-900 truncate">{pgName}</span>
+                    <span className="text-sm font-medium text-[#1b1c1c] truncate">{pgName}</span>
                     <StatusBadge status={c.status} />
                   </div>
                   <div className="flex items-center gap-2">
                     <TypeChip type={c.type} />
                     {c.isVerifiedResident && (
-                      <span className="text-xs text-purple-600 font-medium">✓ Resident</span>
+                      <span className="inline-flex items-center gap-0.5 text-xs text-green-700 font-medium">
+                        <span className="material-symbols-outlined" style={{ fontSize: '11px', fontVariationSettings: "'FILL' 1" }}>verified</span>
+                        Resident
+                      </span>
                     )}
                     {c.isAnonymous && (
-                      <span className="text-xs text-gray-400">Anon</span>
+                      <span className="text-xs text-[#73787a]">Anon</span>
                     )}
-                    <span className="text-xs text-gray-400 ml-auto whitespace-nowrap" title={absoluteDate(c.createdAt)}>
+                    <span className="text-xs text-[#73787a] ml-auto whitespace-nowrap" title={absoluteDate(c.createdAt)}>
                       {relativeTime(c.createdAt)}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1.5 line-clamp-1">{c.description}</p>
+                  <p className="text-xs text-[#73787a] mt-1.5 line-clamp-1">{c.description}</p>
                 </button>
               )
             })
           }
 
           {pagination && pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-[#f0f0f0]">
               <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
-                className="text-xs px-3 py-1.5 border border-[#e0e0e0] rounded-[10px] hover:bg-gray-50 disabled:opacity-40">
+                className="text-xs px-3 py-1.5 border border-[#E5E7EB] rounded-[10px] hover:bg-[#f6f3f2] text-[#434849] disabled:opacity-40 transition-colors">
                 ← Prev
               </button>
-              <span className="text-xs text-gray-400">Page {pagination.currentPage}/{pagination.totalPages}</span>
+              <span className="text-xs text-[#73787a]">Page {pagination.currentPage}/{pagination.totalPages}</span>
               <button onClick={() => setPage(Math.min(pagination.totalPages, page + 1))} disabled={page === pagination.totalPages}
-                className="text-xs px-3 py-1.5 border border-[#e0e0e0] rounded-[10px] hover:bg-gray-50 disabled:opacity-40">
+                className="text-xs px-3 py-1.5 border border-[#E5E7EB] rounded-[10px] hover:bg-[#f6f3f2] text-[#434849] disabled:opacity-40 transition-colors">
                 Next →
               </button>
             </div>

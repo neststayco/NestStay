@@ -2,6 +2,8 @@ import express from "express";
 import {
   registerInitiate,
   registerVerify,
+  registerOwnerInitiate,
+  registerOwnerVerify,
   login,
   logout,
   refreshTokens,
@@ -17,6 +19,8 @@ const router = express.Router();
 // Registration
 router.post("/register/initiate", registerInitiate);
 router.post("/register/verify", registerVerify);
+router.post("/register-owner/initiate", registerOwnerInitiate);
+router.post("/register-owner/verify", registerOwnerVerify);
 
 // Session
 router.post("/login", login);

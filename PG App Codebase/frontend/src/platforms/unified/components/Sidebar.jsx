@@ -80,6 +80,7 @@ const NAV_GROUPS = [
     items: [
       { to: '/admin/pgs', label: 'PG Listings', icon: 'home' },
       { to: '/admin/owners', label: 'PG Owners', icon: 'user' },
+      { to: '/admin/onboarding-review', label: 'Listing Review', icon: 'clipboard' },
     ],
   },
   {

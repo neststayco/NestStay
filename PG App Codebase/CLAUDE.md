@@ -132,11 +132,11 @@ All code shared between both platforms. Imported via the `@shared` alias.
 
 - **Auth**: Access token in `localStorage` (`pg_token`); refresh token in HttpOnly cookie. Axios interceptor attaches `Bearer` header; 401 response interceptor attempts silent refresh via `POST /api/auth/refresh`, then falls back to logout + redirect.
 - **API layer**: `@shared/api/client.js` (axios instance) + domain files (`auth.js`, `pgs.js`, `admissions.js`, `complaints.js`, `admin.js`, `owners.js`, `testimonials.js`, `imagekit.js`)
-- **Auth context**: `@shared/context/AuthContext.jsx` — `{ user, token, login, logout, currentAdmission, setCurrentAdmission, isAdmitted, admissionLoaded }`. On mount, fetches `GET /admissions/mine` to populate admission state.
+- **Auth context**: `@shared/context/AuthContext.jsx` — `{ user, token, login, logout, currentAdmission, setCurrentAdmission, isAdmitted, admissionLoaded, savedPGIds, toggleSave }`. On mount, fetches `GET /admissions/mine` (admission state) and `GET /api/user/interactions` (saved PG IDs). `savedPGIds` is a `Set<string>` for O(1) lookup. `toggleSave` handles optimistic UI + atomic `$addToSet`/`$pull` via `POST /api/user/pgs/:id/save`.
 - **Toast**: `@shared/components/Toast.jsx` — `ToastProvider` wraps app root; `useToast()` returns `toast(msg, type)` function; types: `success | error | info`
-- **PGCard**: `@shared/components/PGCard.jsx` — accepts `basePath` prop (default `/pgs` for student PWA, `/user/pgs` for unified user area)
+- **PGCard**: `@shared/components/PGCard.jsx` — props: `{ pg, basePath, isSaved, onSave }`. `basePath` defaults to `/pgs` (student PWA) or `/user/pgs` (unified). Save button only renders when `onSave` provided. Amenity pills include Material Symbols icons via `AMENITY_ICONS` map. Hover applies `card-lift` class (defined in `index.css`).
 - **Error boundary**: `@shared/components/ErrorBoundary.jsx` — class component, wraps app root, shows "Try again" on render crash
-- **Tailwind**: custom `slide-in` keyframe animation defined in `frontend/tailwind.config.js`
+- **Tailwind**: `frontend/tailwind.config.js` — custom animations: `slide-in`, `fade-up`, `scale-in`, `pulse-dot`. Custom shadows: `card`, `card-hover`, `ambient`, `warm`, `float`, `glow`, `subtle`, `inner`. `index.css` adds elevation classes `.e1`/`.e2`/`.e3`, `.card-lift`, `.btn-glow`, surface layer helpers.
 
 ### Key Backend Patterns
 
@@ -144,7 +144,8 @@ All code shared between both platforms. Imported via the `@shared` alias.
 - **RBAC** via `protect` + `allowRoles(...roles)` in `src/middleware/auth.middleware.js`
 - **Event-driven notifications**: EventEmitter framework kept; event handlers emptied (no active listeners)
 - **Anti-spam**: 15-min cooldown per `userId+pgId` before new complaint
-- **Trust score**: `max(0, verifiedComplaints×2 − unverifiedComplaints)` — computed in aggregation pipeline in `pg.controller.js`; returned on both list and detail endpoints (detail also returns `remainingCapacity` and the requesting user's admission status)
+- **PG list/detail**: `getPGList` supports filters `city`, `area`, `gender`, `foodType`, `minPrice`, `maxPrice`, `amenities` (comma-separated, case-insensitive), `sortBy` (`price` only — no trust/complaint sort), pagination. `getPGDetails` returns `{ pg, remainingCapacity, userContext }` — no trust metrics.
+- **Save PG**: atomic `$addToSet`/`$pull` via `findByIdAndUpdate` — avoids triggering pre-save bcrypt hook. `getSavedPGs` uses aggregation with pgresidencies lookup for `remainingCapacity`.
 - **Lean queries**: `.lean()` on all read-only queries
 - **Structured logging**: `src/services/logger.service.js` — use instead of `console.log`
 - **Soft delete**: `deletePG` sets `isActive: false`, never physically removes

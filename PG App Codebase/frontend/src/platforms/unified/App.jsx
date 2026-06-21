@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from '@shared/context/AuthContext'
 import { ToastProvider } from '@shared/components/Toast'
 import ErrorBoundary from '@shared/components/ErrorBoundary'
-import { RequireRole } from './components/ProtectedRoute'
+import { RequireRole, RequireOwnerApproved } from './components/ProtectedRoute'
 import Layout from './components/Layout'
 import OwnerLayout from './components/OwnerLayout'
 import LandingPage from './pages/LandingPage'
@@ -31,7 +31,12 @@ import OwnerLocationPage from './pages/pgowner/LocationPage'
 import OwnerDetailsPage from './pages/pgowner/DetailsPage'
 import AdminTestimonialsPage from './pages/AdminTestimonialsPage'
 import AdminUsersPage from './pages/AdminUsersPage'
+import AdminOnboardingReviewPage from './pages/AdminOnboardingReviewPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import OwnerRegisterPage from './pages/OwnerRegisterPage'
+import OnboardingPage from './pages/pgowner/OnboardingPage'
+import WaitingApprovalPage from './pages/pgowner/WaitingApprovalPage'
+import RejectedPage from './pages/pgowner/RejectedPage'
 
 export default function App() {
   return (
@@ -46,6 +51,7 @@ export default function App() {
               <Route path="/properties/:id" element={<PropertyDetailPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/owner/register" element={<OwnerRegisterPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
               {/* Admin area */}
@@ -58,6 +64,7 @@ export default function App() {
                   <Route path="/admin/owners"          element={<OwnersPage />} />
                   <Route path="/admin/testimonials"   element={<AdminTestimonialsPage />} />
                   <Route path="/admin/users"          element={<AdminUsersPage />} />
+                  <Route path="/admin/onboarding-review" element={<AdminOnboardingReviewPage />} />
                 </Route>
               </Route>
 
@@ -73,16 +80,23 @@ export default function App() {
 
               {/* PG Owner area */}
               <Route element={<RequireRole role="pg_owner" />}>
-                <Route element={<OwnerLayout />}>
-                  <Route path="/pgowner"             element={<OwnerDashboardPage />} />
-                  <Route path="/pgowner/admissions"  element={<OwnerAdmissionsPage />} />
-                  <Route path="/pgowner/residents"   element={<OwnerStudentsPage />} />
-                  <Route path="/pgowner/complaints"    element={<OwnerComplaintsPage />} />
-                  <Route path="/pgowner/testimonials" element={<OwnerTestimonialsPage />} />
-                  <Route path="/pgowner/photos"      element={<OwnerPhotosPage />} />
-                  <Route path="/pgowner/location"   element={<OwnerLocationPage />} />
-                  <Route path="/pgowner/capacity"   element={<Navigate to="/pgowner/details" replace />} />
-                  <Route path="/pgowner/details"    element={<OwnerDetailsPage />} />
+                {/* Standalone status pages — all pg_owners can access regardless of onboardingStatus */}
+                <Route path="/pgowner/onboarding"        element={<OnboardingPage />} />
+                <Route path="/pgowner/waiting-approval"  element={<WaitingApprovalPage />} />
+                <Route path="/pgowner/rejected"          element={<RejectedPage />} />
+                {/* Dashboard — only approved or legacy admin-created owners */}
+                <Route element={<RequireOwnerApproved />}>
+                  <Route element={<OwnerLayout />}>
+                    <Route path="/pgowner"             element={<OwnerDashboardPage />} />
+                    <Route path="/pgowner/admissions"  element={<OwnerAdmissionsPage />} />
+                    <Route path="/pgowner/residents"   element={<OwnerStudentsPage />} />
+                    <Route path="/pgowner/complaints"    element={<OwnerComplaintsPage />} />
+                    <Route path="/pgowner/testimonials" element={<OwnerTestimonialsPage />} />
+                    <Route path="/pgowner/photos"      element={<OwnerPhotosPage />} />
+                    <Route path="/pgowner/location"   element={<OwnerLocationPage />} />
+                    <Route path="/pgowner/capacity"   element={<Navigate to="/pgowner/details" replace />} />
+                    <Route path="/pgowner/details"    element={<OwnerDetailsPage />} />
+                  </Route>
                 </Route>
               </Route>
 

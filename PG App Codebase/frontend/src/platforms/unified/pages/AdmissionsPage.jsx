@@ -5,10 +5,10 @@ import { useToast } from '@shared/components/Toast'
 import { SkeletonTable } from '@shared/components/Skeleton'
 
 const STATUS_COLORS = {
-  pending:   'bg-yellow-100 text-yellow-800',
-  approved:  'bg-green-100 text-green-800',
-  rejected:  'bg-red-100 text-red-800',
-  withdrawn: 'bg-gray-100 text-gray-600',
+  pending:   'bg-yellow-50 text-yellow-700 border border-yellow-200',
+  approved:  'bg-green-50 text-green-700 border border-green-200',
+  rejected:  'bg-red-50 text-red-600 border border-red-200',
+  withdrawn: 'bg-[#f6f3f2] text-[#73787a] border border-[#E5E7EB]',
 }
 
 function ReviewModal({ app, onClose, onUpdated }) {
@@ -31,9 +31,9 @@ function ReviewModal({ app, onClose, onUpdated }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
-        <div className="px-6 py-4 border-b flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-800">Admission Request</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+        <div className="px-6 py-4 border-b border-[#f0f0f0] flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-[#1b1c1c]">Admission Request</h2>
+          <button onClick={onClose} className="text-[#73787a] hover:text-[#1b1c1c] transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -42,47 +42,47 @@ function ReviewModal({ app, onClose, onUpdated }) {
 
         <div className="px-6 py-5 space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gray-50 rounded-xl p-3">
-              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Applicant</p>
-              <p className="text-sm font-semibold text-gray-800">{app.userId?.name || '—'}</p>
-              <p className="text-xs text-gray-400">{app.userId?.email || '—'}</p>
+            <div className="bg-[#f6f3f2] rounded-xl p-3">
+              <p className="text-[10px] text-[#73787a] font-semibold uppercase tracking-wider mb-1">Applicant</p>
+              <p className="text-sm font-semibold text-[#1b1c1c]">{app.userId?.name || '—'}</p>
+              <p className="text-xs text-[#73787a]">{app.userId?.email || '—'}</p>
             </div>
-            <div className="bg-gray-50 rounded-xl p-3">
-              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">PG</p>
-              <p className="text-sm font-semibold text-gray-800">{app.pgId?.name || '—'}</p>
-              <p className="text-xs text-gray-400">{app.pgId?.location?.area}, {app.pgId?.location?.city}</p>
+            <div className="bg-[#f6f3f2] rounded-xl p-3">
+              <p className="text-[10px] text-[#73787a] font-semibold uppercase tracking-wider mb-1">PG</p>
+              <p className="text-sm font-semibold text-[#1b1c1c]">{app.pgId?.name || '—'}</p>
+              <p className="text-xs text-[#73787a]">{app.pgId?.location?.area}, {app.pgId?.location?.city}</p>
             </div>
           </div>
 
           {app.moveInNote && (
-            <div className="bg-gray-50 rounded-xl p-3">
-              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Move-in Note</p>
-              <p className="text-sm text-gray-700">{app.moveInNote}</p>
+            <div className="bg-[#f6f3f2] rounded-xl p-3">
+              <p className="text-[10px] text-[#73787a] font-semibold uppercase tracking-wider mb-1">Move-in Note</p>
+              <p className="text-sm text-[#434849]">{app.moveInNote}</p>
             </div>
           )}
 
           <div>
-            <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[app.status] || 'bg-gray-100 text-gray-600'}`}>
+            <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${STATUS_COLORS[app.status] || 'bg-[#f6f3f2] text-[#73787a]'}`}>
               {app.status}
             </span>
           </div>
 
           {app.processedBy?.role && (
             <div>
-              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Processed by</p>
-              <p className="text-sm text-gray-600">{app.processedBy.role === 'admin' ? 'Platform Admin' : 'PG Owner'}</p>
+              <p className="text-[10px] text-[#73787a] font-semibold uppercase tracking-wider mb-1">Processed by</p>
+              <p className="text-sm text-[#434849]">{app.processedBy.role === 'admin' ? 'Platform Admin' : 'PG Owner'}</p>
             </div>
           )}
 
           <div>
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Applied</p>
-            <p className="text-sm text-gray-600">{new Date(app.createdAt).toLocaleString()}</p>
+            <p className="text-[10px] text-[#73787a] font-semibold uppercase tracking-wider mb-1">Applied</p>
+            <p className="text-sm text-[#434849]">{new Date(app.createdAt).toLocaleString()}</p>
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t flex justify-end gap-3">
+        <div className="px-6 py-4 border-t border-[#f0f0f0] flex justify-end gap-3">
           <button onClick={onClose}
-            className="px-4 py-2 text-sm rounded-[10px] border border-[#e0e0e0] text-gray-700 hover:bg-gray-50">
+            className="px-4 py-2 text-sm rounded-[10px] border border-[#E5E7EB] text-[#434849] hover:bg-[#f6f3f2] transition-colors">
             Cancel
           </button>
           {app.status === 'pending' && (
@@ -179,8 +179,8 @@ export default function AdmissionsPage() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Admission Requests</h1>
-        <p className="text-gray-500 text-sm mt-1">Review and manage guest admissions across all PGs</p>
+        <h1 className="text-2xl font-bold text-[#1b1c1c]">Admission Requests</h1>
+        <p className="text-[#73787a] text-sm mt-1">Review and manage guest admissions across all PGs</p>
       </div>
 
       <div className="flex items-center gap-2 mb-4 flex-wrap">
@@ -190,8 +190,8 @@ export default function AdmissionsPage() {
             onClick={() => setFilter(s ? { status: s } : {})}
             className={`px-3 py-1.5 rounded-[10px] text-sm font-medium transition-colors ${
               statusFilter === s
-                ? 'bg-[#222121] text-white'
-                : 'bg-white border border-[#e0e0e0] text-[#6c757d] hover:border-[#027fff]'
+                ? 'bg-[#1b1c1c] text-white'
+                : 'bg-white border border-[#E5E7EB] text-[#73787a] hover:border-[#e98a76] hover:text-[#1b1c1c]'
             }`}
           >
             {s === '' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
@@ -199,12 +199,12 @@ export default function AdmissionsPage() {
         ))}
 
         {pagination.totalItems !== undefined && (
-          <span className="ml-auto text-sm text-gray-400">{pagination.totalItems} total</span>
+          <span className="ml-auto text-xs text-[#73787a] bg-[#f6f3f2] px-3 py-1.5 rounded-full font-medium">{pagination.totalItems} total</span>
         )}
       </div>
 
       <div className="relative mb-5 max-w-xs">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#b0b0b0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
         </svg>
         <input
@@ -212,10 +212,10 @@ export default function AdmissionsPage() {
           value={search}
           onChange={e => handleSearchChange(e.target.value)}
           placeholder="Search by name or email…"
-          className="w-full pl-9 pr-8 py-2 text-sm border border-[#e0e0e0] rounded-[10px] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full pl-9 pr-8 py-2 text-sm border border-[#E5E7EB] rounded-xl bg-[#fbf9f8] focus:outline-none focus:ring-2 focus:ring-[#e98a76] focus:border-[#e98a76] text-[#1b1c1c] placeholder-[#9ca3af]"
         />
         {search && (
-          <button onClick={() => handleSearchChange('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+          <button onClick={() => handleSearchChange('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#b0b0b0] hover:text-[#434849] transition-colors">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -227,62 +227,63 @@ export default function AdmissionsPage() {
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-[10px] text-sm text-red-700">{error}</div>
       )}
 
-      <div className="bg-white rounded-[20px] border border-[#e0e0e0] shadow-card overflow-hidden">
+      <div className="bg-white rounded-[20px] border border-[#E5E7EB] overflow-hidden"
+        style={{ boxShadow: 'rgba(0,0,0,0.04) 0px 2px 8px, rgba(0,0,0,0.02) 0px 0px 1px' }}>
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-[#f6f3f2] border-b border-[#f0f0f0]">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Applicant</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">PG</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Via</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Applied</th>
+              <th className="px-4 py-3 text-left text-[10px] font-bold text-[#73787a] uppercase tracking-widest">Applicant</th>
+              <th className="px-4 py-3 text-left text-[10px] font-bold text-[#73787a] uppercase tracking-widest">PG</th>
+              <th className="px-4 py-3 text-left text-[10px] font-bold text-[#73787a] uppercase tracking-widest">Via</th>
+              <th className="px-4 py-3 text-left text-[10px] font-bold text-[#73787a] uppercase tracking-widest">Status</th>
+              <th className="px-4 py-3 text-left text-[10px] font-bold text-[#73787a] uppercase tracking-widest">Applied</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
           {loading
             ? <SkeletonTable rows={6} cols={6} />
-            : <tbody className="divide-y divide-gray-100">
+            : <tbody className="divide-y divide-[#f6f6f6]">
                 {apps.length === 0
                   ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-12 text-center text-gray-400">
+                      <td colSpan={6} className="px-4 py-12 text-center text-[#73787a] text-sm">
                         No admission requests found
                       </td>
                     </tr>
                   )
                   : apps.map(app => (
-                <tr key={app._id} className="hover:bg-gray-50 transition-colors">
+                <tr key={app._id} className="hover:bg-[#fbf9f8] transition-colors">
                   <td className="px-4 py-3">
-                    <p className="font-medium text-gray-800">{app.userId?.name || '—'}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{app.userId?.email}</p>
+                    <p className="font-semibold text-[#1b1c1c]">{app.userId?.name || '—'}</p>
+                    <p className="text-xs text-[#73787a] mt-0.5">{app.userId?.email}</p>
                   </td>
-                  <td className="px-4 py-3 text-gray-700">
-                    <p>{app.pgId?.name || '—'}</p>
-                    <p className="text-xs text-gray-400">{app.pgId?.location?.city}</p>
+                  <td className="px-4 py-3">
+                    <p className="text-[#434849]">{app.pgId?.name || '—'}</p>
+                    <p className="text-xs text-[#73787a]">{app.pgId?.location?.city}</p>
                   </td>
                   <td className="px-4 py-3">
                     {app.processedBy?.role ? (
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                        app.processedBy.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-action-50 text-action'
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        app.processedBy.role === 'admin' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-[#fff3ee] text-[#c0431e] border border-[#ffdbd0]'
                       }`}>
                         {app.processedBy.role === 'admin' ? 'Via admin' : 'Via owner'}
                       </span>
                     ) : (
-                      <span className="text-xs text-gray-400">Pending</span>
+                      <span className="text-xs text-[#73787a]">Pending</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[app.status] || 'bg-gray-100 text-gray-600'}`}>
+                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${STATUS_COLORS[app.status] || 'bg-[#f6f3f2] text-[#73787a]'}`}>
                       {app.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">
+                  <td className="px-4 py-3 text-[#73787a] text-xs">
                     {new Date(app.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
                       onClick={() => setSelected(app)}
-                      className="text-sm font-medium text-action hover:text-action-light transition-colors"
+                      className={`text-xs font-semibold transition-colors ${app.status === 'pending' ? 'text-[#e98a76] hover:text-[#c0431e]' : 'text-[#73787a] hover:text-[#1b1c1c]'}`}
                     >
                       {app.status === 'pending' ? 'Review' : 'View'}
                     </button>
@@ -296,15 +297,15 @@ export default function AdmissionsPage() {
       </div>
 
       {pagination.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+        <div className="mt-4 flex items-center justify-between">
           <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
-            className="px-4 py-2 border border-[#e0e0e0] rounded-[10px] disabled:opacity-40 hover:bg-gray-50">
-            Previous
+            className="px-4 py-2 text-sm font-medium border border-[#E5E7EB] rounded-full bg-white hover:bg-[#f6f3f2] text-[#434849] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            ← Previous
           </button>
-          <span>Page {page} of {pagination.totalPages}</span>
+          <span className="text-sm text-[#73787a] font-medium">Page {page} of {pagination.totalPages}</span>
           <button onClick={() => setPage(Math.min(pagination.totalPages, page + 1))} disabled={page === pagination.totalPages}
-            className="px-4 py-2 border border-[#e0e0e0] rounded-[10px] disabled:opacity-40 hover:bg-gray-50">
-            Next
+            className="px-4 py-2 text-sm font-medium border border-[#E5E7EB] rounded-full bg-white hover:bg-[#f6f3f2] text-[#434849] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            Next →
           </button>
         </div>
       )}

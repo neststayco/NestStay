@@ -32,6 +32,12 @@ const userSchema = new mongoose.Schema(
       default: null,
       // Only populated for pg_owner accounts.
     },
+    onboardingStatus: {
+      type: String,
+      // Temporary compatibility value for safe rollout before migration completes.
+      enum: ["legacy", "not_started", "profile_incomplete", "pending_review", "approved", "rejected"],
+      default: "legacy",
+    },
 
     // ─── Security fields ───────────────────────────────────────────────
 

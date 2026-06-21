@@ -150,7 +150,12 @@ export const getPGList = async (req, res) => {
   try {
     const { city, area, gender, foodType, minPrice, maxPrice, amenities, sortBy, search, page = 1, limit = 10 } = req.query;
 
+    const isAdmin = req.user?.role === "admin";
     const matchFilter = { isActive: true };
+
+    if (!isAdmin) {
+      matchFilter.verificationStatus = "approved";
+    }
 
     if (search && search.trim()) {
       matchFilter.$text = { $search: search.trim() };
@@ -243,7 +248,7 @@ export const getPGDetails = async (req, res) => {
     }
 
     const [pg, activeResidentCount] = await Promise.all([
-      PG.findOne({ _id: pgId, isActive: true })
+      PG.findOne({ _id: pgId, isActive: true, verificationStatus: "approved" })
         .select("-owner.phone -owner.email")
         .lean(),
       PGResidency.countDocuments({ pgId, residentStatus: "active" })

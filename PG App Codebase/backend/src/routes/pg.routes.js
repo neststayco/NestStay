@@ -16,7 +16,7 @@ import { uploadImages } from "../middleware/upload.middleware.js";
 const router = express.Router();
 
 // Public / Student routes
-router.get("/", getPGList);
+router.get("/", optionalAuth, getPGList);
 router.get("/:id", optionalAuth, getPGDetails);
 
 // PG owner routes

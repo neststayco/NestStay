@@ -44,3 +44,13 @@ export async function getMe() {
   const { data } = await client.get('/auth/me')
   return data
 }
+
+export async function registerOwnerInitiate(email) {
+  const { data } = await client.post('/auth/register-owner/initiate', { email })
+  return data
+}
+
+export async function registerOwnerVerify(email, otp, name, password) {
+  const { data } = await client.post('/auth/register-owner/verify', { email, otp, name, password })
+  return data
+}

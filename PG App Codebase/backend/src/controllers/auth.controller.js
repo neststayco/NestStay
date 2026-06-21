@@ -9,6 +9,7 @@ import {
   hashToken,
   getRefreshCookieOptions,
 } from "../utils/tokenUtils.js";
+import { runInTransaction } from "../utils/transaction.js";
 import { generateOTP, hashOTP, verifyOTP } from "../utils/otpUtils.js";
 import NotificationService from "../services/notification.service.js";
 import Logger from "../services/logger.service.js";
@@ -25,6 +26,17 @@ const isString = (v) => typeof v === "string" && v.length > 0;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isValidEmail = (v) => isString(v) && EMAIL_RE.test(v.toLowerCase().trim());
+
+const serializeAuthUser = (user) => ({
+  _id: user._id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+  pgId: user.pgId || null,
+  onboardingStatus: user.onboardingStatus === "not_started" ? "legacy" : (user.onboardingStatus || "legacy"),
+});
+
+const isDuplicateKeyError = (error) => error?.code === 11000 || error?.code === 11001;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // REGISTRATION — 2-step OTP flow
@@ -158,39 +170,38 @@ export const registerVerify = async (req, res) => {
       return res.status(409).json({ success: false, message: "Email already registered" });
     }
 
-    const user = await User.create({
-      name: name.trim(),
-      email: normalizedEmail,
-      password,
-      role: "user",
-      isVerified: true,
-      isActive: true,
+    const user = await runInTransaction(async (session) => {
+      const [createdUser] = await User.create([{
+        name: name.trim(),
+        email: normalizedEmail,
+        password,
+        role: "user",
+        isVerified: true,
+        isActive: true,
+      }], { session });
+
+      await otpDoc.deleteOne({ session });
+
+      const refreshToken = generateRefreshToken(createdUser._id);
+      await User.findByIdAndUpdate(createdUser._id, { refreshToken: hashToken(refreshToken) }, { session });
+
+      return { user: createdUser, refreshToken };
     });
 
-    await otpDoc.deleteOne();
+    Logger.event("user.registered", { userId: user.user._id });
 
-    const accessToken = generateAccessToken(user._id, user.role);
-    const refreshToken = generateRefreshToken(user._id);
-
-    await User.findByIdAndUpdate(user._id, { refreshToken: hashToken(refreshToken) });
-
-    Logger.event("user.registered", { userId: user._id });
-
-    res.cookie("refreshToken", refreshToken, getRefreshCookieOptions());
+    res.cookie("refreshToken", user.refreshToken, getRefreshCookieOptions());
 
     return res.status(201).json({
       success: true,
       message: "Registration successful",
-      data: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isVerified: user.isVerified,
-      },
-      accessToken,
+      data: serializeAuthUser(user.user),
+      accessToken: generateAccessToken(user.user._id, user.user.role),
     });
   } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      return res.status(409).json({ success: false, message: "Email already registered" });
+    }
     Logger.error("REGISTER_VERIFY_ERROR", { error: error.message });
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
@@ -262,14 +273,7 @@ export const login = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        pgId: user.pgId || null,
-        isVerified: user.isVerified,
-      },
+      data: serializeAuthUser(user),
       accessToken,
     });
   } catch (error) {
@@ -358,7 +362,11 @@ export const refreshTokens = async (req, res) => {
 
     res.cookie("refreshToken", newRefreshToken, getRefreshCookieOptions());
 
-    return res.status(200).json({ success: true, accessToken: newAccessToken });
+    return res.status(200).json({
+      success: true,
+      accessToken: newAccessToken,
+      data: serializeAuthUser(user),
+    });
   } catch (error) {
     Logger.error("REFRESH_ERROR", { error: error.message });
     return res.status(500).json({ success: false, message: "Internal server error" });
@@ -571,5 +579,173 @@ export const resetPassword = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const getMe = async (req, res) => {
-  return res.status(200).json({ success: true, data: req.user });
+  return res.status(200).json({ success: true, data: serializeAuthUser(req.user) });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OWNER REGISTRATION — 2-step OTP flow
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const registerOwnerInitiate = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ success: false, message: "Valid email address is required" });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const existing = await User.findOne({ email: normalizedEmail }).lean();
+    if (existing) {
+      return res.status(409).json({ success: false, message: "Email already registered" });
+    }
+
+    const recent = await OTP.findOne({
+      email: normalizedEmail,
+      type: "REGISTER_OWNER",
+      createdAt: { $gte: new Date(Date.now() - OTP_RESEND_COOLDOWN_MS) },
+    }).lean();
+
+    if (recent) {
+      return res.status(429).json({
+        success: false,
+        message: "Please wait before requesting a new OTP",
+      });
+    }
+
+    const otp = generateOTP();
+    const hashedOtp = await hashOTP(otp);
+
+    await OTP.findOneAndUpdate(
+      { email: normalizedEmail, type: "REGISTER_OWNER" },
+      {
+        $set: {
+          hashedOtp,
+          attempts: 0,
+          expiresAt: new Date(Date.now() + OTP_EXPIRY_MS),
+          createdAt: new Date(),
+        },
+      },
+      { upsert: true, new: true }
+    );
+
+    await NotificationService.sendOTPEmail(normalizedEmail, otp, "REGISTER_OWNER");
+
+    Logger.event("register.owner.otp.sent", { email: normalizedEmail });
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent to your email address. Valid for 10 minutes.",
+    });
+  } catch (error) {
+    Logger.error("REGISTER_OWNER_INITIATE_ERROR", { error: error.message });
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const registerOwnerVerify = async (req, res) => {
+  try {
+    const { email, otp, name, password } = req.body;
+
+    if (!isString(email) || !isString(otp) || !isString(name) || !isString(password)) {
+      return res.status(400).json({
+        success: false,
+        message: "email, otp, name, and password are required",
+      });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters",
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const otpDoc = await OTP.findOne({ email: normalizedEmail, type: "REGISTER_OWNER" });
+
+    if (!otpDoc) {
+      return res.status(400).json({
+        success: false,
+        message: "No active OTP found. Please request a new one.",
+      });
+    }
+
+    if (otpDoc.expiresAt < new Date()) {
+      await otpDoc.deleteOne();
+      return res.status(400).json({
+        success: false,
+        message: "OTP expired. Please request a new one.",
+      });
+    }
+
+    if (otpDoc.attempts >= MAX_OTP_ATTEMPTS) {
+      await otpDoc.deleteOne();
+      return res.status(429).json({
+        success: false,
+        message: "Too many failed attempts. Please request a new OTP.",
+      });
+    }
+
+    const isValid = await verifyOTP(otp, otpDoc.hashedOtp);
+
+    if (!isValid) {
+      const updated = await OTP.findOneAndUpdate(
+        { _id: otpDoc._id, attempts: { $lt: MAX_OTP_ATTEMPTS } },
+        { $inc: { attempts: 1 } },
+        { new: true }
+      );
+      const attemptsUsed = updated ? updated.attempts : MAX_OTP_ATTEMPTS;
+      const remaining = Math.max(0, MAX_OTP_ATTEMPTS - attemptsUsed);
+      return res.status(400).json({
+        success: false,
+        message: `Invalid OTP. ${remaining} attempt(s) remaining.`,
+      });
+    }
+
+    const existing = await User.findOne({ email: normalizedEmail }).lean();
+    if (existing) {
+      await otpDoc.deleteOne();
+      return res.status(409).json({ success: false, message: "Email already registered" });
+    }
+
+    const user = await runInTransaction(async (session) => {
+      const [createdUser] = await User.create([{
+        name: name.trim(),
+        email: normalizedEmail,
+        password,
+        role: "pg_owner",
+        onboardingStatus: "profile_incomplete",
+        pgId: null,
+        isVerified: true,
+        isActive: true,
+      }], { session });
+
+      await otpDoc.deleteOne({ session });
+
+      const refreshToken = generateRefreshToken(createdUser._id);
+      await User.findByIdAndUpdate(createdUser._id, { refreshToken: hashToken(refreshToken) }, { session });
+
+      return { user: createdUser, refreshToken };
+    });
+
+    Logger.event("owner.registered", { userId: user.user._id });
+
+    res.cookie("refreshToken", user.refreshToken, getRefreshCookieOptions());
+
+    return res.status(201).json({
+      success: true,
+      message: "Owner account created. Please complete your PG listing.",
+      data: serializeAuthUser(user.user),
+      accessToken: generateAccessToken(user.user._id, user.user.role),
+    });
+  } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      return res.status(409).json({ success: false, message: "Email already registered" });
+    }
+    Logger.error("REGISTER_OWNER_VERIFY_ERROR", { error: error.message });
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
 };

@@ -57,7 +57,7 @@ function Navbar() {
             Register
           </Link>
           <Link
-            to="/register"
+            to="/owner/register"
             className="hidden xl:block bg-[#101e22] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-all"
           >
             List Your Property
@@ -82,7 +82,7 @@ function Navbar() {
           <a href="#contact" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>Contact</a>
           <div className="pt-3 border-t border-[#E5E7EB] space-y-1">
             <Link to="/register" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>Register</Link>
-            <Link to="/register" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>List Your Property</Link>
+            <Link to="/owner/register" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>List Your Property</Link>
           </div>
         </div>
       )}
@@ -634,7 +634,7 @@ const STEPS = [
   { n: '1', title: 'Search',  desc: 'Browse verified properties near your college or workplace' },
   { n: '2', title: 'Compare', desc: 'Compare prices, amenities and locations side by side'      },
   { n: '3', title: 'Apply',   desc: 'Submit your admission request online — no visits needed'   },
-  { n: '4', title: 'Move In', desc: 'Complete documentation digitally and move in hassle-free'  },
+  { n: '4', title: 'Move In', desc: 'Get approved by the owner and move into your new home'      },
 ]
 
 function HowItWorksSection() {
@@ -801,10 +801,10 @@ function OwnerSection() {
         </div>
         <div className="flex flex-wrap justify-center gap-4">
           <Link
-            to="/register"
+            to="/owner/register"
             className="bg-[#e98a76] text-white px-10 py-4 rounded-2xl text-sm font-semibold hover:opacity-90 transition-all"
           >
-            Partner With Us
+            List Your PG Free
           </Link>
           <Link
             to="/login"

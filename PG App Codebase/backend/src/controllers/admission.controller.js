@@ -18,7 +18,7 @@ export const createAdmissionRequest = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid pgId format" });
     }
 
-    const pg = await PG.findOne({ _id: pgId, isActive: true }).lean();
+    const pg = await PG.findOne({ _id: pgId, status: 'active' }).lean();
     if (!pg) {
       return res.status(404).json({ success: false, message: "PG not found or inactive" });
     }

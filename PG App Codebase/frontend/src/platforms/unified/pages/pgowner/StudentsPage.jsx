@@ -186,7 +186,7 @@ export default function OwnerResidentsPage() {
 
       <TableWrapper>
         <table className="w-full text-sm">
-          <thead className="border-b border-[#f0f0f0]">
+          <thead className="sticky top-0 z-10 bg-[#f6f3f2] border-b border-[#f0f0f0]">
             <tr>
               <th className="px-4 py-3 text-left text-[10px] font-semibold text-[#73787a] uppercase tracking-wider bg-[#f6f3f2]">Resident</th>
               <th className="px-4 py-3 text-left text-[10px] font-semibold text-[#73787a] uppercase tracking-wider bg-[#f6f3f2]">
@@ -217,9 +217,9 @@ export default function OwnerResidentsPage() {
                       </td>
                       <td className="px-4 py-3.5 text-[#73787a] text-xs whitespace-nowrap">
                         {tab === 'active'
-                          ? new Date(r.updatedAt).toLocaleDateString()
+                          ? new Date(r.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
                           : r.residentRemovedAt
-                            ? new Date(r.residentRemovedAt).toLocaleDateString()
+                            ? new Date(r.residentRemovedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
                             : '—'
                         }
                       </td>

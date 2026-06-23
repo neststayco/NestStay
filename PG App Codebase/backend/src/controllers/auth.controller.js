@@ -103,7 +103,7 @@ export const registerInitiate = async (req, res) => {
 
 export const registerVerify = async (req, res) => {
   try {
-    const { email, otp, name, password } = req.body;
+    const { email, otp, name, password, phoneNumber, area } = req.body;
 
     if (!isString(email) || !isString(otp) || !isString(name) || !isString(password)) {
       return res.status(400).json({
@@ -178,6 +178,8 @@ export const registerVerify = async (req, res) => {
         role: "user",
         isVerified: true,
         isActive: true,
+        ...(phoneNumber && { phoneNumber: String(phoneNumber).trim() }),
+        ...(area && { area: String(area).trim() }),
       }], { session });
 
       await otpDoc.deleteOne({ session });

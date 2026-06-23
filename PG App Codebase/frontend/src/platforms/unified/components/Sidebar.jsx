@@ -118,7 +118,7 @@ export default function Sidebar({ onClose }) {
     : 'A'
 
   return (
-    <aside className="w-56 flex-shrink-0 flex flex-col h-screen" style={{ backgroundColor: '#101e22' }}>
+    <aside className="w-56 flex-shrink-0 flex flex-col h-screen border-r border-white/10" style={{ backgroundColor: '#101e22' }}>
       {/* Brand header */}
       <div className="px-5 py-5 border-b border-white/10">
         <div className="flex items-center justify-between gap-2">
@@ -147,11 +147,11 @@ export default function Sidebar({ onClose }) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-5">
+      <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-4">
         {NAV_GROUPS.map(group => (
           <div key={group.label}>
             <p
-              className="text-[10px] font-bold uppercase tracking-widest px-3 mb-2"
+              className="text-[10px] font-bold uppercase tracking-widest px-3 mb-1.5"
               style={{ color: '#bac9ce', opacity: 0.5 }}
             >
               {group.label}
@@ -164,12 +164,12 @@ export default function Sidebar({ onClose }) {
                     key={item.to}
                     to={item.to}
                     onClick={onClose}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                      active ? 'bg-[#e98a76] text-white' : 'hover:bg-white/5'
+                    className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      active ? 'bg-white/10 border-l-2 border-[#e98a76]' : 'hover:bg-white/5'
                     }`}
-                    style={{ color: active ? '#ffffff' : '#bac9ce' }}
+                    style={{ color: active ? '#e98a76' : '#bac9ce' }}
                   >
-                    <span style={{ color: active ? '#ffffff' : '#ffdbd0', opacity: active ? 1 : 0.7 }}>
+                    <span style={{ color: active ? '#e98a76' : '#ffdbd0', opacity: active ? 1 : 0.7 }}>
                       {ICONS[item.icon]}
                     </span>
                     <span className="flex-1 truncate">{item.label}</span>
@@ -182,8 +182,8 @@ export default function Sidebar({ onClose }) {
       </nav>
 
       {/* Footer */}
-      <div className="px-3 py-4 border-t border-white/10">
-        <div className="flex items-center gap-2.5 px-3 py-2 mb-1">
+      <div className="px-3 py-3 border-t border-white/20">
+        <div className="flex items-center gap-2 px-3 py-2 mb-0.5">
           <div
             className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
             style={{ backgroundColor: '#ffdbd0', color: '#3a0b00' }}
@@ -197,7 +197,7 @@ export default function Sidebar({ onClose }) {
         </div>
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all hover:bg-white/5"
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-white/5"
           style={{ color: '#bac9ce' }}
         >
           {ICONS.logout}

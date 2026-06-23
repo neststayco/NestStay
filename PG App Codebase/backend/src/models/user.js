@@ -64,6 +64,8 @@ const userSchema = new mongoose.Schema(
     },
 
     savedPGs: [{ type: mongoose.Schema.Types.ObjectId, ref: "PG" }],
+    phoneNumber: { type: String, default: null },
+    area: { type: String, default: null },
   },
   {
     timestamps: true,

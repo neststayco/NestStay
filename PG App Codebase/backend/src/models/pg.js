@@ -15,7 +15,7 @@ const pgSchema = new mongoose.Schema(
     },
     pricing: { rent: Number, deposit: Number, maintenance: Number },
     accommodation: {
-      gender: String,
+      gender: { type: String, enum: ['male', 'female', 'other'] },
       roomTypes: [String],
       totalCapacity: Number,
     },
@@ -27,6 +27,13 @@ const pgSchema = new mongoose.Schema(
         fileId: { type: String },
       }
     ],
+    video: {
+      url: { type: String },
+      fileId: { type: String },
+    },
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    likesEnabled: { type: Boolean, default: true },
+    separateKitchenAvailable: { type: Boolean, default: false },
     owner: {
       name: String,
       phone: String,
@@ -34,7 +41,11 @@ const pgSchema = new mongoose.Schema(
       isVerified: Boolean,
     },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    isActive: { type: Boolean, default: true },
+    status: {
+      type: String,
+      enum: ['active', 'inactive'],
+      default: 'active',
+    },
     isVerified: { type: Boolean, default: false },
     ownerId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -59,13 +70,14 @@ const pgSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    uniqueViewCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
 
 pgSchema.index({ "location.city": 1, "location.area": 1 });
 pgSchema.index({ "pricing.rent": 1 });
-pgSchema.index({ isActive: 1 });
+pgSchema.index({ status: 1 });
 pgSchema.index({ name: "text", description: "text", amenities: "text", "location.area": "text" }, { name: "pg_text_search" });
 
 export default mongoose.model("PG", pgSchema);

@@ -77,19 +77,11 @@ export default function PGCard({ pg, basePath = '/pgs', isSaved = false, onSave 
         {/* Layered bottom gradient for text contrast */}
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/50 via-black/20 to-transparent pointer-events-none" />
 
-        {/* Verified badge — top left */}
+        {/* Verified badge — top right */}
         {pg.isVerified && (
-          <span className="absolute top-3 left-3 inline-flex items-center gap-1 text-xs bg-white/95 backdrop-blur-sm text-green-700 rounded-full px-2.5 py-1 font-semibold border border-green-100"
+          <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-xs bg-white/95 backdrop-blur-sm text-green-700 rounded-full px-2.5 py-1 font-semibold border border-green-100"
             style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.12)' }}>
             <ShieldCheck /> Verified
-          </span>
-        )}
-
-        {/* Gender badge — top right */}
-        {pg.accommodation?.gender && (
-          <span className="absolute top-3 right-3 text-xs bg-white/90 backdrop-blur-sm text-[#222121] rounded-full px-2.5 py-1 capitalize font-medium"
-            style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}>
-            {pg.accommodation.gender}
           </span>
         )}
 
@@ -174,6 +166,15 @@ export default function PGCard({ pg, basePath = '/pgs', isSaved = false, onSave 
           )}
         </div>
 
+        {/* Tags row: gender + requirements */}
+        {pg.accommodation?.gender && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            <span className="text-[11px] bg-[#f6f3f2] border border-[#E5E7EB] text-[#434849] rounded-full px-2.5 py-0.5 capitalize font-medium">
+              {pg.accommodation.gender}
+            </span>
+          </div>
+        )}
+
         {/* Amenities with icons */}
         {pg.amenities?.length > 0 && (
           <div className="flex flex-wrap gap-1">
@@ -199,6 +200,28 @@ export default function PGCard({ pg, basePath = '/pgs', isSaved = false, onSave 
             )}
           </div>
         )}
+
+        {/* Like count + viewer count */}
+        {(pg.likesEnabled && pg.likesCount > 0) || pg.uniqueViewCount > 0 ? (
+          <div className="flex items-center gap-3 mt-2">
+            {pg.likesEnabled && pg.likesCount > 0 && (
+              <span className="flex items-center gap-1">
+                <svg className="w-3 h-3 text-[#e98a76]" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+                <span className="text-[11px] text-[#9ca3af] font-medium">{pg.likesCount}</span>
+              </span>
+            )}
+            {pg.uniqueViewCount > 0 && (
+              <span className="flex items-center gap-1">
+                <svg className="w-3 h-3 text-[#9ca3af]" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                </svg>
+                <span className="text-[11px] text-[#9ca3af] font-medium">{pg.uniqueViewCount} interested</span>
+              </span>
+            )}
+          </div>
+        ) : null}
 
       </div>
     </Link>

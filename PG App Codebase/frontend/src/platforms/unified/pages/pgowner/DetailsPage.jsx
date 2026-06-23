@@ -36,6 +36,7 @@ export default function OwnerSettingsPage() {
   const [foodType, setFoodType] = useState('')
   const [amenities, setAmenities] = useState([])
   const [customAmenity, setCustomAmenity] = useState('')
+  const [separateKitchen, setSeparateKitchen] = useState(false)
 
   const [totalCapacity, setTotalCapacity] = useState('')
   const [remainingCapacity, setRemainingCapacity] = useState(null)
@@ -52,6 +53,7 @@ export default function OwnerSettingsPage() {
         setMaintenance(pg?.pricing?.maintenance != null ? String(pg.pricing.maintenance) : '')
         setFoodType(pg?.foodType || '')
         setAmenities(pg?.amenities || [])
+        setSeparateKitchen(pg?.separateKitchenAvailable || false)
         const cap = pg?.accommodation?.totalCapacity
         if (cap != null) {
           setTotalCapacity(String(cap))
@@ -88,6 +90,7 @@ export default function OwnerSettingsPage() {
       },
       foodType: foodType || null,
       amenities,
+      separateKitchenAvailable: separateKitchen,
     }
     setSaving(true)
     try {
@@ -251,6 +254,18 @@ export default function OwnerSettingsPage() {
                   ))}
                 </div>
               )}
+            </DataCard>
+
+            <DataCard title="Kitchen">
+              <label className="flex items-center gap-3 cursor-pointer select-none">
+                <div
+                  onClick={() => setSeparateKitchen(v => !v)}
+                  className={`relative w-10 h-5 rounded-full transition-colors ${separateKitchen ? 'bg-[#1b1c1c]' : 'bg-[#E5E7EB]'}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${separateKitchen ? 'translate-x-5' : ''}`} />
+                </div>
+                <span className="text-sm font-medium text-[#434849]">Separate kitchen available</span>
+              </label>
             </DataCard>
 
             <button

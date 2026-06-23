@@ -145,7 +145,7 @@ export default function OwnerComplaintsPage() {
 
       <TableWrapper>
         <table className="w-full text-sm">
-          <thead className="border-b border-[#f0f0f0]">
+          <thead className="sticky top-0 z-10 bg-[#f6f3f2] border-b border-[#f0f0f0]">
             <tr>
               <th className="px-4 py-3 text-left text-[10px] font-semibold text-[#73787a] uppercase tracking-wider bg-[#f6f3f2]">Type</th>
               <th className="px-4 py-3 text-left text-[10px] font-semibold text-[#73787a] uppercase tracking-wider bg-[#f6f3f2]">Description</th>

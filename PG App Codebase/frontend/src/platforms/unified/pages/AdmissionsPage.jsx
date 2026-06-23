@@ -43,12 +43,12 @@ function ReviewModal({ app, onClose, onUpdated }) {
         <div className="px-6 py-5 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-[#f6f3f2] rounded-xl p-3">
-              <p className="text-[10px] text-[#73787a] font-semibold uppercase tracking-wider mb-1">Applicant</p>
+              <p className="text-xs text-[#73787a] font-semibold uppercase tracking-wider mb-1">Applicant</p>
               <p className="text-sm font-semibold text-[#1b1c1c]">{app.userId?.name || '—'}</p>
               <p className="text-xs text-[#73787a]">{app.userId?.email || '—'}</p>
             </div>
             <div className="bg-[#f6f3f2] rounded-xl p-3">
-              <p className="text-[10px] text-[#73787a] font-semibold uppercase tracking-wider mb-1">PG</p>
+              <p className="text-xs text-[#73787a] font-semibold uppercase tracking-wider mb-1">PG</p>
               <p className="text-sm font-semibold text-[#1b1c1c]">{app.pgId?.name || '—'}</p>
               <p className="text-xs text-[#73787a]">{app.pgId?.location?.area}, {app.pgId?.location?.city}</p>
             </div>
@@ -56,43 +56,43 @@ function ReviewModal({ app, onClose, onUpdated }) {
 
           {app.moveInNote && (
             <div className="bg-[#f6f3f2] rounded-xl p-3">
-              <p className="text-[10px] text-[#73787a] font-semibold uppercase tracking-wider mb-1">Move-in Note</p>
+              <p className="text-xs text-[#73787a] font-semibold uppercase tracking-wider mb-1">Move-in Note</p>
               <p className="text-sm text-[#434849]">{app.moveInNote}</p>
             </div>
           )}
 
           <div>
-            <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${STATUS_COLORS[app.status] || 'bg-[#f6f3f2] text-[#73787a]'}`}>
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_COLORS[app.status] || 'bg-[#f6f3f2] text-[#73787a]'}`}>
               {app.status}
             </span>
           </div>
 
           {app.processedBy?.role && (
             <div>
-              <p className="text-[10px] text-[#73787a] font-semibold uppercase tracking-wider mb-1">Processed by</p>
+              <p className="text-xs text-[#73787a] font-semibold uppercase tracking-wider mb-1">Processed by</p>
               <p className="text-sm text-[#434849]">{app.processedBy.role === 'admin' ? 'Platform Admin' : 'PG Owner'}</p>
             </div>
           )}
 
           <div>
-            <p className="text-[10px] text-[#73787a] font-semibold uppercase tracking-wider mb-1">Applied</p>
-            <p className="text-sm text-[#434849]">{new Date(app.createdAt).toLocaleString()}</p>
+            <p className="text-xs text-[#73787a] font-semibold uppercase tracking-wider mb-1">Applied</p>
+            <p className="text-sm text-[#434849]">{new Date(app.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
           </div>
         </div>
 
         <div className="px-6 py-4 border-t border-[#f0f0f0] flex justify-end gap-3">
           <button onClick={onClose}
-            className="px-4 py-2 text-sm rounded-[10px] border border-[#E5E7EB] text-[#434849] hover:bg-[#f6f3f2] transition-colors">
+            className="px-4 py-2 text-sm rounded-xl border border-[#E5E7EB] text-[#434849] hover:bg-[#f6f3f2] transition-colors">
             Cancel
           </button>
           {app.status === 'pending' && (
             <>
               <button onClick={() => handleDecide('rejected')} disabled={loading}
-                className="px-4 py-2 text-sm rounded-[10px] bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">
+                className="px-4 py-2 text-sm rounded-xl bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">
                 {loading ? 'Saving…' : 'Reject'}
               </button>
               <button onClick={() => handleDecide('approved')} disabled={loading}
-                className="px-4 py-2 text-sm rounded-[10px] bg-green-600 text-white hover:bg-green-700 disabled:opacity-50">
+                className="px-4 py-2 text-sm rounded-xl bg-green-600 text-white hover:bg-green-700 disabled:opacity-50">
                 {loading ? 'Saving…' : 'Approve'}
               </button>
             </>
@@ -177,9 +177,9 @@ export default function AdmissionsPage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#1b1c1c]">Admission Requests</h1>
+    <div className="p-5 max-w-6xl mx-auto">
+      <div className="mb-4">
+        <h1 className="text-2xl font-semibold text-[#1b1c1c]">Admission Requests</h1>
         <p className="text-[#73787a] text-sm mt-1">Review and manage guest admissions across all PGs</p>
       </div>
 
@@ -188,7 +188,7 @@ export default function AdmissionsPage() {
           <button
             key={s}
             onClick={() => setFilter(s ? { status: s } : {})}
-            className={`px-3 py-1.5 rounded-[10px] text-sm font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-colors ${
               statusFilter === s
                 ? 'bg-[#1b1c1c] text-white'
                 : 'bg-white border border-[#E5E7EB] text-[#73787a] hover:border-[#e98a76] hover:text-[#1b1c1c]'
@@ -212,7 +212,7 @@ export default function AdmissionsPage() {
           value={search}
           onChange={e => handleSearchChange(e.target.value)}
           placeholder="Search by name or email…"
-          className="w-full pl-9 pr-8 py-2 text-sm border border-[#E5E7EB] rounded-xl bg-[#fbf9f8] focus:outline-none focus:ring-2 focus:ring-[#e98a76] focus:border-[#e98a76] text-[#1b1c1c] placeholder-[#9ca3af]"
+          className="w-full pl-9 pr-8 py-2 text-sm border border-[#E5E7EB] rounded-xl bg-[#fbf9f8] focus:outline-none focus:ring-2 focus:ring-[#e98a76] focus:border-[#e98a76] text-[#1b1c1c] placeholder-[#9ca3af] transition-all duration-150"
         />
         {search && (
           <button onClick={() => handleSearchChange('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#b0b0b0] hover:text-[#434849] transition-colors">
@@ -224,46 +224,50 @@ export default function AdmissionsPage() {
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-[10px] text-sm text-red-700">{error}</div>
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">{error}</div>
       )}
 
-      <div className="bg-white rounded-[20px] border border-[#E5E7EB] overflow-hidden"
-        style={{ boxShadow: 'rgba(0,0,0,0.04) 0px 2px 8px, rgba(0,0,0,0.02) 0px 0px 1px' }}>
+      <div className="bg-white rounded-2xl border border-[#e0e0e0] overflow-hidden shadow-card">
+        <div className="overflow-x-auto overflow-y-auto max-h-[520px]">
         <table className="w-full text-sm">
-          <thead className="bg-[#f6f3f2] border-b border-[#f0f0f0]">
+          <thead className="sticky top-0 z-10 bg-[#f6f3f2] border-b border-[#e5e5e5]">
             <tr>
-              <th className="px-4 py-3 text-left text-[10px] font-bold text-[#73787a] uppercase tracking-widest">Applicant</th>
-              <th className="px-4 py-3 text-left text-[10px] font-bold text-[#73787a] uppercase tracking-widest">PG</th>
-              <th className="px-4 py-3 text-left text-[10px] font-bold text-[#73787a] uppercase tracking-widest">Via</th>
-              <th className="px-4 py-3 text-left text-[10px] font-bold text-[#73787a] uppercase tracking-widest">Status</th>
-              <th className="px-4 py-3 text-left text-[10px] font-bold text-[#73787a] uppercase tracking-widest">Applied</th>
-              <th className="px-4 py-3" />
+              <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">Applicant</th>
+              <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">PG</th>
+              <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">Via</th>
+              <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">Status</th>
+              <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">Applied</th>
+              <th className="w-[76px] px-4 py-2" />
             </tr>
           </thead>
           {loading
             ? <SkeletonTable rows={6} cols={6} />
-            : <tbody className="divide-y divide-[#f6f6f6]">
+            : <tbody className="divide-y divide-[#e5e5e5]">
                 {apps.length === 0
                   ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-12 text-center text-[#73787a] text-sm">
-                        No admission requests found
+                      <td colSpan={6} className="px-4 py-6 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <span className="text-2xl">📋</span>
+                          <p className="text-sm font-medium text-[#1b1c1c]">No admission requests found</p>
+                          <p className="text-xs text-[#73787a]">New admissions will appear here once students apply</p>
+                        </div>
                       </td>
                     </tr>
                   )
                   : apps.map(app => (
-                <tr key={app._id} className="hover:bg-[#fbf9f8] transition-colors">
-                  <td className="px-4 py-3">
+                <tr key={app._id} className="hover:bg-[#fbf9f8] transition-colors duration-150">
+                  <td className="px-4 py-2">
                     <p className="font-semibold text-[#1b1c1c]">{app.userId?.name || '—'}</p>
                     <p className="text-xs text-[#73787a] mt-0.5">{app.userId?.email}</p>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2">
                     <p className="text-[#434849]">{app.pgId?.name || '—'}</p>
                     <p className="text-xs text-[#73787a]">{app.pgId?.location?.city}</p>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2">
                     {app.processedBy?.role ? (
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${
                         app.processedBy.role === 'admin' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-[#fff3ee] text-[#c0431e] border border-[#ffdbd0]'
                       }`}>
                         {app.processedBy.role === 'admin' ? 'Via admin' : 'Via owner'}
@@ -272,18 +276,18 @@ export default function AdmissionsPage() {
                       <span className="text-xs text-[#73787a]">Pending</span>
                     )}
                   </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${STATUS_COLORS[app.status] || 'bg-[#f6f3f2] text-[#73787a]'}`}>
+                  <td className="px-4 py-2">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_COLORS[app.status] || 'bg-[#f6f3f2] text-[#73787a]'}`}>
                       {app.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-[#73787a] text-xs">
-                    {new Date(app.createdAt).toLocaleDateString()}
+                  <td className="px-4 py-2 text-[#73787a] text-xs">
+                    {new Date(app.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-2 w-[76px] text-right">
                     <button
                       onClick={() => setSelected(app)}
-                      className={`text-xs font-semibold transition-colors ${app.status === 'pending' ? 'text-[#e98a76] hover:text-[#c0431e]' : 'text-[#73787a] hover:text-[#1b1c1c]'}`}
+                      className={`min-w-[52px] text-center text-xs font-semibold transition-colors ${app.status === 'pending' ? 'text-[#e98a76] hover:text-[#c0431e]' : 'text-[#73787a] hover:text-[#1b1c1c]'}`}
                     >
                       {app.status === 'pending' ? 'Review' : 'View'}
                     </button>
@@ -294,6 +298,7 @@ export default function AdmissionsPage() {
               </tbody>
           }
         </table>
+        </div>
       </div>
 
       {pagination.totalPages > 1 && (

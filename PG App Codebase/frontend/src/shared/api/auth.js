@@ -10,8 +10,12 @@ export async function registerInitiate(email) {
   return data
 }
 
-export async function registerVerify(email, otp, name, password) {
-  const { data } = await client.post('/auth/register/verify', { email, otp, name, password })
+export async function registerVerify(email, otp, name, password, phoneNumber, area) {
+  const { data } = await client.post('/auth/register/verify', {
+    email, otp, name, password,
+    ...(phoneNumber && { phoneNumber }),
+    ...(area && { area }),
+  })
   return data
 }
 

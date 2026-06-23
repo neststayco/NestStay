@@ -43,7 +43,7 @@ function Navbar() {
         <div className="hidden lg:flex items-center gap-6">
           <a href="#home" className="text-sm font-bold text-[#e98a76] border-b-2 border-[#e98a76] pb-1">Home</a>
           <a href="#listings" className="text-sm font-medium text-[#434849] hover:text-black transition-colors">Properties</a>
-          <a href="#colleges" className="text-sm font-medium text-[#434849] hover:text-black transition-colors">PG Near Colleges</a>
+          <a href="#colleges" className="text-sm font-medium text-[#434849] hover:text-black transition-colors">PG Near You</a>
           <a href="#for-owners" className="text-sm font-medium text-[#434849] hover:text-black transition-colors">For Property Owners</a>
           <a href="#about" className="text-sm font-medium text-[#434849] hover:text-black transition-colors">About Us</a>
           <a href="#contact" className="text-sm font-medium text-[#434849] hover:text-black transition-colors">Contact</a>
@@ -76,7 +76,7 @@ function Navbar() {
         <div className="lg:hidden absolute top-full left-0 right-0 bg-[#fbf9f8] border-t border-[#E5E7EB] px-6 py-4 space-y-1 shadow-lg">
           <a href="#home" className="block text-sm py-2.5 text-[#e98a76] font-bold" onClick={() => setOpen(false)}>Home</a>
           <a href="#listings" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>Properties</a>
-          <a href="#colleges" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>PG Near Colleges</a>
+          <a href="#colleges" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>PG Near You</a>
           <a href="#for-owners" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>For Property Owners</a>
           <a href="#about" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>About Us</a>
           <a href="#contact" className="block text-sm py-2.5 text-[#434849]" onClick={() => setOpen(false)}>Contact</a>
@@ -158,18 +158,18 @@ function HeroSection() {
           {/* Trust badge */}
           <span className="inline-flex items-center gap-1.5 bg-[#fef3f0] text-[#c0431e] border border-[#f4c4b5] px-4 py-1.5 rounded-full text-[10px] font-bold tracking-wide mb-3">
             <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
-            Trusted by 3000+ Students Across Pune
+            Verified PG Discovery Platform — Pune
           </span>
 
           {/* Headline */}
           <h1 className="text-[28px] sm:text-[34px] lg:text-[48px] font-extrabold text-[#1b1c1c] leading-[1.18] mb-3">
             Find Verified PGs &amp; Hostels{' '}
-            <span className="text-[#e98a76]">Near Your College</span>
+            <span className="text-[#e98a76]">Near Your College or Workplace</span>
           </h1>
 
           {/* Supporting text */}
           <p className="text-sm sm:text-base lg:text-lg text-[#434849] mb-4 leading-relaxed max-w-[460px] lg:max-w-none">
-            Safe, Affordable &amp; Fully Verified Student Accommodation.
+            Safe, Affordable &amp; Fully Verified Accommodation for Students and Working Professionals.
           </p>
 
           {/* Social proof — above form to prime trust before action */}
@@ -191,8 +191,8 @@ function HeroSection() {
               ))}
             </div>
             <div className="text-sm text-[#1b1c1c]">
-              <span className="font-semibold">3000+ Students</span><br />
-              Already Found Their Home
+              <span className="font-semibold">Trusted by Residents</span><br />
+              Across Pune
             </div>
           </div>
 
@@ -200,12 +200,12 @@ function HeroSection() {
           <form onSubmit={handleFindPG} className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-[0_8px_32px_rgba(0,0,0,0.10)] border border-[#E5E7EB]">
             <div className="grid grid-cols-2 gap-2 mb-4">
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-semibold text-[#73787a] uppercase tracking-wide px-1">College</label>
+                <label className="text-[10px] font-semibold text-[#73787a] uppercase tracking-wide px-1">College / Workplace</label>
                 <input
                   type="text"
                   value={college}
                   onChange={e => setCollege(e.target.value)}
-                  placeholder="Search by College"
+                  placeholder="College or workplace"
                   className="h-[48px] sm:h-[52px] px-3 border border-[#d1d5db] rounded-xl text-sm outline-none focus:border-[#e98a76] focus:bg-[#fffaf9] bg-white transition-colors"
                 />
               </div>
@@ -282,21 +282,56 @@ function HeroSection() {
 
 // ─── Trust Indicators ─────────────────────────────────────────────────────────
 
+const TRUST_ITEMS = [
+  {
+    icon: 'verified',
+    title: 'Verified Listings',
+    desc: 'Every PG is reviewed and verified before going live on the platform.',
+  },
+  {
+    icon: 'currency_rupee',
+    title: 'Zero Brokerage',
+    desc: 'Connect directly with PG owners. No middlemen, no hidden fees.',
+  },
+  {
+    icon: 'groups',
+    title: 'Students & Professionals',
+    desc: 'Serving both students and working professionals looking for accommodation.',
+  },
+  {
+    icon: 'shield',
+    title: 'Safe & Transparent',
+    desc: 'Verified owners, real photos, honest reviews from actual residents.',
+  },
+]
+
 function TrustIndicators() {
   return (
-    <section className="py-10 bg-[#f6f3f2] border-y border-[#E5E7EB]">
+    <section className="py-14 lg:py-20 bg-white border-y border-[#E5E7EB]">
       <div className="max-w-[1280px] mx-auto px-6 lg:px-16">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-6 text-center">
-          {[
-            { value: '500+',  label: 'Verified Properties' },
-            { value: '3000+', label: 'Students Placed'     },
-            { value: '₹0',    label: 'Zero Brokerage'      },
-            { value: '24×7',  label: 'Support'             },
-            { value: '100%',  label: 'Safe &amp; Secure'   },
-          ].map(({ value, label }) => (
-            <div key={label} className="text-sm text-[#73787a]">
-              <strong className="block text-xl font-bold text-[#1b1c1c] mb-1" dangerouslySetInnerHTML={{ __html: value }} />
-              <span dangerouslySetInnerHTML={{ __html: label }} />
+        <div className="text-center mb-10">
+          <span className="text-[#e98a76] text-xs font-bold uppercase tracking-wider mb-2 block">Why Nest Stay</span>
+          <h2 className="text-[24px] lg:text-[32px] font-extrabold text-[#1b1c1c] leading-tight">
+            A Platform Built on Trust
+          </h2>
+          <p className="text-sm text-[#73787a] mt-2 max-w-md mx-auto leading-relaxed">
+            Find accommodation that fits your life — whether you're a student or a working professional.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {TRUST_ITEMS.map(({ icon, title, desc }) => (
+            <div
+              key={title}
+              className="bg-[#fbf9f8] border border-[#E5E7EB] rounded-2xl p-5 flex flex-col gap-3 hover:border-[#e98a76]/40 hover:shadow-md transition-all duration-200"
+              style={{ boxShadow: 'rgba(0,0,0,0.04) 0px 2px 8px' }}
+            >
+              <div className="w-10 h-10 rounded-xl bg-[#fff3ee] flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-[#e98a76]" style={{ fontSize: '20px', fontVariationSettings: "'FILL' 1" }}>{icon}</span>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[#1b1c1c] mb-1">{title}</p>
+                <p className="text-xs text-[#73787a] leading-relaxed">{desc}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -388,22 +423,21 @@ function CollegesSection() {
       <div className="max-w-[1280px] mx-auto px-6 lg:px-16">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-[20px] font-bold text-[#1b1c1c]">
-            Find Accommodation Near Your College
+            Find Accommodation Near Your College or Workplace
           </h2>
           <Link to="/login" className="text-[#e98a76] text-sm font-semibold flex items-center gap-1 hover:underline flex-shrink-0">
-            View All Colleges <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+            View All Locations <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
           </Link>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-          {COLLEGES.map(({ name, abbr, from, to, logo, count }) => (
+          {COLLEGES.map(({ name, abbr, from, to, logo }) => (
             <Link
               key={name}
               to="/login"
               className="bg-white border border-[#E5E7EB] rounded-xl py-5 px-3 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[#e98a76] cursor-pointer"
             >
               <CollegeLogo name={name} abbr={abbr} from={from} to={to} logo={logo} />
-              <p className="text-sm font-semibold text-[#1b1c1c] mb-1">{name}</p>
-              <p className="text-xs text-[#6B7280]">{count} Properties</p>
+              <p className="text-sm font-semibold text-[#1b1c1c]">{name}</p>
             </Link>
           ))}
         </div>
@@ -827,7 +861,7 @@ function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 mb-12 pb-12 border-b border-[#E5E7EB]">
 
           <div className="col-span-2 md:col-span-1">
-            <img src="/logo2.png" alt="Nest Stay" className="h-20 w-auto mb-4" />
+            <img src="/logo.png" alt="Nest Stay" className="h-20 w-auto mb-4" />
             <p className="text-sm text-[#434849] leading-relaxed mb-4">
               Your trusted platform for verified PGs and hostels near colleges.
             </p>
@@ -843,7 +877,7 @@ function Footer() {
           <div>
             <h4 className="text-sm font-bold text-[#1b1c1c] mb-4">Quick Links</h4>
             <ul className="space-y-2">
-              {['Properties', 'PG Near Colleges', 'Locations', 'Contact Us'].map(l => (
+              {['Properties', 'PG Near You', 'Locations', 'Contact Us'].map(l => (
                 <li key={l}><Link to="/login" className="text-sm text-[#434849] hover:text-black transition-colors block">{l}</Link></li>
               ))}
             </ul>

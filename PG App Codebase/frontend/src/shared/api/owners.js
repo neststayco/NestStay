@@ -1,7 +1,7 @@
 import client from './client'
 
-export const getAllOwners = () =>
-  client.get('/admin/owners').then(r => r.data)
+export const getAllOwners = (params = {}) =>
+  client.get('/admin/owners', { params }).then(r => r.data)
 
 export const createOwner = (data) =>
   client.post('/admin/owners', data).then(r => r.data)

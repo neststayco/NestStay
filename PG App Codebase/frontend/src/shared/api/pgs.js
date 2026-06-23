@@ -13,19 +13,21 @@ export async function getPGDetails(id) {
   return data // { success, pg, trust, userContext }
 }
 
-export async function createPG(textPayload, files) {
+export async function createPG(textPayload, files, videoFile = null) {
   const formData = new FormData()
   formData.append('data', JSON.stringify(textPayload))
   files.forEach((f) => formData.append('images', f))
+  if (videoFile) formData.append('video', videoFile)
   const { data } = await client.post('/pgs', formData)
   return data
 }
 
-export async function updatePG(id, body, files = []) {
-  if (files.length > 0) {
+export async function updatePG(id, body, files = [], videoFile = null) {
+  if (files.length > 0 || videoFile) {
     const formData = new FormData()
     formData.append('data', JSON.stringify(body))
     files.forEach((f) => formData.append('images', f))
+    if (videoFile) formData.append('video', videoFile)
     const { data } = await client.patch(`/pgs/${id}`, formData)
     return data
   }
@@ -33,8 +35,19 @@ export async function updatePG(id, body, files = []) {
   return data
 }
 
-export async function deletePG(id) {
-  const { data } = await client.delete(`/pgs/${id}`)
+export async function toggleVerifyPG(id) {
+  const { data } = await client.patch(`/pgs/${id}/verify`)
+  return data
+}
+
+export async function deactivatePG(id) {
+  const { data } = await client.patch(`/pgs/${id}/deactivate`)
+  return data
+}
+
+
+export async function restorePG(id) {
+  const { data } = await client.patch(`/pgs/${id}/restore`)
   return data
 }
 
@@ -50,5 +63,20 @@ export async function updateMyPGLocation(lat, lng) {
 
 export async function updateMyPGDetails(body) {
   const { data } = await client.patch('/pgs/my/details', body)
+  return data
+}
+
+export async function updateMyPGVideo(video) {
+  const { data } = await client.patch('/pgs/my/video', { video })
+  return data
+}
+
+export async function togglePGLike(id) {
+  const { data } = await client.post(`/pgs/${id}/like`)
+  return data // { success, liked, likesCount }
+}
+
+export async function setPGLikesEnabled(id, enabled) {
+  const { data } = await client.patch(`/pgs/${id}/likes-enabled`, { enabled })
   return data
 }

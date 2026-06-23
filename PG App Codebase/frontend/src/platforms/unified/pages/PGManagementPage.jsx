@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { getPGList, createPG, updatePG, deletePG } from '@shared/api/pgs'
+import { getPGList, createPG, updatePG, deactivatePG, restorePG, toggleVerifyPG, setPGLikesEnabled } from '@shared/api/pgs'
+import { getTerms, updateTerms } from '@shared/api/terms'
 import PGImageUploader from '@shared/components/PGImageUploader'
 import { SkeletonTable } from '@shared/components/Skeleton'
 
@@ -15,10 +16,14 @@ const EMPTY_FORM = {
   accommodation: { gender: '', totalCapacity: '' },
   foodType: '',
   amenities: '',
+  separateKitchenAvailable: false,
   imageFiles: [],
   existingImages: [],
+  videoFile: null,
+  existingVideo: null,
   owner: { name: '', phone: '', email: '', isVerified: false },
   isVerified: false,
+  ownerAccount: { create: false, password: '' },
 }
 
 function pgToForm(pg) {
@@ -46,8 +51,11 @@ function pgToForm(pg) {
     },
     foodType: pg.foodType || '',
     amenities: (pg.amenities || []).join(', '),
+    separateKitchenAvailable: pg.separateKitchenAvailable || false,
     imageFiles: [],
     existingImages: pg.images || [],
+    videoFile: null,
+    existingVideo: pg.video || null,
     owner: {
       name: pg.owner?.name || '',
       phone: pg.owner?.phone || '',
@@ -58,7 +66,7 @@ function pgToForm(pg) {
   }
 }
 
-function buildTextPayload(f) {
+function buildTextPayload(f, isEdit) {
   return {
     name: f.name,
     slug: f.slug,
@@ -81,15 +89,17 @@ function buildTextPayload(f) {
     },
     foodType: f.foodType || undefined,
     amenities: f.amenities.split(',').map(s => s.trim()).filter(Boolean),
+    separateKitchenAvailable: f.separateKitchenAvailable,
     owner: { ...f.owner },
     isVerified: f.isVerified,
+    ...(!isEdit && f.ownerAccount.create ? { ownerAccount: { create: true, password: f.ownerAccount.password } } : {}),
   }
 }
 
 function Field({ label, required, children }) {
   return (
     <div>
-      <label className="block text-[10px] font-bold text-[#73787a] uppercase tracking-widest mb-1.5">
+      <label className="block text-xs font-bold text-[#73787a] uppercase tracking-widest mb-1.5">
         {label}{required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
       {children}
@@ -104,6 +114,14 @@ function PGFormModal({ editPG, onClose, onSaved }) {
   const [form, setForm] = useState(isEdit ? pgToForm(editPG) : EMPTY_FORM)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [termsContent, setTermsContent] = useState(null)
+  const [termsAccepted, setTermsAccepted] = useState(false)
+
+  useEffect(() => {
+    if (!isEdit) {
+      getTerms().then(res => { if (res?.data?.content) setTermsContent(res.data.content) }).catch(() => {})
+    }
+  }, [isEdit])
 
   function setField(path, value) {
     setForm(prev => {
@@ -133,12 +151,26 @@ function PGFormModal({ editPG, onClose, onSaved }) {
       setError('Maximum 10 images allowed.')
       return
     }
+    if (!isEdit && form.ownerAccount.create) {
+      if (!form.owner.email) {
+        setError('Owner email is required to create a login account.')
+        return
+      }
+      if (!form.ownerAccount.password || form.ownerAccount.password.length < 8) {
+        setError('Owner login password must be at least 8 characters.')
+        return
+      }
+    }
+    if (!isEdit && termsContent && !termsAccepted) {
+      setError('You must accept the Terms & Conditions to create a PG.')
+      return
+    }
     setLoading(true)
     try {
-      const textPayload = buildTextPayload(form)
+      const textPayload = buildTextPayload(form, isEdit)
       const res = isEdit
-        ? await updatePG(editPG._id, textPayload, form.imageFiles)
-        : await createPG(textPayload, form.imageFiles)
+        ? await updatePG(editPG._id, textPayload, form.imageFiles, form.videoFile)
+        : await createPG(textPayload, form.imageFiles, form.videoFile)
       onSaved(res.data, isEdit)
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save PG.')
@@ -165,7 +197,7 @@ function PGFormModal({ editPG, onClose, onSaved }) {
           )}
 
           <section>
-            <p className="text-[10px] font-bold text-[#73787a] uppercase tracking-widest mb-3">Basic Info</p>
+            <p className="text-xs font-bold text-[#73787a] uppercase tracking-widest mb-3">Basic Info</p>
             <div className="space-y-3">
               <Field label="Name" required>
                 <input className={inputCls} value={form.name}
@@ -184,7 +216,7 @@ function PGFormModal({ editPG, onClose, onSaved }) {
           </section>
 
           <section>
-            <p className="text-[10px] font-bold text-[#73787a] uppercase tracking-widest mb-3">Location</p>
+            <p className="text-xs font-bold text-[#73787a] uppercase tracking-widest mb-3">Location</p>
             <div className="grid grid-cols-2 gap-3">
               <Field label="City">
                 <input className={inputCls} value={form.location.city}
@@ -220,7 +252,7 @@ function PGFormModal({ editPG, onClose, onSaved }) {
           </section>
 
           <section>
-            <p className="text-[10px] font-bold text-[#73787a] uppercase tracking-widest mb-3">Pricing (₹)</p>
+            <p className="text-xs font-bold text-[#73787a] uppercase tracking-widest mb-3">Pricing (₹)</p>
             <div className="grid grid-cols-3 gap-3">
               <Field label="Rent/mo">
                 <input type="number" className={inputCls} value={form.pricing.rent}
@@ -238,7 +270,7 @@ function PGFormModal({ editPG, onClose, onSaved }) {
           </section>
 
           <section>
-            <p className="text-[10px] font-bold text-[#73787a] uppercase tracking-widest mb-3">Accommodation</p>
+            <p className="text-xs font-bold text-[#73787a] uppercase tracking-widest mb-3">Accommodation</p>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Gender">
                 <select className={`${inputCls} bg-white`} value={form.accommodation.gender}
@@ -246,7 +278,7 @@ function PGFormModal({ editPG, onClose, onSaved }) {
                   <option value="">Any</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
-                  <option value="mixed">Mixed</option>
+                  <option value="other">Other</option>
                 </select>
               </Field>
               <Field label="Total capacity">
@@ -266,7 +298,20 @@ function PGFormModal({ editPG, onClose, onSaved }) {
           </section>
 
           <section>
-            <p className="text-[10px] font-bold text-[#73787a] uppercase tracking-widest mb-3">Amenities</p>
+            <p className="text-xs font-bold text-[#73787a] uppercase tracking-widest mb-3">Kitchen</p>
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <div
+                onClick={() => setForm(prev => ({ ...prev, separateKitchenAvailable: !prev.separateKitchenAvailable }))}
+                className={`relative w-10 h-5 rounded-full transition-colors ${form.separateKitchenAvailable ? 'bg-[#1b1c1c]' : 'bg-[#E5E7EB]'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.separateKitchenAvailable ? 'translate-x-5' : ''}`} />
+              </div>
+              <span className="text-sm text-[#434849]">Separate kitchen available</span>
+            </label>
+          </section>
+
+          <section>
+            <p className="text-xs font-bold text-[#73787a] uppercase tracking-widest mb-3">Amenities</p>
             <Field label="Amenities (comma-separated)">
               <input className={inputCls} value={form.amenities}
                 onChange={e => setField('amenities', e.target.value)}
@@ -282,7 +327,7 @@ function PGFormModal({ editPG, onClose, onSaved }) {
           </section>
 
           <section>
-            <p className="text-[10px] font-bold text-[#73787a] uppercase tracking-widest mb-3">Images</p>
+            <p className="text-xs font-bold text-[#73787a] uppercase tracking-widest mb-3">Images</p>
 
             {isEdit && form.existingImages.length > 0 && (
               <div className="mb-4">
@@ -313,7 +358,50 @@ function PGFormModal({ editPG, onClose, onSaved }) {
           </section>
 
           <section>
-            <p className="text-[10px] font-bold text-[#73787a] uppercase tracking-widest mb-3">Owner Info</p>
+            <p className="text-xs font-bold text-[#73787a] uppercase tracking-widest mb-3">Video (optional)</p>
+            {isEdit && form.existingVideo?.url && !form.videoFile && (
+              <div className="mb-3">
+                <p className="text-xs text-[#73787a] mb-2">Current video</p>
+                <video src={form.existingVideo.url} controls className="w-full rounded-xl border border-[#E5E7EB] max-h-40" />
+              </div>
+            )}
+            {form.videoFile && (
+              <div className="mb-3">
+                <p className="text-xs text-[#73787a] mb-2">New video preview</p>
+                <video src={URL.createObjectURL(form.videoFile)} controls className="w-full rounded-xl border border-[#E5E7EB] max-h-40" />
+                <button type="button" onClick={() => setForm(prev => ({ ...prev, videoFile: null }))}
+                  className="mt-1 text-xs text-red-500 hover:text-red-700">Remove</button>
+              </div>
+            )}
+            <label className={`${inputCls} flex items-center gap-2 cursor-pointer py-2.5`}>
+              <svg className="w-4 h-4 text-[#73787a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.868v6.264a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <span className="text-sm text-[#73787a]">{form.videoFile ? form.videoFile.name : 'Choose video (max 15 sec)'}</span>
+              <input type="file" accept="video/mp4,video/quicktime,video/webm" className="hidden"
+                onChange={async e => {
+                  const file = e.target.files?.[0]
+                  e.target.value = ''
+                  if (!file) return
+                  const url = URL.createObjectURL(file)
+                  const vid = document.createElement('video')
+                  vid.src = url
+                  vid.onloadedmetadata = () => {
+                    URL.revokeObjectURL(url)
+                    if (vid.duration > 15) {
+                      setError('Video must be 15 seconds or shorter.')
+                    } else {
+                      setError('')
+                      setForm(prev => ({ ...prev, videoFile: file }))
+                    }
+                  }
+                }} />
+            </label>
+            <p className="text-xs text-[#73787a] mt-1">MP4, MOV, WebM · max 15 seconds</p>
+          </section>
+
+          <section>
+            <p className="text-xs font-bold text-[#73787a] uppercase tracking-widest mb-3">Owner Info</p>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Name">
                 <input className={inputCls} value={form.owner.name}
@@ -330,22 +418,49 @@ function PGFormModal({ editPG, onClose, onSaved }) {
                 </Field>
               </div>
             </div>
-            <label className="flex items-center gap-2 mt-3 cursor-pointer select-none">
-              <input type="checkbox" className="w-4 h-4 accent-[#e98a76]"
-                checked={form.owner.isVerified}
-                onChange={e => setField('owner.isVerified', e.target.checked)} />
-              <span className="text-sm text-[#434849]">Owner is verified</span>
-            </label>
+            {!isEdit && (
+              <div className="mt-4 border-t border-[#f0f0f0] pt-4">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input type="checkbox" className="w-4 h-4 accent-[#e98a76]"
+                    checked={form.ownerAccount.create}
+                    onChange={e => setForm(prev => ({ ...prev, ownerAccount: { ...prev.ownerAccount, create: e.target.checked } }))} />
+                  <span className="text-sm font-medium text-[#434849]">Create owner login account</span>
+                </label>
+                {form.ownerAccount.create && (
+                  <div className="mt-3">
+                    <Field label="Login Password" required>
+                      <input type="password" className={inputCls} value={form.ownerAccount.password}
+                        onChange={e => setForm(prev => ({ ...prev, ownerAccount: { ...prev.ownerAccount, password: e.target.value } }))}
+                        placeholder="Min. 8 characters" autoComplete="new-password" />
+                    </Field>
+                    <p className="text-xs text-[#73787a] mt-1">Owner will log in with the email above and this password.</p>
+                  </div>
+                )}
+              </div>
+            )}
           </section>
 
-          <section>
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input type="checkbox" className="w-4 h-4 accent-[#e98a76]"
-                checked={form.isVerified}
-                onChange={e => setField('isVerified', e.target.checked)} />
-              <span className="text-sm font-medium text-[#434849]">Mark this PG as verified</span>
-            </label>
-          </section>
+          {/* Terms & Conditions — create mode only */}
+          {!isEdit && termsContent && (
+            <section>
+              <p className="text-xs font-bold text-[#73787a] uppercase tracking-widest mb-3">Terms &amp; Conditions</p>
+              <div className="border border-[#E5E7EB] rounded-xl bg-[#f6f3f2] p-4 max-h-40 overflow-y-auto text-xs text-[#434849] leading-relaxed whitespace-pre-wrap mb-3">
+                {termsContent}
+              </div>
+              <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 w-4 h-4 accent-[#e98a76] flex-shrink-0"
+                  checked={termsAccepted}
+                  onChange={e => setTermsAccepted(e.target.checked)}
+                />
+                <span className="text-sm text-[#434849]">
+                  I have read and agree to the Terms &amp; Conditions above.
+                </span>
+              </label>
+            </section>
+          )}
+
         </form>
 
         <div className="px-6 py-4 border-t border-[#f0f0f0] flex gap-3 flex-shrink-0">
@@ -353,7 +468,7 @@ function PGFormModal({ editPG, onClose, onSaved }) {
             className="flex-1 border border-[#E5E7EB] text-[#434849] hover:bg-[#f6f3f2] text-sm font-medium py-2.5 rounded-xl transition-colors">
             Cancel
           </button>
-          <button onClick={handleSubmit} disabled={loading}
+          <button onClick={handleSubmit} disabled={loading || (!isEdit && termsContent && !termsAccepted)}
             className="flex-1 bg-[#e98a76] hover:opacity-90 disabled:opacity-50 text-white text-sm font-semibold py-2.5 rounded-xl transition-all active:scale-[0.98]">
             {loading ? 'Saving…' : isEdit ? 'Save changes' : 'Create PG'}
           </button>
@@ -363,28 +478,45 @@ function PGFormModal({ editPG, onClose, onSaved }) {
   )
 }
 
-function ConfirmDialog({ pg, onCancel, onConfirm, loading }) {
+const CONFIRM_CONFIG = {
+  deactivate: {
+    iconBg: 'bg-red-100', iconColor: 'text-red-600',
+    iconPath: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
+    title: 'Deactivate PG?',
+    body: 'will be hidden from students. Owner login will be blocked. You can restore it later.',
+    confirmLabel: 'Deactivate', loadingLabel: 'Deactivating…',
+    btnClass: 'bg-red-500 hover:bg-red-600',
+  },
+  restore: {
+    iconBg: 'bg-green-100', iconColor: 'text-green-600',
+    iconPath: 'M5 13l4 4L19 7',
+    title: 'Restore PG?',
+    body: 'will become active and visible to students again. Owner login will be re-enabled.',
+    confirmLabel: 'Restore', loadingLabel: 'Restoring…',
+    btnClass: 'bg-green-600 hover:bg-green-700',
+  },
+}
+
+function ConfirmDialog({ pg, mode, onCancel, onConfirm, loading }) {
+  const c = CONFIRM_CONFIG[mode] || CONFIRM_CONFIG.deactivate
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center">
-        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${c.iconBg}`}>
+          <svg className={`w-6 h-6 ${c.iconColor}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={c.iconPath} />
           </svg>
         </div>
-        <h3 className="font-bold text-[#1b1c1c] mb-1">Deactivate PG?</h3>
-        <p className="text-sm text-[#73787a] mb-5">
-          <strong>{pg.name}</strong> will be hidden from guests. Existing complaints are preserved.
-        </p>
+        <h3 className="font-bold text-[#1b1c1c] mb-1">{c.title}</h3>
+        <p className="text-sm text-[#73787a] mb-5"><strong>{pg.name}</strong> {c.body}</p>
         <div className="flex gap-3">
           <button onClick={onCancel}
             className="flex-1 border border-[#E5E7EB] text-[#434849] hover:bg-[#f6f3f2] text-sm font-medium py-2 rounded-xl transition-colors">
             Cancel
           </button>
           <button onClick={onConfirm} disabled={loading}
-            className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white text-sm font-medium py-2 rounded-[10px] transition-colors">
-            {loading ? 'Deactivating…' : 'Deactivate'}
+            className={`flex-1 text-white text-sm font-medium py-2 rounded-xl transition-colors disabled:opacity-50 ${c.btnClass}`}>
+            {loading ? c.loadingLabel : c.confirmLabel}
           </button>
         </div>
       </div>
@@ -403,10 +535,18 @@ export default function PGManagementPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [editTarget, setEditTarget] = useState(null)
   const [confirmTarget, setConfirmTarget] = useState(null)
+  const [confirmMode, setConfirmMode] = useState(null)
   const [deactivating, setDeactivating] = useState(false)
   const [togglingVerify, setTogglingVerify] = useState(null)
+  const [togglingLikes, setTogglingLikes] = useState(null)
+
+  const [termsEdit, setTermsEdit] = useState(null)
+  const [termsDraft, setTermsDraft] = useState('')
+  const [termsSaving, setTermsSaving] = useState(false)
+  const [termsMsg, setTermsMsg] = useState('')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
   const searchTimer = useRef(null)
 
   function setPage(p) {
@@ -424,6 +564,7 @@ export default function PGManagementPage() {
     try {
       const params = { page, limit: 12 }
       if (debouncedSearch) params.search = debouncedSearch
+      if (statusFilter) params.status = statusFilter
       const res = await getPGList(params)
       setPgs(res.data)
       setPagination(res.pagination)
@@ -432,17 +573,25 @@ export default function PGManagementPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, debouncedSearch])
+  }, [page, debouncedSearch, statusFilter])
 
   function handleSearchChange(e) {
     const val = e.target.value
     setSearch(val)
-    setPage(1)
     clearTimeout(searchTimer.current)
-    searchTimer.current = setTimeout(() => setDebouncedSearch(val), 400)
+    searchTimer.current = setTimeout(() => {
+      setDebouncedSearch(val)
+      setPage(1)
+    }, 400)
   }
 
   useEffect(() => { loadPGs() }, [loadPGs])
+
+  useEffect(() => {
+    getTerms().then(res => {
+      if (res?.data?.content) { setTermsEdit(res.data.content); setTermsDraft(res.data.content) }
+    }).catch(() => {})
+  }, [])
 
   function handleSaved(pg, isEdit) {
     if (isEdit) {
@@ -457,7 +606,7 @@ export default function PGManagementPage() {
   async function handleToggleVerify(pg) {
     setTogglingVerify(pg._id)
     try {
-      const res = await updatePG(pg._id, { isVerified: !pg.isVerified })
+      const res = await toggleVerifyPG(pg._id)
       setPgs(prev => prev.map(p => p._id === pg._id ? res.data : p))
     } catch {
       setError('Failed to update verification status.')
@@ -466,32 +615,62 @@ export default function PGManagementPage() {
     }
   }
 
-  async function handleDeactivate() {
+  async function handleSaveTerms(e) {
+    e.preventDefault()
+    if (termsDraft.trim().length < 10) { setTermsMsg('Content must be at least 10 characters.'); return }
+    setTermsSaving(true)
+    setTermsMsg('')
+    try {
+      await updateTerms(termsDraft.trim())
+      setTermsEdit(termsDraft.trim())
+      setTermsMsg('Terms & Conditions updated.')
+    } catch {
+      setTermsMsg('Failed to update.')
+    } finally {
+      setTermsSaving(false)
+    }
+  }
+
+  async function handleToggleLikes(pg) {
+    setTogglingLikes(pg._id)
+    try {
+      const res = await setPGLikesEnabled(pg._id, !pg.likesEnabled)
+      setPgs(prev => prev.map(p => p._id === pg._id ? { ...p, likesEnabled: res.data.likesEnabled } : p))
+    } catch {
+      setError('Failed to update likes setting.')
+    } finally {
+      setTogglingLikes(null)
+    }
+  }
+
+  async function handleConfirm() {
     if (!confirmTarget) return
     setDeactivating(true)
     try {
-      await deletePG(confirmTarget._id)
-      setPgs(prev => prev.filter(p => p._id !== confirmTarget._id))
+      if (confirmMode === 'deactivate') {
+        await deactivatePG(confirmTarget._id)
+        setPgs(prev => prev.map(p => p._id === confirmTarget._id ? { ...p, status: 'inactive' } : p))
+      } else if (confirmMode === 'restore') {
+        await restorePG(confirmTarget._id)
+        setPgs(prev => prev.map(p => p._id === confirmTarget._id ? { ...p, status: 'active' } : p))
+      }
       setConfirmTarget(null)
+      setConfirmMode(null)
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to deactivate PG.')
+      setError(err.response?.data?.message || `Failed to ${confirmMode} PG.`)
       setConfirmTarget(null)
+      setConfirmMode(null)
     } finally {
       setDeactivating(false)
     }
   }
 
   return (
-    <div className="p-6">
+    <div className="p-5">
       <div className="flex items-start justify-between gap-4 mb-5">
         <div>
-          <h1 className="text-2xl font-bold text-[#1b1c1c]">PG Listings</h1>
-          <p className="text-[#73787a] text-sm mt-0.5">
-            Manage PG properties on the platform
-            <span className="ml-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
-              Active PGs only
-            </span>
-          </p>
+          <h1 className="text-2xl font-semibold text-[#1b1c1c]">PG Listings</h1>
+          <p className="text-[#73787a] text-sm mt-0.5">Manage PG properties on the platform</p>
         </div>
         <button
           onClick={() => { setEditTarget(null); setFormOpen(true) }}
@@ -504,71 +683,110 @@ export default function PGManagementPage() {
         </button>
       </div>
 
-      <div className="mb-4">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
         <input
           type="text"
           value={search}
           onChange={handleSearchChange}
           placeholder="Search by name or location…"
-          className="w-full max-w-sm border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e98a76]/40 focus:border-[#e98a76] bg-white text-[#1b1c1c] placeholder-[#9ca3af] transition-colors"
+          className="max-w-sm border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e98a76]/40 focus:border-[#e98a76] bg-white text-[#1b1c1c] placeholder-[#9ca3af] transition-colors"
         />
+        <div className="flex items-center gap-1 bg-[#f6f3f2] rounded-xl p-1">
+          {[['', 'All'], ['active', 'Active'], ['inactive', 'Inactive']].map(([val, label]) => (
+            <button
+              key={val}
+              onClick={() => { setStatusFilter(val); setPage(1) }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                statusFilter === val
+                  ? 'bg-white text-[#1b1c1c] shadow-sm'
+                  : 'text-[#73787a] hover:text-[#434849]'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>
       )}
 
-      <div className="bg-white border border-[#E5E7EB] rounded-[20px] overflow-hidden"
-        style={{ boxShadow: 'rgba(0,0,0,0.04) 0px 2px 8px, rgba(0,0,0,0.02) 0px 0px 1px' }}>
-        <div className="overflow-x-auto">
+      <div className="bg-white border border-[#e0e0e0] rounded-2xl overflow-hidden shadow-card">
+        <div className="overflow-x-auto overflow-y-auto max-h-[520px]">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[#f0f0f0] bg-[#f6f3f2]">
-                <th className="px-4 py-3 text-left text-[10px] font-bold text-[#73787a] uppercase tracking-widest">Name</th>
-                <th className="px-4 py-3 text-left text-[10px] font-bold text-[#73787a] uppercase tracking-widest">Location</th>
-                <th className="px-4 py-3 text-left text-[10px] font-bold text-[#73787a] uppercase tracking-widest">Rent</th>
-                <th className="px-4 py-3 text-left text-[10px] font-bold text-[#73787a] uppercase tracking-widest">Gender</th>
-                <th className="px-4 py-3 text-left text-[10px] font-bold text-[#73787a] uppercase tracking-widest">Status</th>
-                <th className="px-4 py-3 text-left text-[10px] font-bold text-[#73787a] uppercase tracking-widest">Owner</th>
-                <th className="px-4 py-3" />
+            <thead className="sticky top-0 z-10 bg-[#f6f3f2]">
+              <tr className="border-b border-[#e5e5e5]">
+                <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">Name</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">Location</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">Rent</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">Gender</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">Status</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">Likes</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">Owner</th>
+                <th className="w-[248px] px-4 py-3" />
               </tr>
             </thead>
             {loading
-              ? <SkeletonTable rows={8} cols={7} />
-              : <tbody className="divide-y divide-[#f6f6f6]">
+              ? <SkeletonTable rows={8} cols={8} />
+              : <tbody className="divide-y divide-[#e5e5e5]">
                   {pgs.length === 0
                     ? (
                       <tr>
-                        <td colSpan={7} className="text-center py-12 text-[#73787a] text-sm">No PGs found</td>
+                        <td colSpan={8} className="text-center py-6">
+                          <div className="flex flex-col items-center gap-2">
+                            <span className="text-2xl">🏠</span>
+                            <p className="text-sm font-medium text-[#1b1c1c]">No PGs found</p>
+                            <p className="text-xs text-[#73787a]">Add the first PG listing to get started</p>
+                          </div>
+                        </td>
                       </tr>
                     )
                     : pgs.map(pg => (
-                  <tr key={pg._id} className="hover:bg-[#fbf9f8] transition-colors">
-                    <td className="px-4 py-3.5">
+                  <tr key={pg._id} className="hover:bg-[#fbf9f8] transition-colors duration-150">
+                    <td className="px-4 py-2">
                       <div className="font-semibold text-[#1b1c1c] max-w-[160px] truncate">{pg.name}</div>
                       <div className="text-xs text-[#73787a] font-mono truncate max-w-[160px]">{pg.slug}</div>
                     </td>
-                    <td className="px-4 py-3.5 text-[#434849] whitespace-nowrap">
+                    <td className="px-4 py-2 text-[#434849] whitespace-nowrap">
                       {[pg.location?.area, pg.location?.city].filter(Boolean).join(', ') || '—'}
                     </td>
-                    <td className="px-4 py-3.5 font-bold text-[#1b1c1c] whitespace-nowrap">
+                    <td className="px-4 py-2 font-bold text-[#1b1c1c] whitespace-nowrap">
                       {pg.pricing?.rent ? `₹${pg.pricing.rent.toLocaleString('en-IN')}` : '—'}
                     </td>
-                    <td className="px-4 py-3.5 capitalize text-[#434849]">{pg.accommodation?.gender || '—'}</td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-4 py-2 capitalize text-[#434849]">{pg.accommodation?.gender || '—'}</td>
+                    <td className="px-4 py-2">
                       <div className="flex flex-col gap-1">
-                        <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full border ${pg.isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-[#f6f3f2] text-[#73787a] border-[#E5E7EB]'}`}>
-                          {pg.isActive ? 'Active' : 'Inactive'}
+                        <span className={`inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded-full border ${
+                          pg.status === 'active' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-[#f6f3f2] text-[#73787a] border-[#E5E7EB]'
+                        }`}>
+                          {pg.status === 'active' ? 'Active' : 'Inactive'}
                         </span>
                         {pg.isVerified && (
-                          <span className="inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">
+                          <span className="inline-flex items-center gap-0.5 text-xs font-medium px-2.5 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">
                             <span className="material-symbols-outlined" style={{ fontSize: '11px', fontVariationSettings: "'FILL' 1" }}>verified</span>
                             Verified
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3.5 text-[#434849] text-xs">
+                    <td className="px-4 py-2">
+                      <div className="flex flex-col gap-1 items-start">
+                        <span className="text-sm font-semibold text-[#1b1c1c]">{pg.likesCount ?? 0}</span>
+                        <button
+                          onClick={() => handleToggleLikes(pg)}
+                          disabled={togglingLikes === pg._id}
+                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-colors disabled:opacity-50 ${
+                            pg.likesEnabled
+                              ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                              : 'bg-[#f6f3f2] text-[#73787a] border-[#E5E7EB] hover:bg-[#eae8e7]'
+                          }`}
+                        >
+                          {togglingLikes === pg._id ? '…' : pg.likesEnabled ? 'Enabled' : 'Disabled'}
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-4 py-2 text-[#434849] text-xs">
                       <div>{pg.owner?.name || '—'}</div>
                       {pg.owner?.isVerified && (
                         <div className="inline-flex items-center gap-0.5 text-green-600 font-medium">
@@ -577,24 +795,31 @@ export default function PGManagementPage() {
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-2">
+                    <td className="px-4 py-2 w-[248px]">
+                      <div className="flex items-center gap-1.5">
                         <button onClick={() => { setEditTarget(pg); setFormOpen(true) }}
-                          className="text-xs font-semibold px-3 py-1.5 bg-[#f6f3f2] hover:bg-[#eae8e7] text-[#434849] rounded-[10px] transition-colors">
+                          className="min-w-[44px] text-xs font-semibold px-3 py-1.5 bg-[#f6f3f2] hover:bg-[#eae8e7] text-[#434849] rounded-xl transition-colors">
                           Edit
                         </button>
                         <button
-                          onClick={() => handleToggleVerify(pg)}
-                          disabled={togglingVerify === pg._id}
+                          onClick={() => pg.status === 'active' ? handleToggleVerify(pg) : undefined}
+                          disabled={togglingVerify === pg._id || pg.status !== 'active'}
                           title={pg.isVerified ? 'Remove verification' : 'Mark as verified'}
-                          className={`text-xs font-semibold px-3 py-1.5 rounded-[10px] transition-colors disabled:opacity-50 ${pg.isVerified ? 'bg-green-50 hover:bg-green-100 text-green-700 border border-green-200' : 'bg-[#f6f3f2] hover:bg-[#eae8e7] text-[#73787a]'}`}
+                          className={`min-w-[86px] text-xs font-semibold px-3 py-1.5 rounded-xl transition-colors disabled:opacity-50 ${pg.status !== 'active' ? 'invisible pointer-events-none' : pg.isVerified ? 'bg-green-50 hover:bg-green-100 text-green-700 border border-green-200' : 'bg-[#f6f3f2] hover:bg-[#eae8e7] text-[#73787a]'}`}
                         >
                           {togglingVerify === pg._id ? '…' : pg.isVerified ? '✓ Verified' : 'Verify'}
                         </button>
-                        <button onClick={() => setConfirmTarget(pg)}
-                          className="text-xs font-semibold px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-[10px] border border-red-100 transition-colors">
-                          Deactivate
-                        </button>
+                        {pg.status === 'active' ? (
+                          <button onClick={() => { setConfirmTarget(pg); setConfirmMode('deactivate') }}
+                            className="min-w-[86px] text-xs font-semibold px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl border border-red-100 transition-colors">
+                            Deactivate
+                          </button>
+                        ) : (
+                          <button onClick={() => { setConfirmTarget(pg); setConfirmMode('restore') }}
+                            className="min-w-[86px] text-xs font-semibold px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-xl border border-green-200 transition-colors">
+                            Restore
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -611,11 +836,11 @@ export default function PGManagementPage() {
             </p>
             <div className="flex gap-2">
               <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
-                className="text-sm px-3 py-1.5 border border-[#E5E7EB] rounded-[10px] hover:bg-[#f6f3f2] text-[#434849] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                className="text-sm px-3 py-1.5 border border-[#E5E7EB] rounded-xl hover:bg-[#f6f3f2] text-[#434849] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
                 ← Prev
               </button>
               <button onClick={() => setPage(Math.min(pagination.totalPages, page + 1))} disabled={page === pagination.totalPages}
-                className="text-sm px-3 py-1.5 border border-[#E5E7EB] rounded-[10px] hover:bg-[#f6f3f2] text-[#434849] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                className="text-sm px-3 py-1.5 border border-[#E5E7EB] rounded-xl hover:bg-[#f6f3f2] text-[#434849] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
                 Next →
               </button>
             </div>
@@ -633,11 +858,38 @@ export default function PGManagementPage() {
       {confirmTarget && (
         <ConfirmDialog
           pg={confirmTarget}
-          onCancel={() => setConfirmTarget(null)}
-          onConfirm={handleDeactivate}
+          mode={confirmMode}
+          onCancel={() => { setConfirmTarget(null); setConfirmMode(null) }}
+          onConfirm={handleConfirm}
           loading={deactivating}
         />
       )}
+
+      {/* Terms & Conditions management */}
+      <div className="mt-6 bg-white border border-[#e0e0e0] rounded-2xl p-5 shadow-card">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-base font-semibold text-[#1b1c1c]">Terms &amp; Conditions</h2>
+            <p className="text-xs text-[#73787a] mt-0.5">Shown to admins before creating a PG listing.</p>
+          </div>
+        </div>
+        <form onSubmit={handleSaveTerms} className="space-y-3">
+          <textarea
+            rows={6}
+            value={termsDraft}
+            onChange={e => setTermsDraft(e.target.value)}
+            placeholder="Enter Terms & Conditions content…"
+            className="w-full border border-[#E5E7EB] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e98a76]/40 focus:border-[#e98a76] bg-white text-[#1b1c1c] resize-none transition-colors"
+          />
+          {termsMsg && (
+            <p className={`text-xs ${termsMsg.includes('Failed') ? 'text-red-600' : 'text-green-600'}`}>{termsMsg}</p>
+          )}
+          <button type="submit" disabled={termsSaving}
+            className="inline-flex items-center gap-2 bg-[#1b1c1c] hover:bg-[#2d2d2d] disabled:opacity-40 text-white text-sm font-semibold px-5 py-2 rounded-xl transition-colors">
+            {termsSaving ? 'Saving…' : termsEdit ? 'Update T&C' : 'Publish T&C'}
+          </button>
+        </form>
+      </div>
     </div>
   )
 }

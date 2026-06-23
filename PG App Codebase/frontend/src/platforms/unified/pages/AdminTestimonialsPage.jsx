@@ -20,7 +20,7 @@ function StarRating({ rating }) {
       {[1, 2, 3, 4, 5].map(s => (
         <svg
           key={s}
-          className={`w-3.5 h-3.5 ${s <= rating ? 'text-amber-400' : 'text-gray-200'}`}
+          className={`w-3.5 h-3.5 ${s <= rating ? 'text-amber-400' : 'text-[#E5E7EB]'}`}
           viewBox="0 0 20 20"
           fill="currentColor"
         >
@@ -110,12 +110,12 @@ export default function AdminTestimonialsPage() {
     : 0
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-5 max-w-6xl mx-auto">
       <OfflineBanner />
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Testimonials</h1>
-        <p className="text-gray-500 text-sm mt-1">
+      <div className="mb-4">
+        <h1 className="text-2xl font-semibold text-[#1b1c1c]">Testimonials</h1>
+        <p className="text-[#73787a] text-sm mt-1">
           All testimonials across all PGs. Approve, reject, or control visibility.
         </p>
       </div>
@@ -125,7 +125,7 @@ export default function AdminTestimonialsPage() {
           <button
             key={s}
             onClick={() => updateParams({ status: s })}
-            className={`px-3 py-1.5 rounded-[10px] text-sm font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-colors ${
               statusFilter === s
                 ? 'bg-[#222121] text-white'
                 : 'bg-white border border-[#e0e0e0] text-[#6c757d] hover:border-[#027fff]'
@@ -135,12 +135,12 @@ export default function AdminTestimonialsPage() {
           </button>
         ))}
         {pagination.totalItems !== undefined && (
-          <span className="ml-auto text-sm text-gray-400">{pagination.totalItems} total</span>
+          <span className="ml-auto text-sm text-[#73787a]">{pagination.totalItems} total</span>
         )}
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-[10px] text-sm text-red-700 flex items-center justify-between gap-3">
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-center justify-between gap-3">
           <span>{error}</span>
           <button onClick={fetchTestimonials} className="text-sm font-medium underline shrink-0">
             Retry
@@ -149,59 +149,62 @@ export default function AdminTestimonialsPage() {
       )}
 
       {pagination.totalItems > 0 && (
-        <p className="text-xs text-gray-400 mb-3">
+        <p className="text-xs text-[#73787a] mb-3">
           Showing {showingFrom}–{showingTo} of {pagination.totalItems} testimonials
         </p>
       )}
 
-      <div className="bg-white rounded-[20px] border border-[#e0e0e0] shadow-card overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="bg-white rounded-2xl border border-[#e0e0e0] shadow-card overflow-hidden">
+        <div className="overflow-x-auto overflow-y-auto max-h-[520px]">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
+            <thead className="sticky top-0 z-10 bg-[#f6f3f2] border-b border-[#e5e5e5]">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">PG</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Resident</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Rating</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Review</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Visible</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</th>
-                <th className="px-4 py-3" />
+                <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">PG</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">Resident</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">Rating</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">Review</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">Status</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">Visible</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">Date</th>
+                <th className="w-[196px] px-4 py-3" />
               </tr>
             </thead>
             {loading
               ? <SkeletonTable rows={10} cols={8} />
-              : <tbody className="divide-y divide-gray-100">
+              : <tbody className="divide-y divide-[#e5e5e5]">
                   {testimonials.length === 0
                     ? (
                       <tr>
-                        <td colSpan={8} className="px-4 py-12 text-center">
-                          <p className="text-gray-400 text-sm font-medium">No testimonials found</p>
-                          <p className="text-gray-300 text-xs mt-1">
-                            {statusFilter
-                              ? 'Try a different status filter'
-                              : 'No testimonials submitted yet across any PG'}
-                          </p>
-                    </td>
+                        <td colSpan={8} className="px-4 py-6 text-center">
+                          <div className="flex flex-col items-center gap-2">
+                            <span className="text-2xl">📝</span>
+                            <p className="text-sm font-medium text-[#1b1c1c]">No testimonials found</p>
+                            <p className="text-xs text-[#73787a]">
+                              {statusFilter
+                                ? 'Try a different status filter'
+                                : 'No testimonials submitted yet across any PG'}
+                            </p>
+                          </div>
+                        </td>
                   </tr>
                 )
                 : testimonials.map(t => (
-                  <tr key={t._id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3.5">
-                      <p className="text-sm font-medium text-gray-800">{t.pgId?.name || '—'}</p>
+                  <tr key={t._id} className="hover:bg-[#fbf9f8] transition-colors duration-150">
+                    <td className="px-4 py-2">
+                      <p className="text-sm font-medium text-[#1b1c1c]">{t.pgId?.name || '—'}</p>
                     </td>
-                    <td className="px-4 py-3.5">
-                      <p className="text-sm font-medium text-gray-800">{t.createdBy?.name || '—'}</p>
+                    <td className="px-4 py-2">
+                      <p className="text-sm font-medium text-[#1b1c1c]">{t.createdBy?.name || '—'}</p>
                       {t.isVerifiedResident && (
                         <span className="text-xs text-purple-600 font-medium">✓ Verified</span>
                       )}
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-4 py-2">
                       <StarRating rating={t.rating} />
-                      <span className="text-xs text-gray-400 mt-0.5 block">{t.rating}/5</span>
+                      <span className="text-xs text-[#73787a] mt-0.5 block">{t.rating}/5</span>
                     </td>
-                    <td className="px-4 py-3.5 max-w-[200px]">
-                      <p className={`text-sm text-gray-700 ${expanded === t._id ? '' : 'line-clamp-2'}`}>
+                    <td className="px-4 py-2 max-w-[200px]">
+                      <p className={`text-sm text-[#434849] ${expanded === t._id ? '' : 'line-clamp-2'}`}>
                         {t.content}
                       </p>
                       {t.content?.length > 80 && (
@@ -213,52 +216,50 @@ export default function AdminTestimonialsPage() {
                         </button>
                       )}
                     </td>
-                    <td className="px-4 py-3.5">
-                      <span className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full border capitalize ${STATUS_STYLES[t.status] || 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                    <td className="px-4 py-2">
+                      <span className={`inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded-full border capitalize ${STATUS_STYLES[t.status] || 'bg-[#f6f3f2] text-[#73787a] border-[#E5E7EB]'}`}>
                         {t.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-4 py-2">
                       {t.status === 'approved' ? (
                         <button
                           onClick={() => handleUpdate(t._id, { isVisible: !t.isVisible })}
                           disabled={acting === t._id}
                           title={t.isVisible ? 'Hide from public' : 'Show on public page'}
-                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-50 ${t.isVisible ? 'bg-green-500' : 'bg-gray-300'}`}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-50 ${t.isVisible ? 'bg-green-500' : 'bg-[#e0e0e0]'}`}
                         >
                           <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${t.isVisible ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
                         </button>
                       ) : (
-                        <span className="text-xs text-gray-300">—</span>
+                        <span className="text-xs text-[#b0b0b0]">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-4 py-2">
                       <span
                         title={absoluteDate(t.createdAt)}
-                        className="text-xs text-gray-400 whitespace-nowrap"
+                        className="text-xs text-[#73787a] whitespace-nowrap"
                       >
                         {relativeTime(t.createdAt)}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5">
-                      {t.status === 'pending' && (
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => handleUpdate(t._id, { status: 'rejected' })}
-                            disabled={acting === t._id}
-                            className="text-xs px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-[10px] disabled:opacity-50 whitespace-nowrap transition-colors"
-                          >
-                            Reject
-                          </button>
-                          <button
-                            onClick={() => handleUpdate(t._id, { status: 'approved', isVisible: true })}
-                            disabled={acting === t._id}
-                            className="text-xs px-2.5 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-[10px] disabled:opacity-50 whitespace-nowrap transition-colors"
-                          >
-                            {acting === t._id ? '…' : 'Approve & Show'}
-                          </button>
-                        </div>
-                      )}
+                    <td className="px-4 py-2 w-[196px]">
+                      <div className={`flex items-center gap-1.5 ${t.status !== 'pending' ? 'invisible pointer-events-none' : ''}`}>
+                        <button
+                          onClick={() => handleUpdate(t._id, { status: 'rejected' })}
+                          disabled={acting === t._id}
+                          className="min-w-[60px] text-xs px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl disabled:opacity-50 whitespace-nowrap transition-colors"
+                        >
+                          Reject
+                        </button>
+                        <button
+                          onClick={() => handleUpdate(t._id, { status: 'approved', isVisible: true })}
+                          disabled={acting === t._id}
+                          className="min-w-[114px] text-xs px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-xl disabled:opacity-50 whitespace-nowrap transition-colors"
+                        >
+                          {acting === t._id ? '…' : 'Approve & Show'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -270,11 +271,11 @@ export default function AdminTestimonialsPage() {
       </div>
 
       {pagination.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+        <div className="mt-4 flex items-center justify-between text-sm text-[#434849]">
           <button
             onClick={() => setPage(Math.max(1, page - 1))}
             disabled={page === 1}
-            className="px-4 py-2 border border-[#e0e0e0] rounded-[10px] disabled:opacity-40 hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 border border-[#e0e0e0] rounded-xl disabled:opacity-40 hover:bg-[#f6f3f2] transition-colors"
           >
             ← Prev
           </button>
@@ -282,7 +283,7 @@ export default function AdminTestimonialsPage() {
           <button
             onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
             disabled={page === pagination.totalPages}
-            className="px-4 py-2 border border-[#e0e0e0] rounded-[10px] disabled:opacity-40 hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 border border-[#e0e0e0] rounded-xl disabled:opacity-40 hover:bg-[#f6f3f2] transition-colors"
           >
             Next →
           </button>

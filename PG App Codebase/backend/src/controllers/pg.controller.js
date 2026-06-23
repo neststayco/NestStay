@@ -1,9 +1,11 @@
 import PG from "../models/pg.js";
+import User from "../models/user.js";
 import Complaint from "../models/Complaint.js";
 import PGResidency from "../models/pgResidency.js";
 import mongoose from "mongoose";
 import Logger from "../services/logger.service.js";
 import { uploadToImageKit, deleteFromImageKit } from "../utils/uploadToImageKit.js";
+import { runInTransaction } from "../utils/transaction.js";
 
 export const createPG = async (req, res) => {
   try {
@@ -14,13 +16,13 @@ export const createPG = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid form data" });
     }
 
-    const { name, slug, description, location, pricing, accommodation, foodType, amenities, owner, isVerified } = payload;
+    const { name, slug, description, location, pricing, accommodation, foodType, amenities, separateKitchenAvailable, owner, isVerified, ownerAccount } = payload;
 
     if (!name || !slug || !description) {
       return res.status(400).json({ success: false, message: "Name, slug, and description are required" });
     }
 
-    const files = req.files || [];
+    const files = req.files?.images || req.files || [];
     if (files.length < 3) {
       return res.status(400).json({ success: false, message: "Minimum 3 images required" });
     }
@@ -33,14 +35,62 @@ export const createPG = async (req, res) => {
       return res.status(400).json({ success: false, message: "A PG with this slug already exists" });
     }
 
+    if (ownerAccount?.create) {
+      if (!owner?.email) {
+        return res.status(400).json({ success: false, message: "Owner email is required to create a login account" });
+      }
+      if (!ownerAccount.password || ownerAccount.password.length < 8) {
+        return res.status(400).json({ success: false, message: "Owner password must be at least 8 characters" });
+      }
+      const emailTaken = await User.findOne({ email: owner.email }).lean();
+      if (emailTaken) {
+        return res.status(400).json({ success: false, message: "Owner email is already in use" });
+      }
+    }
+
     const uploadedImages = await Promise.all(files.map((f) => uploadToImageKit(f)));
 
-    const pg = await PG.create({
+    let uploadedVideo;
+    const videoFile = req.files?.video?.[0];
+    if (videoFile) {
+      uploadedVideo = await uploadToImageKit(videoFile, "pg-videos");
+    }
+
+    const pgData = {
       name, slug, description, location, pricing, accommodation, foodType, amenities,
+      separateKitchenAvailable: separateKitchenAvailable ?? false,
       images: uploadedImages,
+      ...(uploadedVideo && { video: uploadedVideo }),
       owner, isVerified,
       createdBy: req.user.id,
-    });
+    };
+
+    let pg;
+
+    if (ownerAccount?.create) {
+      const { pg: createdPG } = await runInTransaction(async (session) => {
+        const [newPG] = await PG.create([pgData], { session });
+
+        const [newOwner] = await User.create([{
+          name: owner.name,
+          email: owner.email,
+          password: ownerAccount.password,
+          role: "pg_owner",
+          pgId: newPG._id,
+          onboardingStatus: "legacy",
+          isVerified: true,
+          isActive: true,
+        }], { session });
+
+        await PG.findByIdAndUpdate(newPG._id, { ownerId: newOwner._id }, { session });
+
+        Logger.event("owner.created", { ownerId: newOwner._id, pgId: newPG._id });
+        return { pg: newPG, owner: newOwner };
+      });
+      pg = createdPG;
+    } else {
+      pg = await PG.create(pgData);
+    }
 
     return res.status(201).json({ success: true, message: "PG created successfully", data: pg });
   } catch (error) {
@@ -57,11 +107,12 @@ export const updatePG = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid PG ID" });
     }
 
-    let updateData;
-    const files = req.files;
+    const imageFiles = req.files?.images || (Array.isArray(req.files) ? req.files : []);
+    const videoFile = req.files?.video?.[0];
 
-    if (files && files.length > 0) {
-      // Multipart with new images — parse text payload from `data` field
+    let updateData;
+    if (imageFiles.length > 0 || videoFile || req.body.data) {
+      // Multipart — parse text payload from `data` field
       let payload;
       try {
         payload = JSON.parse(req.body.data || "{}");
@@ -69,40 +120,39 @@ export const updatePG = async (req, res) => {
         return res.status(400).json({ success: false, message: "Invalid form data" });
       }
 
-      if (files.length < 3) {
-        return res.status(400).json({ success: false, message: "Minimum 3 images required" });
-      }
-      if (files.length > 10) {
-        return res.status(400).json({ success: false, message: "Maximum 10 images allowed" });
+      if (imageFiles.length > 0) {
+        if (imageFiles.length < 3) {
+          return res.status(400).json({ success: false, message: "Minimum 3 images required" });
+        }
+        if (imageFiles.length > 10) {
+          return res.status(400).json({ success: false, message: "Maximum 10 images allowed" });
+        }
+        const existing = await PG.findById(id).select("images video").lean();
+        if (existing?.images?.length > 0) {
+          await Promise.allSettled(
+            existing.images.filter((img) => img.fileId).map((img) => deleteFromImageKit(img.fileId))
+          );
+        }
+        payload.images = await Promise.all(imageFiles.map((f) => uploadToImageKit(f)));
       }
 
-      // Delete old images from ImageKit before replacing
-      const existing = await PG.findById(id).select("images").lean();
-      if (existing?.images?.length > 0) {
-        await Promise.allSettled(
-          existing.images.filter((img) => img.fileId).map((img) => deleteFromImageKit(img.fileId))
-        );
+      if (videoFile) {
+        const existing = await PG.findById(id).select("video").lean();
+        if (existing?.video?.fileId) await deleteFromImageKit(existing.video.fileId).catch(() => {});
+        payload.video = await uploadToImageKit(videoFile, "pg-videos");
       }
 
-      const uploadedImages = await Promise.all(files.map((f) => uploadToImageKit(f)));
-      updateData = { ...payload, images: uploadedImages };
-    } else if (req.body.data) {
-      // Multipart without new images — keep existing images from payload
-      try {
-        updateData = JSON.parse(req.body.data);
-      } catch {
-        return res.status(400).json({ success: false, message: "Invalid form data" });
-      }
+      updateData = payload;
     } else {
       // Pure JSON request (e.g. toggle verify)
       updateData = req.body;
     }
 
-    const { name, slug, description, location, pricing, accommodation, foodType, amenities, images, owner, isVerified } = updateData;
+    const { name, slug, description, location, pricing, accommodation, foodType, amenities, separateKitchenAvailable: skA, images, video, owner, isVerified } = updateData;
 
     const pg = await PG.findByIdAndUpdate(
       id,
-      { name, slug, description, location, pricing, accommodation, foodType, amenities, images, owner, isVerified },
+      { name, slug, description, location, pricing, accommodation, foodType, amenities, images, ...(video !== undefined && { video }), owner, isVerified, ...(skA !== undefined && { separateKitchenAvailable: skA }) },
       { new: true, runValidators: true }
     );
 
@@ -117,7 +167,25 @@ export const updatePG = async (req, res) => {
   }
 };
 
-export const deletePG = async (req, res) => {
+export const toggleVerifyPG = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "Invalid PG ID" });
+    }
+    const pg = await PG.findById(id).select("isVerified").lean();
+    if (!pg) {
+      return res.status(404).json({ success: false, message: "PG not found" });
+    }
+    const updated = await PG.findByIdAndUpdate(id, { isVerified: !pg.isVerified }, { new: true });
+    return res.status(200).json({ success: true, data: updated });
+  } catch (error) {
+    Logger.error("TOGGLE_VERIFY_PG_ERROR", { error: error.message });
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const deactivatePG = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -130,31 +198,62 @@ export const deletePG = async (req, res) => {
       return res.status(404).json({ success: false, message: "PG not found" });
     }
 
-    // Clean up images from ImageKit
-    if (pg.images?.length > 0) {
-      await Promise.allSettled(
-        pg.images.filter((img) => img.fileId).map((img) => deleteFromImageKit(img.fileId))
-      );
-    }
+    await PG.findByIdAndUpdate(id, { status: 'inactive' });
 
-    await PG.findByIdAndUpdate(id, { isActive: false });
+    if (pg.ownerId) {
+      await User.findByIdAndUpdate(pg.ownerId, { isActive: false, refreshToken: null });
+    }
 
     return res.status(200).json({ success: true, message: "PG deactivated successfully" });
   } catch (error) {
-    Logger.error("DELETE_PG_ERROR", { message: error.message });
+    Logger.error("DEACTIVATE_PG_ERROR", { message: error.message });
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+
+export const restorePG = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "Invalid PG ID" });
+    }
+
+    const pg = await PG.findById(id).lean();
+    if (!pg) {
+      return res.status(404).json({ success: false, message: "PG not found" });
+    }
+
+    if (pg.status === 'active') {
+      return res.status(400).json({ success: false, message: "PG is already active" });
+    }
+
+    await PG.findByIdAndUpdate(id, { status: 'active' });
+
+    if (pg.ownerId) {
+      await User.findByIdAndUpdate(pg.ownerId, { isActive: true });
+    }
+
+    return res.status(200).json({ success: true, message: "PG restored successfully" });
+  } catch (error) {
+    Logger.error("RESTORE_PG_ERROR", { message: error.message });
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 
 export const getPGList = async (req, res) => {
   try {
-    const { city, area, gender, foodType, minPrice, maxPrice, amenities, sortBy, search, page = 1, limit = 10 } = req.query;
+    const { city, area, gender, foodType, minPrice, maxPrice, amenities, sortBy, search, status, page = 1, limit = 10 } = req.query;
 
     const isAdmin = req.user?.role === "admin";
-    const matchFilter = { isActive: true };
+    const matchFilter = {};
 
     if (!isAdmin) {
+      matchFilter.status = 'active';
       matchFilter.verificationStatus = "approved";
+    } else if (status) {
+      matchFilter.status = status;
     }
 
     if (search && search.trim()) {
@@ -199,6 +298,7 @@ export const getPGList = async (req, res) => {
       {
         $addFields: {
           occupancy: { $size: "$admittedResidents" },
+          likesCount: { $size: { $ifNull: ["$likes", []] } },
           remainingCapacity: {
             $cond: {
               if: { $ifNull: ["$accommodation.totalCapacity", false] },
@@ -211,7 +311,8 @@ export const getPGList = async (req, res) => {
       {
         $project: {
           admittedResidents: 0,
-          occupancy: 0
+          occupancy: 0,
+          likes: 0,
         }
       },
       { $sort: sortStage },
@@ -248,10 +349,10 @@ export const getPGDetails = async (req, res) => {
     }
 
     const [pg, activeResidentCount] = await Promise.all([
-      PG.findOne({ _id: pgId, isActive: true, verificationStatus: "approved" })
+      PG.findOne({ _id: pgId, status: 'active', verificationStatus: "approved" })
         .select("-owner.phone -owner.email")
         .lean(),
-      PGResidency.countDocuments({ pgId, residentStatus: "active" })
+      PGResidency.countDocuments({ pgId, residentStatus: "active" }),
     ]);
 
     if (!pg) {
@@ -289,14 +390,90 @@ export const getPGDetails = async (req, res) => {
       userContext.hasActiveAdmissionElsewhere = Boolean(admissionElsewhere);
     }
 
+    const likesCount = pg.likes?.length || 0;
+    const isLiked = req.user ? (pg.likes || []).some((id) => id.toString() === req.user.id.toString()) : false;
+    const { likes: _likes, ...pgData } = pg;
+
     return res.status(200).json({
       success: true,
-      pg,
+      pg: { ...pgData, likesCount, isLiked },
       remainingCapacity,
-      userContext
+      userContext,
     });
   } catch (error) {
     Logger.error("GET_PG_DETAILS_ERROR", { message: error.message });
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// PATCH /api/pgs/my/video — pg_owner updates their PG's video
+export const updateMyPGVideo = async (req, res) => {
+  try {
+    if (!req.user.pgId) {
+      return res.status(400).json({ success: false, message: "No PG linked to this owner account" });
+    }
+    const { video } = req.body;
+    const pg = await PG.findByIdAndUpdate(
+      req.user.pgId,
+      { video: video || null },
+      { new: true }
+    ).lean();
+    if (!pg) return res.status(404).json({ success: false, message: "PG not found" });
+    Logger.event("pg.video.updated", { pgId: pg._id });
+    return res.status(200).json({ success: true, message: "Video updated", data: pg });
+  } catch (error) {
+    Logger.error("UPDATE_VIDEO_ERROR", { message: error.message });
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// POST /api/pgs/:id/like — user toggles like on a PG
+export const toggleLike = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "Invalid PG ID" });
+    }
+    const pg = await PG.findOne({ _id: id, status: "active" }).select("likesEnabled likes").lean();
+    if (!pg) return res.status(404).json({ success: false, message: "PG not found" });
+    if (!pg.likesEnabled) return res.status(403).json({ success: false, message: "Likes are disabled for this PG" });
+
+    const userId = req.user.id;
+    const alreadyLiked = pg.likes.some((l) => l.toString() === userId.toString());
+    const update = alreadyLiked ? { $pull: { likes: userId } } : { $addToSet: { likes: userId } };
+    const updated = await PG.findByIdAndUpdate(id, update, { new: true }).select("likes").lean();
+
+    return res.status(200).json({
+      success: true,
+      liked: !alreadyLiked,
+      likesCount: updated.likes.length,
+    });
+  } catch (error) {
+    Logger.error("TOGGLE_LIKE_ERROR", { message: error.message });
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// PATCH /api/pgs/:id/likes-enabled — admin enables/disables likes for a PG
+export const setLikesEnabled = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "Invalid PG ID" });
+    }
+    const { enabled } = req.body;
+    const pg = await PG.findByIdAndUpdate(
+      id,
+      { likesEnabled: Boolean(enabled) },
+      { new: true }
+    ).select("likesEnabled likes").lean();
+    if (!pg) return res.status(404).json({ success: false, message: "PG not found" });
+    return res.status(200).json({
+      success: true,
+      data: { likesEnabled: pg.likesEnabled, likesCount: pg.likes.length },
+    });
+  } catch (error) {
+    Logger.error("SET_LIKES_ENABLED_ERROR", { message: error.message });
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
@@ -360,7 +537,7 @@ export const updateMyPGDetails = async (req, res) => {
       return res.status(400).json({ success: false, message: "No PG linked to this owner account" });
     }
 
-    const { description, pricing, amenities, foodType } = req.body;
+    const { description, pricing, amenities, foodType, separateKitchenAvailable } = req.body;
     const update = {};
 
     if (description !== undefined) {
@@ -398,6 +575,10 @@ export const updateMyPGDetails = async (req, res) => {
         return res.status(400).json({ success: false, message: "foodType must be 'veg', 'non-veg', 'both', or null" });
       }
       update.foodType = foodType;
+    }
+
+    if (separateKitchenAvailable !== undefined) {
+      update.separateKitchenAvailable = Boolean(separateKitchenAvailable);
     }
 
     if (Object.keys(update).length === 0) {

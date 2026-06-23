@@ -29,7 +29,7 @@ export const toggleSave = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid PG ID" });
     }
 
-    const pgExists = await PG.exists({ _id: pgId, isActive: true });
+    const pgExists = await PG.exists({ _id: pgId, status: 'active' });
     if (!pgExists) {
       return res.status(404).json({ success: false, message: "PG not found" });
     }
@@ -62,7 +62,7 @@ export const getSavedPGs = async (req, res) => {
     }
 
     const pgs = await PG.aggregate([
-      { $match: { _id: { $in: savedIds }, isActive: true } },
+      { $match: { _id: { $in: savedIds }, status: 'active' } },
       {
         $lookup: {
           from: "pgresidencies",

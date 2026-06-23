@@ -9,9 +9,9 @@ import { runInTransaction } from "../utils/transaction.js";
 // GET /api/admin/users
 export const getAllUsers = async (req, res) => {
   try {
-    const { page = 1, limit = 20, search = "", role = "user" } = req.query;
+    const { page = 1, limit = 20, search = "", role } = req.query;
 
-    const filter = { role };
+    const filter = role ? { role } : { role: { $in: ['user', 'pg_owner'] } };
     if (search) {
       const regex = new RegExp(search.trim(), "i");
       filter.$or = [{ name: regex }, { email: regex }];
@@ -58,19 +58,24 @@ export const deactivateUser = async (req, res) => {
       return res.status(400).json({ success: false, message: "Cannot deactivate your own account" });
     }
 
-    const user = await User.findOneAndUpdate(
-      { _id: id, role: "user" },
-      { isActive: false, refreshToken: null },
-      { new: true }
-    ).select("-password -refreshToken").lean();
+    const user = await User.findOne({ _id: id, role: { $in: ['user', 'pg_owner'] } })
+      .select("-password -refreshToken")
+      .lean();
 
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    Logger.event("user.deactivated", { targetUserId: id, byAdmin: req.user.id });
+    await User.findByIdAndUpdate(id, { isActive: false, refreshToken: null });
 
-    return res.status(200).json({ success: true, message: "User deactivated", data: user });
+    if (user.role === 'pg_owner' && user.pgId) {
+      await PG.findByIdAndUpdate(user.pgId, { status: 'inactive' });
+      Logger.event("pg.deactivated_via_owner", { pgId: user.pgId, byAdmin: req.user.id });
+    }
+
+    Logger.event("user.deactivated", { targetUserId: id, role: user.role, byAdmin: req.user.id });
+
+    return res.status(200).json({ success: true, message: "User deactivated", data: { ...user, isActive: false } });
   } catch (error) {
     Logger.error("DEACTIVATE_USER_ERROR", { error: error.message });
     return res.status(500).json({ success: false, message: "Internal server error" });
@@ -264,12 +269,35 @@ export const createPGOwner = async (req, res) => {
 // GET /api/admin/owners
 export const getAllPGOwners = async (req, res) => {
   try {
-    const owners = await User.find({ role: "pg_owner" })
-      .select("-password -refreshToken")
-      .populate("pgId", "name location.city")
-      .lean();
+    const { page = 1, limit = 20, search = '' } = req.query;
+    const filter = { role: "pg_owner" };
+    if (search.trim()) {
+      filter.$or = [
+        { name: { $regex: search.trim(), $options: 'i' } },
+        { email: { $regex: search.trim(), $options: 'i' } },
+      ];
+    }
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const [owners, total] = await Promise.all([
+      User.find(filter)
+        .select("-password -refreshToken")
+        .populate("pgId", "name location.city")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      User.countDocuments(filter),
+    ]);
 
-    return res.status(200).json({ success: true, data: owners });
+    return res.status(200).json({
+      success: true,
+      data: owners,
+      pagination: {
+        totalItems: total,
+        totalPages: Math.ceil(total / parseInt(limit)),
+        currentPage: parseInt(page),
+      }
+    });
   } catch (error) {
     Logger.error("GET_PG_OWNERS_ERROR", { error: error.message });
     return res.status(500).json({ success: false, message: "Internal server error" });
@@ -451,7 +479,7 @@ export const approvePG = async (req, res) => {
       pg.reviewedBy = req.user.id;
       pg.reviewedAt = new Date();
       pg.rejectionReason = null;
-      pg.isActive = true;
+      pg.status = 'active';
       await pg.save({ session });
 
       if (pg.ownerId) {
@@ -498,7 +526,7 @@ export const rejectPG = async (req, res) => {
       pg.reviewedBy = req.user.id;
       pg.reviewedAt = new Date();
       pg.rejectionReason = reason.trim();
-      pg.isActive = false;
+      pg.status = 'inactive';
       await pg.save({ session });
 
       if (pg.ownerId) {

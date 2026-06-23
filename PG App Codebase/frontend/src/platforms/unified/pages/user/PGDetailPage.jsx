@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import UserNavbar from '../../components/UserNavbar'
 import OfflineBanner from '@shared/components/OfflineBanner'
-import { getPGDetails } from '@shared/api/pgs'
+import { getPGDetails, togglePGLike } from '@shared/api/pgs'
 import { getPublicTestimonials, createTestimonial } from '@shared/api/testimonials'
+import { createVisit } from '@shared/api/visits'
+import { recordView } from '@shared/api/leads'
 import { useAuth } from '@shared/context/AuthContext'
 import { useToast } from '@shared/components/Toast'
 import { SkeletonPGDetail } from '@shared/components/Skeleton'
@@ -131,13 +133,16 @@ function ChevronIcon({ dir }) {
 export default function PGDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { isAdmitted, savedPGIds, toggleSave } = useAuth()
+  const { user, isAdmitted, savedPGIds, toggleSave } = useAuth()
   const toast = useToast()
 
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeImage, setActiveImage] = useState(0)
+  const [liked, setLiked] = useState(false)
+  const [likesCount, setLikesCount] = useState(0)
+  const [liking, setLiking] = useState(false)
 
   const [testimonials, setTestimonials] = useState([])
   const [testimonialRating, setTestimonialRating] = useState(0)
@@ -145,9 +150,50 @@ export default function PGDetailPage() {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
+  const [visitModalOpen, setVisitModalOpen] = useState(false)
+  const [visitDate, setVisitDate] = useState('')
+  const [visitTime, setVisitTime] = useState('')
+  const [visitLoading, setVisitLoading] = useState(false)
+  const [visitSubmitted, setVisitSubmitted] = useState(false)
+
+  async function handleLike() {
+    if (liking) return
+    setLiking(true)
+    try {
+      const res = await togglePGLike(id)
+      setLiked(res.liked)
+      setLikesCount(res.likesCount)
+    } catch (err) {
+      toast(err.response?.data?.message || 'Failed to update like', 'error')
+    } finally {
+      setLiking(false)
+    }
+  }
+
+  async function handleScheduleVisit(e) {
+    e.preventDefault()
+    if (!visitDate || !visitTime) return
+    setVisitLoading(true)
+    try {
+      await createVisit({ pgId: id, visitDate, visitTime })
+      setVisitSubmitted(true)
+      toast('Visit request submitted!', 'success')
+    } catch (err) {
+      toast(err.response?.data?.message || 'Failed to submit visit request', 'error')
+    } finally {
+      setVisitLoading(false)
+    }
+  }
+
   useEffect(() => {
     getPublicTestimonials(id).then(res => setTestimonials(res.data || [])).catch(() => {})
   }, [id])
+
+  useEffect(() => {
+    if (!user) return
+    const timer = setTimeout(() => { recordView(id).catch(() => {}) }, 5000)
+    return () => clearTimeout(timer)
+  }, [id, user])
 
   async function handleSubmitTestimonial(e) {
     e.preventDefault()
@@ -171,6 +217,8 @@ export default function PGDetailPage() {
       try {
         const res = await getPGDetails(id)
         setData(res)
+        setLiked(res.pg?.isLiked || false)
+        setLikesCount(res.pg?.likesCount || 0)
       } catch (err) {
         const status = err.response?.status
         if (status === 404) setError('PG not found or no longer active.')
@@ -326,6 +374,19 @@ export default function PGDetailPage() {
           )}
         </div>
 
+        {/* Video */}
+        {pg.video?.url && (
+          <div className="bg-white border border-[#E5E7EB] rounded-[20px] overflow-hidden"
+            style={{ boxShadow: 'rgba(0,0,0,0.04) 0px 2px 8px' }}>
+            <video
+              src={pg.video.url}
+              controls
+              className="w-full max-h-72 object-cover"
+              preload="metadata"
+            />
+          </div>
+        )}
+
         {/* PG Info */}
         <div className="bg-white border border-[#E5E7EB] rounded-[20px] p-5 space-y-5"
           style={{ boxShadow: 'rgba(0,0,0,0.05) 0px 4px 16px' }}>
@@ -357,6 +418,23 @@ export default function PGDetailPage() {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
+              {pg.likesEnabled && (
+                <button
+                  onClick={handleLike}
+                  disabled={liking}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-full border-2 transition-all duration-200 ${
+                    liked
+                      ? 'bg-[#fff3ee] border-[#e98a76] text-[#e98a76]'
+                      : 'border-[#E5E7EB] text-[#9ca3af] hover:border-[#e98a76] hover:text-[#e98a76]'
+                  }`}
+                  title={liked ? 'Unlike' : 'Like'}
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2}>
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                  </svg>
+                  {likesCount > 0 && <span className="text-xs font-semibold">{likesCount}</span>}
+                </button>
+              )}
               <button
                 onClick={() => toggleSave(pg._id)}
                 className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-200 btn-glow ${
@@ -456,6 +534,12 @@ export default function PGDetailPage() {
                   {FOOD_LABELS[pg.foodType]}
                 </span>
               )}
+              {pg.separateKitchenAvailable && (
+                <span className="inline-flex items-center gap-1 text-xs bg-blue-50 border border-blue-200 text-blue-700 rounded-full px-3 py-1 font-medium">
+                  <span className="material-symbols-outlined" style={{ fontSize: '13px', fontVariationSettings: "'FILL' 1" }}>kitchen</span>
+                  Separate kitchen
+                </span>
+              )}
             </div>
           )}
 
@@ -540,14 +624,14 @@ export default function PGDetailPage() {
               <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-black/05 rounded-full blur-lg pointer-events-none" />
 
               <div className="relative">
-                <h2 className="text-white font-bold text-base mb-0.5 leading-tight">Apply for Admission</h2>
+                <h2 className="text-white font-bold text-base mb-0.5 leading-tight">Connect to PG</h2>
                 <p className="text-white/70 text-xs mb-4 leading-relaxed">Submit a request — the owner will review and respond.</p>
                 <Link
                   to={`/user/pgs/${id}/apply`}
                   className="inline-flex items-center gap-2 bg-white text-[#c0431e] text-sm font-bold px-6 py-2.5 rounded-[12px] hover:bg-[#fff3ee] active:scale-[0.97] transition-all"
                   style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }}
                 >
-                  Apply Now
+                  Connect to PG
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
@@ -556,6 +640,79 @@ export default function PGDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Schedule Visit */}
+        <div className="bg-white border border-[#E5E7EB] rounded-[20px] p-5"
+          style={{ boxShadow: 'rgba(0,0,0,0.04) 0px 2px 8px' }}>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-[#1b1c1c]">Schedule a Visit</p>
+              <p className="text-xs text-[#73787a] mt-0.5">Request an in-person visit to this PG.</p>
+            </div>
+            <button
+              onClick={() => { setVisitModalOpen(true); setVisitSubmitted(false) }}
+              className="flex-shrink-0 bg-[#f6f3f2] hover:bg-[#eae8e7] text-[#434849] text-sm font-semibold px-4 py-2 rounded-[10px] transition-colors border border-[#E5E7EB]"
+            >
+              Schedule Visit
+            </button>
+          </div>
+        </div>
+
+        {/* Visit modal */}
+        {visitModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-[#1b1c1c]">Schedule a Visit</h3>
+                <button onClick={() => setVisitModalOpen(false)} className="text-[#73787a] hover:text-[#1b1c1c] p-1">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              {visitSubmitted ? (
+                <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-100 rounded-xl px-4 py-3">
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                  Visit request sent! The owner will be in touch.
+                </div>
+              ) : (
+                <form onSubmit={handleScheduleVisit} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-[#73787a] uppercase tracking-widest mb-1.5">Preferred Date</label>
+                    <input
+                      type="date"
+                      value={visitDate}
+                      onChange={e => setVisitDate(e.target.value)}
+                      min={(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })()}
+                      required
+                      className="w-full border border-[#E5E7EB] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e98a76] focus:border-[#e98a76] bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-[#73787a] uppercase tracking-widest mb-1.5">Preferred Time</label>
+                    <input
+                      type="time"
+                      value={visitTime}
+                      onChange={e => setVisitTime(e.target.value)}
+                      required
+                      className="w-full border border-[#E5E7EB] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e98a76] focus:border-[#e98a76] bg-white"
+                    />
+                  </div>
+                  <div className="flex gap-3 pt-1">
+                    <button type="button" onClick={() => setVisitModalOpen(false)}
+                      className="flex-1 border border-[#E5E7EB] text-[#434849] hover:bg-[#f6f3f2] text-sm font-medium py-2.5 rounded-xl transition-colors">
+                      Cancel
+                    </button>
+                    <button type="submit" disabled={visitLoading || !visitDate || !visitTime}
+                      className="flex-1 bg-[#e98a76] hover:opacity-90 disabled:opacity-50 text-white text-sm font-semibold py-2.5 rounded-xl transition-all">
+                      {visitLoading ? 'Submitting…' : 'Send Request'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Testimonials */}
         <div className="bg-white border border-[#E5E7EB] rounded-[20px] p-5 space-y-4"

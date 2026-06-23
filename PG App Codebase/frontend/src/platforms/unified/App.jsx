@@ -29,6 +29,8 @@ import OwnerTestimonialsPage from './pages/pgowner/TestimonialsPage'
 import OwnerPhotosPage from './pages/pgowner/PhotosPage'
 import OwnerLocationPage from './pages/pgowner/LocationPage'
 import OwnerDetailsPage from './pages/pgowner/DetailsPage'
+import OwnerVisitsPage from './pages/pgowner/VisitsPage'
+import OwnerLeadsPage from './pages/pgowner/LeadsPage'
 import AdminTestimonialsPage from './pages/AdminTestimonialsPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminOnboardingReviewPage from './pages/AdminOnboardingReviewPage'
@@ -96,6 +98,8 @@ export default function App() {
                     <Route path="/pgowner/location"   element={<OwnerLocationPage />} />
                     <Route path="/pgowner/capacity"   element={<Navigate to="/pgowner/details" replace />} />
                     <Route path="/pgowner/details"    element={<OwnerDetailsPage />} />
+                    <Route path="/pgowner/visits"     element={<OwnerVisitsPage />} />
+                    <Route path="/pgowner/leads"      element={<OwnerLeadsPage />} />
                   </Route>
                 </Route>
               </Route>

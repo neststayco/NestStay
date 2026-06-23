@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { getAllOwners, createOwner, updateOwner, resetOwnerPassword } from '@shared/api/owners'
 import { getPGList } from '@shared/api/pgs'
 import { useToast } from '@shared/components/Toast'
@@ -51,19 +51,19 @@ function CreateOwnerModal({ pgs, onClose, onCreated }) {
         <div className="px-6 py-5 space-y-4">
           {error && <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2.5 rounded-lg text-sm">{error}</div>}
           <div>
-            <label className="block text-[10px] font-bold text-[#73787a] uppercase tracking-widest mb-1.5">Name</label>
+            <label className="block text-xs font-bold text-[#73787a] uppercase tracking-widest mb-1.5">Name</label>
             <input className={inputCls} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Owner name" />
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-[#73787a] uppercase tracking-widest mb-1.5">Email</label>
+            <label className="block text-xs font-bold text-[#73787a] uppercase tracking-widest mb-1.5">Email</label>
             <input type="email" className={inputCls} value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="owner@example.com" />
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-[#73787a] uppercase tracking-widest mb-1.5">Temp Password</label>
+            <label className="block text-xs font-bold text-[#73787a] uppercase tracking-widest mb-1.5">Temp Password</label>
             <input type="password" className={inputCls} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Min 6 characters" />
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-[#73787a] uppercase tracking-widest mb-1.5">Link to PG</label>
+            <label className="block text-xs font-bold text-[#73787a] uppercase tracking-widest mb-1.5">Link to PG</label>
             <select className={`${inputCls} bg-white`} value={form.pgId} onChange={e => setForm(f => ({ ...f, pgId: e.target.value }))}>
               <option value="">Select a PG…</option>
               {pgs.map(pg => (
@@ -120,7 +120,7 @@ function ResetPasswordModal({ owner, onClose }) {
           <p className="text-sm text-[#434849]">Set a new password for <strong>{owner.name}</strong>.</p>
           {error && <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2.5 rounded-lg text-sm">{error}</div>}
           <div>
-            <label className="block text-[10px] font-bold text-[#73787a] uppercase tracking-widest mb-1.5">New Password</label>
+            <label className="block text-xs font-bold text-[#73787a] uppercase tracking-widest mb-1.5">New Password</label>
             <input type="password" className={inputCls} value={password} onChange={e => setPassword(e.target.value)} placeholder="Min 6 characters" />
           </div>
           <p className="text-xs text-[#73787a]">Inform the owner of their new password manually — no email is sent.</p>
@@ -172,7 +172,7 @@ function ReassignModal({ owner, pgs, onClose, onUpdated }) {
           <p className="text-sm text-[#434849]">Change which PG <strong>{owner.name}</strong> manages.</p>
           {error && <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2.5 rounded-lg text-sm">{error}</div>}
           <div>
-            <label className="block text-[10px] font-bold text-[#73787a] uppercase tracking-widest mb-1.5">PG</label>
+            <label className="block text-xs font-bold text-[#73787a] uppercase tracking-widest mb-1.5">PG</label>
             <select className={`${inputCls} bg-white`} value={pgId} onChange={e => setPgId(e.target.value)}>
               <option value="">No PG (unlinked)</option>
               {pgs.map(pg => (
@@ -194,25 +194,30 @@ function ReassignModal({ owner, pgs, onClose, onUpdated }) {
 
 export default function OwnersPage() {
   const [owners, setOwners] = useState([])
+  const [pagination, setPagination] = useState(null)
   const [pgs, setPgs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [is403, setIs403] = useState(false)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [page, setPage] = useState(1)
   const [createOpen, setCreateOpen] = useState(false)
   const [resetTarget, setResetTarget] = useState(null)
   const [reassignTarget, setReassignTarget] = useState(null)
+  const searchTimer = useRef(null)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (searchVal, pageVal) => {
     setLoading(true)
     setError('')
     setIs403(false)
     try {
       const [ownersRes, pgsRes] = await Promise.all([
-        getAllOwners(),
+        getAllOwners({ page: pageVal, limit: 20, search: searchVal }),
         getPGList({ limit: 100 }),
       ])
       setOwners(ownersRes.data)
+      setPagination(ownersRes.pagination)
       setPgs(pgsRes.data)
     } catch (err) {
       if (err.response?.status === 403) {
@@ -226,35 +231,43 @@ export default function OwnersPage() {
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { load(debouncedSearch, page) }, [load, debouncedSearch, page])
+
+  function handleSearchChange(e) {
+    const val = e.target.value
+    setSearch(val)
+    setPage(1)
+    clearTimeout(searchTimer.current)
+    searchTimer.current = setTimeout(() => setDebouncedSearch(val), 400)
+  }
+
+  function clearSearch() {
+    setSearch('')
+    setDebouncedSearch('')
+    setPage(1)
+  }
 
   function handleCreated(owner) {
     setOwners(prev => [owner, ...prev])
+    setPagination(prev => prev ? { ...prev, totalItems: prev.totalItems + 1 } : prev)
   }
 
   function handleUpdated(owner) {
     setOwners(prev => prev.map(o => o._id === owner._id ? owner : o))
   }
 
-  const q = search.trim().toLowerCase()
-  const filteredOwners = q
-    ? owners.filter(o =>
-        o.name?.toLowerCase().includes(q) ||
-        o.email?.toLowerCase().includes(q) ||
-        o.pgId?.name?.toLowerCase().includes(q)
-      )
-    : owners
-
   return (
-    <div className="p-6">
+    <div className="p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#1b1c1c]">PG Owners</h1>
-          <p className="text-[#73787a] text-sm mt-0.5">Manage owner accounts and their PG assignments</p>
+          <h1 className="text-2xl font-semibold text-[#1b1c1c]">PG Owners</h1>
+          <p className="text-[#73787a] text-sm mt-0.5">
+            {loading ? 'Loading…' : pagination ? `${pagination.totalItems} owner account${pagination.totalItems !== 1 ? 's' : ''}` : 'Manage owner accounts and their PG assignments'}
+          </p>
         </div>
         <button
           onClick={() => setCreateOpen(true)}
-          className="flex items-center gap-2 bg-[#e98a76] hover:opacity-90 text-white text-sm font-semibold px-4 py-2.5 rounded-[10px] transition-all"
+          className="flex items-center gap-2 bg-[#e98a76] hover:opacity-90 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -270,12 +283,12 @@ export default function OwnersPage() {
         <input
           type="text"
           value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search by name, email or PG…"
+          onChange={handleSearchChange}
+          placeholder="Search by name or email…"
           className="w-full pl-9 pr-8 py-2 text-sm border border-[#E5E7EB] rounded-xl bg-[#fbf9f8] focus:outline-none focus:ring-2 focus:ring-[#e98a76]/40 focus:border-[#e98a76] text-[#1b1c1c] placeholder-[#9ca3af]"
         />
         {search && (
-          <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#b0b0b0] hover:text-[#434849] transition-colors">
+          <button onClick={clearSearch} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#b0b0b0] hover:text-[#434849] transition-colors">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -292,7 +305,7 @@ export default function OwnersPage() {
           <span>{error}</span>
           {!is403 && (
             <button
-              onClick={load}
+              onClick={() => load(debouncedSearch, page)}
               className="text-xs font-semibold underline underline-offset-2 whitespace-nowrap hover:no-underline"
             >
               Retry
@@ -301,37 +314,40 @@ export default function OwnersPage() {
         </div>
       )}
 
-      <div className="bg-white border border-[#E5E7EB] rounded-[20px] overflow-hidden" style={{ boxShadow: 'rgba(0,0,0,0.04) 0px 2px 8px, rgba(0,0,0,0.02) 0px 0px 1px' }}>
-        <div className="overflow-x-auto">
+      <div className="bg-white border border-[#e0e0e0] rounded-2xl overflow-hidden shadow-card">
+        <div className="overflow-x-auto overflow-y-auto max-h-[520px]">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[#f0f0f0] bg-[#f6f3f2]">
-                <th className="px-4 py-3 text-left text-[10px] font-bold text-[#73787a] uppercase tracking-widest">Owner</th>
-                <th className="px-4 py-3 text-left text-[10px] font-bold text-[#73787a] uppercase tracking-widest">PG</th>
-                <th className="px-4 py-3 text-left text-[10px] font-bold text-[#73787a] uppercase tracking-widest">City</th>
-                <th className="px-4 py-3 text-left text-[10px] font-bold text-[#73787a] uppercase tracking-widest">Created</th>
+            <thead className="sticky top-0 z-10 bg-[#f6f3f2]">
+              <tr className="border-b border-[#e5e5e5]">
+                <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">Owner</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">PG</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">City</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-[#73787a] uppercase tracking-widest">Created</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             {loading
               ? <SkeletonTable rows={5} cols={5} />
-              : <tbody className="divide-y divide-[#f6f6f6]">
-                  {filteredOwners.length === 0
+              : <tbody className="divide-y divide-[#e5e5e5]">
+                  {owners.length === 0
                     ? (
                       <tr>
-                        <td colSpan={5} className="text-center py-12">
-                          <p className="text-[#73787a] text-sm font-medium">
-                            {search ? 'No owners match your search' : 'No owner accounts yet'}
-                          </p>
-                          <p className="text-[#b0b0b0] text-xs mt-1">
-                            {search ? 'Try a different name or email' : 'Create the first owner to link them to a PG'}
-                          </p>
+                        <td colSpan={5} className="text-center py-6">
+                          <div className="flex flex-col items-center gap-2">
+                            <span className="text-2xl">🏠</span>
+                            <p className="text-sm font-medium text-[#1b1c1c]">
+                              {search ? 'No owners match your search' : 'No owner accounts yet'}
+                            </p>
+                            <p className="text-xs text-[#73787a]">
+                              {search ? 'Try a different name or email' : 'Create the first owner to link them to a PG'}
+                            </p>
+                          </div>
                         </td>
                       </tr>
                     )
-                    : filteredOwners.map(owner => (
-                  <tr key={owner._id} className="hover:bg-[#fbf9f8] transition-colors">
-                    <td className="px-4 py-3.5">
+                    : owners.map(owner => (
+                  <tr key={owner._id} className="hover:bg-[#fbf9f8] transition-colors duration-150">
+                    <td className="px-4 py-2">
                       <div className="font-medium text-[#1b1c1c]">{owner.name}</div>
                       <div className="flex items-center gap-1 mt-0.5">
                         <span className="text-xs text-[#73787a]">{owner.email}</span>
@@ -339,33 +355,33 @@ export default function OwnersPage() {
                       </div>
                       {owner._id && (
                         <div className="flex items-center gap-1 mt-0.5">
-                          <span className="text-[10px] text-[#b0b0b0] font-mono">{owner._id}</span>
+                          <span className="text-xs text-[#b0b0b0] font-mono">{owner._id}</span>
                           <CopyButton value={owner._id} />
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3.5 text-[#434849]">
+                    <td className="px-4 py-2 text-[#434849]">
                       {owner.pgId?.name || <span className="text-[#73787a] italic">Unlinked</span>}
                     </td>
-                    <td className="px-4 py-3.5 text-[#73787a]">
+                    <td className="px-4 py-2 text-[#73787a]">
                       {owner.pgId?.location?.city || '—'}
                     </td>
-                    <td className="px-4 py-3.5 text-[#73787a] text-xs">
+                    <td className="px-4 py-2 text-[#73787a] text-xs">
                       {owner.createdAt
                         ? <RelativeTime timestamp={owner.createdAt} />
                         : '—'}
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-4 py-2">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => setReassignTarget(owner)}
-                          className="text-xs font-medium px-3 py-1.5 bg-[#f6f3f2] hover:bg-[#eae8e7] text-[#434849] rounded-lg transition-colors"
+                          className="text-xs font-medium px-3 py-1.5 bg-[#f6f3f2] hover:bg-[#eae8e7] text-[#434849] rounded-xl transition-colors"
                         >
                           Edit PG
                         </button>
                         <button
                           onClick={() => setResetTarget(owner)}
-                          className="text-xs font-medium px-3 py-1.5 bg-[#fff3ee] hover:bg-[#ffdbd0] text-[#c0431e] border border-[#ffdbd0] rounded-lg transition-colors"
+                          className="text-xs font-medium px-3 py-1.5 bg-[#fff3ee] hover:bg-[#ffdbd0] text-[#c0431e] border border-[#ffdbd0] rounded-xl transition-colors"
                         >
                           Reset Password
                         </button>
@@ -378,6 +394,30 @@ export default function OwnersPage() {
             }
           </table>
         </div>
+
+        {pagination && pagination.totalPages > 1 && (
+          <div className="px-4 py-2 border-t border-[#f0f0f0] flex items-center justify-between text-sm">
+            <span className="text-[#73787a] text-xs">
+              Page {pagination.currentPage} of {pagination.totalPages}
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="px-3 py-1.5 border border-[#E5E7EB] rounded-xl text-[#434849] hover:bg-[#f6f3f2] disabled:opacity-40 text-xs font-medium transition-colors duration-150"
+              >
+                Prev
+              </button>
+              <button
+                onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+                disabled={page >= pagination.totalPages}
+                className="px-3 py-1.5 border border-[#E5E7EB] rounded-xl text-[#434849] hover:bg-[#f6f3f2] disabled:opacity-40 text-xs font-medium transition-colors duration-150"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {createOpen && <CreateOwnerModal pgs={pgs} onClose={() => setCreateOpen(false)} onCreated={handleCreated} />}

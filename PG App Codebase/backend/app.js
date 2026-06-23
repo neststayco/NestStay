@@ -13,6 +13,9 @@ import adminRoutes from "./src/routes/admin.routes.js";
 import admissionRoutes from "./src/routes/admission.routes.js";
 import userRoutes from "./src/routes/user.routes.js";
 import onboardingRoutes from "./src/routes/onboarding.routes.js";
+import termsRoutes from "./src/routes/terms.routes.js";
+import visitRoutes from "./src/routes/visit.routes.js";
+import leadRoutes from "./src/routes/lead.routes.js";
 import requestLogger from "./src/middleware/requestLogger.middleware.js";
 import Logger from "./src/services/logger.service.js";
 
@@ -82,6 +85,9 @@ app.use("/api/testimonials", testimonialRoutes);
 app.use("/api/imagekit", imagekitRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/onboarding", onboardingRoutes);
+app.use("/api/terms", termsRoutes);
+app.use("/api/visits", visitRoutes);
+app.use("/api/leads", leadRoutes);
 
 app.use((req, res, next) => {
   res.status(404).json({ message: "Route not found" });

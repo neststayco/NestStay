@@ -114,13 +114,13 @@ export default function OwnerAdmissionsPage() {
 
       <TableWrapper>
         <table className="w-full text-sm">
-          <thead className="border-b border-[#f0f0f0]">
+          <thead className="sticky top-0 z-10 bg-[#f6f3f2] border-b border-[#f0f0f0]">
             <tr>
               <th className="px-4 py-3 text-left text-[10px] font-semibold text-[#73787a] uppercase tracking-wider bg-[#f6f3f2]">Guest</th>
               <th className="px-4 py-3 text-left text-[10px] font-semibold text-[#73787a] uppercase tracking-wider bg-[#f6f3f2]">Move-in note</th>
               <th className="px-4 py-3 text-left text-[10px] font-semibold text-[#73787a] uppercase tracking-wider bg-[#f6f3f2]">Applied</th>
               <th className="px-4 py-3 text-left text-[10px] font-semibold text-[#73787a] uppercase tracking-wider bg-[#f6f3f2]">Status</th>
-              <th className="px-4 py-3 bg-[#f6f3f2]" />
+              <th className="w-[160px] px-4 py-3 bg-[#f6f3f2]" />
             </tr>
           </thead>
           {loading
@@ -148,30 +148,28 @@ export default function OwnerAdmissionsPage() {
                     <p className="truncate text-sm">{adm.moveInNote || <span className="italic text-[#b0b0b0]">—</span>}</p>
                   </td>
                   <td className="px-4 py-3.5 text-[#73787a] text-xs whitespace-nowrap">
-                    {new Date(adm.createdAt).toLocaleDateString()}
+                    {new Date(adm.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </td>
                   <td className="px-4 py-3.5">
                     <StatusBadge status={adm.status} />
                   </td>
-                  <td className="px-4 py-3.5 text-right">
-                    {adm.status === 'pending' && (
-                      <div className="flex items-center gap-2 justify-end">
-                        <button
-                          onClick={() => handleDecide(adm._id, 'rejected')}
-                          disabled={adm._deciding}
-                          className="text-xs px-3 py-1.5 border border-[#E5E7EB] hover:border-red-200 hover:bg-red-50 hover:text-red-600 text-[#73787a] rounded-lg font-medium disabled:opacity-40 transition-colors"
-                        >
-                          Reject
-                        </button>
-                        <button
-                          onClick={() => handleDecide(adm._id, 'approved')}
-                          disabled={adm._deciding}
-                          className="text-xs px-3 py-1.5 bg-[#e98a76] hover:opacity-90 text-white rounded-lg font-semibold disabled:opacity-40 transition-all"
-                        >
-                          {adm._deciding ? '…' : 'Approve'}
-                        </button>
-                      </div>
-                    )}
+                  <td className="px-4 py-3.5 w-[160px] text-right">
+                    <div className={`flex items-center gap-2 justify-end ${adm.status !== 'pending' ? 'invisible pointer-events-none' : ''}`}>
+                      <button
+                        onClick={() => handleDecide(adm._id, 'rejected')}
+                        disabled={adm._deciding}
+                        className="min-w-[60px] text-xs px-3 py-1.5 border border-[#E5E7EB] hover:border-red-200 hover:bg-red-50 hover:text-red-600 text-[#73787a] rounded-lg font-medium disabled:opacity-40 transition-colors"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        onClick={() => handleDecide(adm._id, 'approved')}
+                        disabled={adm._deciding}
+                        className="min-w-[72px] text-xs px-3 py-1.5 bg-[#e98a76] hover:opacity-90 text-white rounded-lg font-semibold disabled:opacity-40 transition-all"
+                      >
+                        {adm._deciding ? '…' : 'Approve'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

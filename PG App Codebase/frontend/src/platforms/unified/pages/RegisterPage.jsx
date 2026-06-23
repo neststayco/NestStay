@@ -45,6 +45,8 @@ export default function RegisterPage() {
   const [name, setName]           = useState('')
   const [password, setPassword]   = useState('')
   const [confirm, setConfirm]     = useState('')
+  const [phoneNumber, setPhoneNumber] = useState('')
+  const [area, setArea]           = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm]   = useState(false)
   const [fieldErrors, setFieldErrors]   = useState({})
@@ -126,6 +128,9 @@ export default function RegisterPage() {
     const errs = {}
     if (!otp.trim() || !/^\d{6}$/.test(otp.trim())) errs.otp = 'Enter the 6-digit OTP from your email.'
     if (!name.trim()) errs.name = 'Full name is required.'
+    if (!phoneNumber.trim()) errs.phoneNumber = 'Phone number is required.'
+    else if (!/^[6-9]\d{9}$/.test(phoneNumber.trim())) errs.phoneNumber = 'Enter a valid 10-digit Indian mobile number.'
+    if (!area.trim()) errs.area = 'Area / locality is required.'
     if (!password) errs.password = 'Password is required.'
     else if (password.length < MIN_PASSWORD_LEN) errs.password = `Password must be at least ${MIN_PASSWORD_LEN} characters.`
     if (!confirm) errs.confirm = 'Please confirm your password.'
@@ -141,7 +146,7 @@ export default function RegisterPage() {
     setFieldErrors({})
     setStep2Loading(true)
     try {
-      const res = await registerVerify(email.trim(), otp.trim(), name.trim(), password)
+      const res = await registerVerify(email.trim(), otp.trim(), name.trim(), password, phoneNumber.trim(), area.trim())
       toast('Account created! Welcome to Nest Stay.', 'success')
       flushSync(() => authLogin(res.accessToken, res.data))
       navigate('/user', { replace: true })
@@ -186,12 +191,17 @@ export default function RegisterPage() {
             <div className="flex items-center gap-2 mb-6">
               <div className={`flex items-center gap-1.5 text-xs font-medium ${step >= 1 ? 'text-[#e98a76]' : 'text-[#73787a]'}`}>
                 <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step >= 1 ? 'bg-[#e98a76] text-white' : 'bg-[#E5E7EB] text-[#73787a]'}`}>1</span>
-                Email
+                Create Account
               </div>
               <div className="flex-1 h-px bg-[#E5E7EB]" />
               <div className={`flex items-center gap-1.5 text-xs font-medium ${step >= 2 ? 'text-[#e98a76]' : 'text-[#73787a]'}`}>
                 <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step >= 2 ? 'bg-[#e98a76] text-white' : 'bg-[#E5E7EB] text-[#73787a]'}`}>2</span>
-                Verify &amp; set up
+                Browse PGs
+              </div>
+              <div className="flex-1 h-px bg-[#E5E7EB]" />
+              <div className="flex items-center gap-1.5 text-xs font-medium text-[#73787a]">
+                <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold bg-[#E5E7EB] text-[#73787a]">3</span>
+                Connect with PG
               </div>
             </div>
 
@@ -301,6 +311,52 @@ export default function RegisterPage() {
                   )}
                 </div>
 
+                {/* Phone number */}
+                <div>
+                  <label className="block text-sm font-semibold text-[#1b1c1c] mb-2" htmlFor="reg-phone">
+                    Phone number
+                  </label>
+                  <input
+                    id="reg-phone"
+                    type="tel"
+                    inputMode="numeric"
+                    value={phoneNumber}
+                    onChange={(e) => { setPhoneNumber(e.target.value.replace(/\D/g, '')); if (fieldErrors.phoneNumber) setFieldErrors(p => ({ ...p, phoneNumber: '' })) }}
+                    required
+                    autoComplete="tel"
+                    placeholder="9876543210"
+                    maxLength={10}
+                    className={fieldErrors.phoneNumber ? inputErr : inputOk}
+                    aria-invalid={!!fieldErrors.phoneNumber}
+                    aria-describedby={fieldErrors.phoneNumber ? 'reg-phone-err' : undefined}
+                  />
+                  {fieldErrors.phoneNumber && (
+                    <p id="reg-phone-err" className="mt-1.5 text-xs text-red-600">{fieldErrors.phoneNumber}</p>
+                  )}
+                </div>
+
+                {/* Area / Locality */}
+                <div>
+                  <label className="block text-sm font-semibold text-[#1b1c1c] mb-2" htmlFor="reg-area">
+                    Area / Locality
+                  </label>
+                  <input
+                    id="reg-area"
+                    type="text"
+                    value={area}
+                    onChange={(e) => { setArea(e.target.value); if (fieldErrors.area) setFieldErrors(p => ({ ...p, area: '' })) }}
+                    required
+                    autoComplete="address-level2"
+                    placeholder="e.g. Kothrud, Pune"
+                    className={fieldErrors.area ? inputErr : inputOk}
+                    aria-invalid={!!fieldErrors.area}
+                    aria-describedby={fieldErrors.area ? 'reg-area-err' : undefined}
+                  />
+                  {fieldErrors.area && (
+                    <p id="reg-area-err" className="mt-1.5 text-xs text-red-600">{fieldErrors.area}</p>
+                  )}
+                </div>
+
                 {/* Password */}
                 <div>
                   <label className="block text-sm font-semibold text-[#1b1c1c] mb-2" htmlFor="reg-password">
@@ -375,7 +431,7 @@ export default function RegisterPage() {
 
                 <button
                   type="button"
-                  onClick={() => { setStep(1); setError(''); setFieldErrors({}); setOtp(''); setName(''); setPassword(''); setConfirm('') }}
+                  onClick={() => { setStep(1); setError(''); setFieldErrors({}); setOtp(''); setName(''); setPassword(''); setConfirm(''); setPhoneNumber(''); setArea('') }}
                   className="w-full text-sm text-[#73787a] hover:text-[#1b1c1c] transition-colors py-1"
                 >
                   ← Change email address

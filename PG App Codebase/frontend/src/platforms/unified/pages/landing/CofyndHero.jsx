@@ -1,7 +1,8 @@
 
 
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '@shared/context/AuthContext'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -213,10 +214,12 @@ export function CofyndNavbar({ user }) {
 export function CofyndHeroSection() {
   const [lookingFor, setLookingFor] = useState('')
   const [selectedLocality, setSelectedLocality] = useState('')
+  const { user } = useAuth()
+  const navigate = useNavigate()
 
   function handleSearch(e) {
     e.preventDefault()
-    window.location.assign('/login')
+    navigate(user ? '/user' : '/login')
   }
 
   return (
@@ -401,10 +404,12 @@ function FilterDropdown({ value, onChange, placeholder, options }) {
 // ─── Locality Cell ────────────────────────────────────────────────────────────
 
 function LocalityCell({ name, icon }) {
+  const { user } = useAuth()
+  const navigate = useNavigate()
   return (
     <button
       type="button"
-      onClick={() => window.location.assign('/login')}
+      onClick={() => navigate(user ? `/user?city=Pune&area=${encodeURIComponent(name)}` : '/login')}
       className="flex flex-col items-center gap-2 group focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2 rounded-lg"
       title={`Browse PGs in ${name}`}
     >

@@ -19,7 +19,7 @@ const GENDER_OPTIONS = [
   { value: '', label: 'Any gender' },
   { value: 'male', label: 'Male' },
   { value: 'female', label: 'Female' },
-  { value: 'mixed', label: 'Mixed' },
+  { value: 'other', label: 'Other' },
 ]
 
 const FOOD_OPTIONS = [

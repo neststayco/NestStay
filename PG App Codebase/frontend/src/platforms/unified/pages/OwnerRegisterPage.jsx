@@ -178,20 +178,22 @@ export default function OwnerRegisterPage() {
             <div className="mb-6">
               <h1 className="text-[28px] font-bold text-[#1b1c1c] leading-tight">List Your PG on Nest Stay</h1>
               <p className="text-sm text-[#434849] mt-1">
-                {step === 1 ? 'Create your owner account to get started' : `We sent a 6-digit code to ${email}`}
+                {step === 1
+                ? "You're just a few steps away from listing your PG and reaching verified tenants."
+                : `We sent a 6-digit verification code to ${email}`}
               </p>
             </div>
 
             {/* Step indicator */}
             <div className="flex items-center gap-2 mb-6">
-              <div className={`flex items-center gap-1.5 text-xs font-medium ${step >= 1 ? 'text-[#e98a76]' : 'text-[#73787a]'}`}>
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step >= 1 ? 'bg-[#e98a76] text-white' : 'bg-[#E5E7EB] text-[#73787a]'}`}>1</span>
-                Email
+              <div className={`flex items-center gap-1.5 text-xs font-semibold ${step >= 1 ? 'text-[#e98a76]' : 'text-[#73787a]'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${step >= 1 ? 'bg-[#e98a76]' : 'bg-[#E5E7EB]'}`} />
+                Create Account
               </div>
               <div className="flex-1 h-px bg-[#E5E7EB]" />
-              <div className={`flex items-center gap-1.5 text-xs font-medium ${step >= 2 ? 'text-[#e98a76]' : 'text-[#73787a]'}`}>
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step >= 2 ? 'bg-[#e98a76] text-white' : 'bg-[#E5E7EB] text-[#73787a]'}`}>2</span>
-                Verify &amp; set up
+              <div className={`flex items-center gap-1.5 text-xs font-semibold ${step >= 2 ? 'text-[#e98a76]' : 'text-[#73787a]'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${step >= 2 ? 'bg-[#e98a76]' : 'bg-[#E5E7EB]'}`} />
+                Almost There
               </div>
             </div>
 

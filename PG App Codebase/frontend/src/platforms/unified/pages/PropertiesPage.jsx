@@ -192,7 +192,7 @@ export default function PropertiesPage() {
   }
   if (searchParams.get('gender')) {
     const g = searchParams.get('gender')
-    activeFilters.push({ key: 'gender', label: g === 'boys' ? 'Boys PG' : 'Girls PG' })
+    activeFilters.push({ key: 'gender', label: g === 'male' ? 'Male PG' : g === 'female' ? 'Female PG' : 'Other PG' })
   }
 
   const totalCount = pagination?.total ?? pgs.length
@@ -238,8 +238,9 @@ export default function PropertiesPage() {
               style={{ backgroundImage: SELECT_ARROW, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}
             >
               <option value="">Any Gender</option>
-              <option value="boys">Boys</option>
-              <option value="girls">Girls</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
             </select>
             <button
               onClick={applyFilters}

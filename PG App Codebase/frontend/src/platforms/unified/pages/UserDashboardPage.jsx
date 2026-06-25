@@ -9,6 +9,7 @@ import { useAuth } from '@shared/context/AuthContext'
 import { normalizeAdmission } from '@shared/utils/normalizeAdmission'
 import { useToast } from '@shared/components/Toast'
 import { SkeletonBase } from '@shared/components/Skeleton'
+import { usePWAInstall } from '@shared/hooks/usePWAInstall'
 
 const SORT_OPTIONS = [
   { value: '', label: 'Newest first' },
@@ -19,7 +20,7 @@ const GENDER_OPTIONS = [
   { value: '', label: 'Any gender' },
   { value: 'male', label: 'Male' },
   { value: 'female', label: 'Female' },
-  { value: 'mixed', label: 'Mixed' },
+  { value: 'other', label: 'Other' },
 ]
 
 const FOOD_OPTIONS = [
@@ -38,6 +39,7 @@ const AMENITY_OPTIONS = [
 export default function UserDashboardPage() {
   const { isAdmitted, admissionLoaded, currentAdmission, setCurrentAdmission, savedPGIds, toggleSave } = useAuth()
   const toast = useToast()
+  const { canInstall, promptInstall } = usePWAInstall()
   const [withdrawing, setWithdrawing] = useState(false)
   const [checking, setChecking] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
@@ -313,6 +315,28 @@ export default function UserDashboardPage() {
             </div>
           </div>
         </div>
+
+        {canInstall && (
+          <div className="flex items-center justify-between gap-3 bg-[#fff3ee] border border-[#ffdbd0] rounded-2xl px-5 py-3.5 mb-5">
+            <div className="flex items-center gap-2.5">
+              <span className="w-8 h-8 rounded-full bg-[#FF5A1F] flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 16V4M8 12l4 4 4-4" /><path d="M4 20h16" />
+                </svg>
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-[#1b1c1c]">Install Nest Stay</p>
+                <p className="text-xs text-[#73787a]">Add to your home screen for quick access</p>
+              </div>
+            </div>
+            <button
+              onClick={promptInstall}
+              className="flex-shrink-0 text-xs font-semibold px-4 py-2 rounded-full bg-[#FF5A1F] text-white hover:bg-[#e04e18] transition-colors"
+            >
+              Install
+            </button>
+          </div>
+        )}
 
         {currentAdmission && currentAdmission.status === 'pending' && (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-5 flex items-start justify-between gap-4">

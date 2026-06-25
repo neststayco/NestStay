@@ -4,12 +4,14 @@ import OwnerSidebar from './OwnerSidebar'
 import { useAuth } from '@shared/context/AuthContext'
 import { getPGAdmissions } from '@shared/api/admissions'
 import { getPGDetails } from '@shared/api/pgs'
+import { usePWAInstall } from '@shared/hooks/usePWAInstall'
 
 export default function OwnerLayout() {
   const { user } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
   const [pgName, setPgName] = useState(null)
+  const { canInstall, promptInstall } = usePWAInstall()
 
   useEffect(() => {
     getPGAdmissions({ status: 'pending', limit: 1 })
@@ -61,12 +63,39 @@ export default function OwnerLayout() {
             </svg>
           </button>
           <img src="/logo.png" alt="Nest Stay" className="h-9 w-auto" />
-          <span className="text-sm font-semibold text-[#1b1c1c] truncate">
+          <span className="text-sm font-semibold text-[#1b1c1c] truncate flex-1">
             {pgName || 'Owner Portal'}
           </span>
+          {canInstall && (
+            <button
+              onClick={promptInstall}
+              className="flex-shrink-0 flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-[#FF5A1F] text-white hover:bg-[#e04e18] transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 16V4M8 12l4 4 4-4" /><path d="M4 20h16" />
+              </svg>
+              Install
+            </button>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto">
+          {canInstall && (
+            <div className="hidden md:flex items-center justify-between gap-3 px-6 py-2.5 bg-[#fff3ee] border-b border-[#ffdbd0]">
+              <div className="flex items-center gap-2 text-sm text-[#c0431e]">
+                <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12" y2="18.01" />
+                </svg>
+                <span className="font-medium">Install Nest Stay on your device for faster access</span>
+              </div>
+              <button
+                onClick={promptInstall}
+                className="flex-shrink-0 text-xs font-semibold px-4 py-1.5 rounded-full bg-[#FF5A1F] text-white hover:bg-[#e04e18] transition-colors"
+              >
+                Install App
+              </button>
+            </div>
+          )}
           <Outlet />
         </div>
       </div>

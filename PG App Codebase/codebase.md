@@ -133,16 +133,21 @@ A backend API for a **PG (Paying Guest accommodation) discovery and complaint ma
 React 18 + Vite + Tailwind CSS. Single app serving all three roles with role-based routing. Mobile-responsive throughout.
 Shared code lives in `frontend/src/shared/` and is accessed via the `@shared` path alias across both platforms.
 
+**PWA (Selective):** `vite-plugin-pwa` active in unified build. SW registered in `main.jsx` via `virtual:pwa-register` (production only). Admin routes excluded from SW navigation fallback via `navigateFallbackDenylist: [/^\/admin/]`. Runtime caching: auth/admin APIs → `NetworkOnly`; PG listings/testimonials → `StaleWhileRevalidate`; all other private APIs → `NetworkFirst`. Install prompt surfaces in `UserDashboardPage` and `OwnerLayout` via `usePWAInstall` hook. PWA icons (`icon-192.png`, `icon-512.png`) not yet generated — installability blocked until provided.
+
 **Public screens**
 
 | Screen | Route | Status |
 |---|---|---|
 | Landing page (live PG cards + testimonials from API) | `/` | ✅ Complete |
+| Public PG browse | `/properties` | ✅ Complete |
+| Public PG detail | `/properties/:id` | ✅ Complete |
 | Login (role-based redirect after auth) | `/login` | ✅ Complete |
 | Register (OTP email verification flow) | `/register` | ✅ Complete |
+| PG Owner registration | `/owner/register` | ✅ Complete |
 | Forgot Password (OTP → reset) | `/forgot-password` | ✅ Complete |
 
-**Admin screens** — sidebar layout (`Layout` + `Sidebar`)
+**Admin screens** — sidebar layout (`Layout` + `Sidebar`) — no PWA, no install prompt
 
 | Screen | Route | Status |
 |---|---|---|
@@ -153,38 +158,46 @@ Shared code lives in `frontend/src/shared/` and is accessed via the `@shared` pa
 | PG Owners (create, reset password, reassign PG) | `/admin/owners` | ✅ Complete |
 | Testimonials (approve/reject/visibility across all PGs) | `/admin/testimonials` | ✅ Complete |
 | Users (list user accounts, deactivate) | `/admin/users` | ✅ Complete |
+| Onboarding Review (review/approve/reject new PG owner applications) | `/admin/onboarding-review` | ✅ Complete |
 
-**User screens** — sticky `UserNavbar`
+**User screens** — sticky `UserNavbar` — PWA-enabled
 
 | Screen | Route | Status |
 |---|---|---|
-| PG Browse (keyword search + filter chips + amenity pills + pagination; pending admission banner with withdraw) | `/user` | ✅ Complete |
+| PG Browse (keyword search + filter chips + amenity pills + pagination; pending admission banner with withdraw; install prompt when PWA installable) | `/user` | ✅ Complete |
+| Saved PGs | `/user/saved` | ✅ Complete |
 | PG Detail (gallery with arrows/dots, pricing stat blocks, amenity tags with icons, dominant Apply CTA, resident reviews) | `/user/pgs/:id` | ✅ Complete |
 | Admission Form | `/user/pgs/:id/apply` | ✅ Complete |
 | Complaint Form (type, char counter, anon toggle) | `/user/pgs/:id/complaint` | ✅ Complete |
 | My PG (admitted resident dashboard + my complaints list) | `/user/my-pg` | ✅ Complete |
 
-**PG Owner screens** — sidebar layout (`OwnerLayout` + `OwnerSidebar` with pending count badge)
+**PG Owner screens** — sidebar layout (`OwnerLayout` + `OwnerSidebar` with pending count badge) — PWA-enabled
 
-| Screen | Route | Status |
-|---|---|---|
-| Dashboard (stat cards, PG info) | `/pgowner` | ✅ Complete |
-| Admissions (filter tabs, admit/reject/revoke with confirm dialog) | `/pgowner/admissions` | ✅ Complete |
-| Residents (current residents, revoke button) | `/pgowner/residents` | ✅ Complete |
-| Complaints (read-only view, verified-only filter) | `/pgowner/complaints` | ✅ Complete |
-| Testimonials (approve/reject/visibility for own PG) | `/pgowner/testimonials` | ✅ Complete |
-| Photos (image gallery management via ImageKit) | `/pgowner/photos` | ✅ Complete |
-| Location (map coordinates update) | `/pgowner/location` | ✅ Complete |
-| Capacity (total beds update) | `/pgowner/capacity` | ✅ Complete |
-| Details (description, pricing, amenities, food type) | `/pgowner/details` | ✅ Complete |
+Onboarding status gates the dashboard via `RequireOwnerApproved`. New owners go through onboarding → waiting-approval → approved before reaching the main dashboard.
 
-Shared infrastructure: auth context (with admission tracking), axios client with interceptors, Toast notifications, ErrorBoundary, role-based `RequireRole` guard.
+| Screen | Route | Auth | Status |
+|---|---|---|---|
+| Onboarding (submit PG details for review) | `/pgowner/onboarding` | `RequireRole` | ✅ Complete |
+| Waiting Approval | `/pgowner/waiting-approval` | `RequireRole` | ✅ Complete |
+| Rejected | `/pgowner/rejected` | `RequireRole` | ✅ Complete |
+| Dashboard (stat cards, PG info; install banner on desktop) | `/pgowner` | `RequireOwnerApproved` | ✅ Complete |
+| Admissions (filter tabs, admit/reject/revoke with confirm dialog) | `/pgowner/admissions` | `RequireOwnerApproved` | ✅ Complete |
+| Residents (current residents, revoke button) | `/pgowner/residents` | `RequireOwnerApproved` | ✅ Complete |
+| Complaints (read-only view, verified-only filter) | `/pgowner/complaints` | `RequireOwnerApproved` | ✅ Complete |
+| Testimonials (approve/reject/visibility for own PG) | `/pgowner/testimonials` | `RequireOwnerApproved` | ✅ Complete |
+| Photos (image gallery management via ImageKit) | `/pgowner/photos` | `RequireOwnerApproved` | ✅ Complete |
+| Location (map coordinates update) | `/pgowner/location` | `RequireOwnerApproved` | ✅ Complete |
+| Details (description, pricing, amenities, food type, capacity) | `/pgowner/details` | `RequireOwnerApproved` | ✅ Complete |
+| Visits (schedule/track property visits) | `/pgowner/visits` | `RequireOwnerApproved` | ✅ Complete |
+| Leads (prospective tenant lead management) | `/pgowner/leads` | `RequireOwnerApproved` | ✅ Complete |
+
+Shared infrastructure: auth context (with admission tracking), axios client with interceptors, Toast notifications, ErrorBoundary, role-based `RequireRole` + `RequireOwnerApproved` guards, `usePWAInstall` hook (user + owner only).
 
 ---
 
 ### ✅ Frontend — Student PWA (`frontend/`, `--mode student`, port 5173)
 
-Built from the same package as the unified app via `npm run dev:student` / `npm run build:student`. Output goes to `dist-student/`. Service worker registered only in student mode. Bundle is ~48% smaller than the unified build because all admin/owner/user-area code is tree-shaken out.
+Built from the same package as the unified app via `npm run dev:student` / `npm run build:student`. Output goes to `dist-student/`. Service worker auto-registered by VitePWA injection. Bundle is ~48% smaller than the unified build because all admin/owner/user-area code is tree-shaken out. Auth endpoints (`/api/auth/*`) explicitly set to `NetworkOnly` — never cached.
 
 ---
 
@@ -194,6 +207,8 @@ Built from the same package as the unified app via `npm run dev:student` / `npm 
 - [ ] Set `JWT_ACCESS_SECRET` + `JWT_REFRESH_SECRET` as real secrets in prod
 - [ ] Configure SMTP vars (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM_EMAIL`)
 - [ ] Set `ALLOWED_ORIGINS` to deployed domain(s)
+- [ ] Generate PWA icons: `public/icon-192.png`, `public/icon-512.png` (source: `logo.png`). Without these, Chrome/Safari install criteria fail silently.
+- [ ] Add `Cache-Control: no-store` header for `sw.js` and `manifest.json` at the hosting layer
 
 #### Testing
 - [ ] No test runner configured
@@ -220,9 +235,10 @@ Phase 2: MVP Build
   ├─ Unified Frontend (all three roles)     ✅ COMPLETE
   ├─ Frontend consolidation (shared code)   ✅ COMPLETE (single package, @shared alias)
   ├─ Polish — toasts, mobile, responsive    ✅ COMPLETE
+  ├─ Selective PWA (user + owner, not admin)✅ COMPLETE (icons still needed for install)
   └─ Notification wiring                    ⚠️  SMTP env vars needed in prod (dev: console log)
 Phase 3: Testing                            ❌ NOT STARTED
-Phase 4: Launch / Production hardening      ❌ NOT STARTED (CORS, security gaps, DevOps)
+Phase 4: Launch / Production hardening      ❌ NOT STARTED (CORS, security gaps, DevOps, PWA icons)
 ```
 
 ---
@@ -255,6 +271,7 @@ Phase 4: Launch / Production hardening      ❌ NOT STARTED (CORS, security gaps
 | `react-router-dom` v6 | Client-side routing with `<Outlet />` nested routes |
 | `axios` | HTTP client; request interceptor (Bearer token), response interceptor (401 → logout) |
 | `vite` + `@vitejs/plugin-react` | Build tool and dev server |
+| `vite-plugin-pwa` | Workbox-backed PWA: SW generation, runtime caching, manifest injection |
 | `tailwindcss` + `autoprefixer` + `postcss` | Utility-first CSS; custom `slide-in` animation in both configs |
 
 No TypeScript, no state management libraries (plain useState/useEffect), no component libraries.
@@ -284,10 +301,11 @@ PG App Codebase/
 │   ├── .env                         # VITE_API_URL=http://localhost:3000/api
 │   ├── index.html                   # single entry point for both modes
 │   ├── public/
-│   │   ├── manifest.json            # PWA manifest (student mode only)
-│   │   └── sw.js                    # Service worker — network-first, never caches /api/
+│   │   ├── manifest.json            # PWA manifest (both modes) — name, scope, theme_color #FF5A1F
+│   │   ├── icon-192.png             # ⚠️ MISSING — required for PWA installability
+│   │   └── icon-512.png             # ⚠️ MISSING — required for PWA installability
 │   └── src/
-│       ├── main.jsx                 # Entry: gates SW registration + dynamic platform import
+│       ├── main.jsx                 # Entry: SW registration for unified mode + dynamic platform import
 │       ├── index.css                # Poppins import + Tailwind directives
 │       ├── shared/                  # @shared alias — code shared by both platforms
 │       │   ├── api/
@@ -301,28 +319,39 @@ PG App Codebase/
 │       │   │   ├── owners.js        # getAllOwners, createOwner, updateOwner, resetOwnerPassword
 │       │   │   ├── testimonials.js  # getPublicTestimonials, getFeaturedTestimonials, createTestimonial,
 │       │   │   │                    # getMyTestimonials, getOwnerTestimonials, updateTestimonial, getAdminTestimonials
-│       │   │   └── imagekit.js      # getImageKitAuth (auth token for SDK uploads)
+│       │   │   ├── imagekit.js      # getImageKitAuth (auth token for SDK uploads)
+│       │   │   ├── leads.js         # lead management for pg_owner
+│       │   │   ├── visits.js        # visit scheduling/tracking for pg_owner
+│       │   │   ├── terms.js         # terms configuration for pg_owner
+│       │   │   ├── onboarding.js    # owner onboarding submission + admin review
+│       │   │   └── user.js          # getUserInteractions, toggleSave (saved PGs)
 │       │   ├── components/
 │       │   │   ├── PGCard.jsx       # basePath prop: '/pgs' (student) or '/user/pgs' (unified)
 │       │   │   ├── Toast.jsx        # ToastProvider + useToast()
 │       │   │   └── ErrorBoundary.jsx
+│       │   ├── hooks/
+│       │   │   ├── useOnline.js     # online/offline status detection
+│       │   │   └── usePWAInstall.js # beforeinstallprompt capture → { canInstall, promptInstall }
 │       │   └── context/
-│       │       └── AuthContext.jsx  # JWT + admission state (isAdmitted, admissionLoaded)
+│       │       └── AuthContext.jsx  # JWT + admission state (isAdmitted, admissionLoaded, updateUser)
 │       └── platforms/
 │           ├── unified/             # Loaded when MODE !== 'student'
 │           │   ├── App.jsx
 │           │   ├── components/
-│           │   │   ├── ProtectedRoute.jsx  # RequireRole — checks user.role
-│           │   │   ├── Layout.jsx          # Admin sidebar layout
+│           │   │   ├── ProtectedRoute.jsx  # RequireRole + RequireOwnerApproved
+│           │   │   ├── Layout.jsx          # Admin sidebar layout (no PWA)
 │           │   │   ├── Sidebar.jsx
-│           │   │   ├── OwnerLayout.jsx     # Owner sidebar layout (pending badge)
+│           │   │   ├── OwnerLayout.jsx     # Owner sidebar layout — install prompt (mobile topbar + desktop banner)
 │           │   │   ├── OwnerSidebar.jsx
 │           │   │   └── UserNavbar.jsx
 │           │   └── pages/
 │           │       ├── LandingPage.jsx
 │           │       ├── LoginPage.jsx
 │           │       ├── RegisterPage.jsx
+│           │       ├── OwnerRegisterPage.jsx
 │           │       ├── ForgotPasswordPage.jsx
+│           │       ├── PropertiesPage.jsx          # public PG browse
+│           │       ├── PropertyDetailPage.jsx      # public PG detail
 │           │       ├── DashboardPage.jsx           # admin
 │           │       ├── ComplaintsPage.jsx          # admin
 │           │       ├── PGManagementPage.jsx        # admin
@@ -330,13 +359,18 @@ PG App Codebase/
 │           │       ├── OwnersPage.jsx              # admin
 │           │       ├── AdminTestimonialsPage.jsx   # admin
 │           │       ├── AdminUsersPage.jsx          # admin
-│           │       ├── UserDashboardPage.jsx       # user — PG browse
+│           │       ├── AdminOnboardingReviewPage.jsx # admin — review new owner applications
+│           │       ├── UserDashboardPage.jsx       # user — PG browse + install prompt
 │           │       ├── user/
 │           │       │   ├── PGDetailPage.jsx
 │           │       │   ├── MyPGPage.jsx
+│           │       │   ├── SavedPGsPage.jsx
 │           │       │   ├── ComplaintFormPage.jsx
 │           │       │   └── AdmissionFormPage.jsx
 │           │       └── pgowner/
+│           │           ├── OnboardingPage.jsx      # new owner onboarding form
+│           │           ├── WaitingApprovalPage.jsx # post-submission status
+│           │           ├── RejectedPage.jsx
 │           │           ├── DashboardPage.jsx
 │           │           ├── AdmissionsPage.jsx
 │           │           ├── StudentsPage.jsx
@@ -344,8 +378,9 @@ PG App Codebase/
 │           │           ├── TestimonialsPage.jsx
 │           │           ├── PhotosPage.jsx
 │           │           ├── LocationPage.jsx
-│           │           ├── CapacityPage.jsx
-│           │           └── DetailsPage.jsx
+│           │           ├── DetailsPage.jsx         # merged capacity + details
+│           │           ├── VisitsPage.jsx
+│           │           └── LeadsPage.jsx
 │           └── student-pwa/         # Loaded when MODE === 'student'
 │               ├── App.jsx
 │               ├── components/
@@ -566,7 +601,10 @@ Two analytics endpoints (aggregation pipelines). `getGlobalStats` now returns ad
 Singleton `BackendEventEmitter`. `initializeEventHandlers()` is called at startup but registers no listeners currently. The framework is in place for future side effects (e.g. post-approval notifications).
 
 ### Frontend — Auth Context (`frontend/src/shared/context/AuthContext.jsx`)
-Extended beyond basic JWT storage. On mount (when token is present), fetches `GET /api/admissions/mine` and stores the result in `currentAdmission`. Exposes `isAdmitted` (boolean shorthand) and `admissionLoaded` (prevents flicker while fetching). Non-user roles get `null` admission silently. Used by user-area pages to determine PG admission state without a separate fetch.
+Extended beyond basic JWT storage. On mount (when token is present), fetches `GET /api/admissions/mine` and stores the result in `currentAdmission`. Exposes `isAdmitted` (boolean shorthand) and `admissionLoaded` (prevents flicker while fetching). Non-user roles get `null` admission silently. Used by user-area pages to determine PG admission state without a separate fetch. `updateUser(updates)` merges partial updates into the stored user without clearing the token — used after onboarding status changes.
+
+### Frontend — PWA Install Hook (`frontend/src/shared/hooks/usePWAInstall.js`)
+Captures the browser `beforeinstallprompt` event (fired when Chrome/Edge considers the app installable). Returns `{ canInstall, promptInstall }`. `canInstall` is `false` until the event fires — so the install UI is invisible by default. Calling `promptInstall()` triggers the native install dialog; on acceptance, `canInstall` resets to `false`. Cleans up on `appinstalled` event. Used only in `OwnerLayout` and `UserDashboardPage` — never imported in admin `Layout`.
 
 ---
 

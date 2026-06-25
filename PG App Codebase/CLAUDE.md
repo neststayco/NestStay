@@ -16,7 +16,7 @@ cd frontend && npm install && npm run dev
 cd frontend && npm run dev:student
 
 # Production builds
-cd frontend && npm run build          # → dist-unified/
+cd frontend && npm run build          # → dist-unified/  (script: "build")
 cd frontend && npm run build:student  # → dist-student/
 ```
 
@@ -74,6 +74,8 @@ HTTP → Helmet → CORS → cookieParser → requestLogger → generalLimiter
 Single Vite app serving all roles. After login, users are redirected to their role-specific area.
 Entry: `src/platforms/unified/App.jsx` — loaded by `src/main.jsx` when `MODE !== 'student'`.
 
+**PWA:** Enabled for user and owner areas. Admin routes excluded via `navigateFallbackDenylist: [/^\/admin/]` in `vite.config.js`. Service worker registered explicitly in `main.jsx` via `virtual:pwa-register` (production only). Install prompt available in `UserDashboardPage` and `OwnerLayout` via `usePWAInstall` hook — never rendered on admin routes.
+
 **Public routes**
 
 | Route | Component |
@@ -81,8 +83,12 @@ Entry: `src/platforms/unified/App.jsx` — loaded by `src/main.jsx` when `MODE !
 | `/` | `LandingPage` |
 | `/login` | `LoginPage` (redirects by role after auth) |
 | `/register` | `RegisterPage` |
+| `/owner/register` | `OwnerRegisterPage` |
+| `/forgot-password` | `ForgotPasswordPage` |
+| `/properties` | `PropertiesPage` (public PG browse) |
+| `/properties/:id` | `PropertyDetailPage` |
 
-**Admin area** — `RequireRole role="admin"` → `Layout` (sidebar)
+**Admin area** — `RequireRole role="admin"` → `Layout` (sidebar) — **no PWA, no install prompt**
 
 | Route | Component |
 |---|---|
@@ -93,49 +99,59 @@ Entry: `src/platforms/unified/App.jsx` — loaded by `src/main.jsx` when `MODE !
 | `/admin/owners` | `OwnersPage` |
 | `/admin/testimonials` | `AdminTestimonialsPage` |
 | `/admin/users` | `AdminUsersPage` |
+| `/admin/onboarding-review` | `AdminOnboardingReviewPage` |
 
-**User area** — `RequireRole roles={["user"]}`
+**User area** — `RequireRole roles={["user"]}` — **PWA-enabled**
 
 | Route | Component |
 |---|---|
-| `/user` | `UserDashboardPage` (PG browse + keyword search; auto-redirects admitted users to /user/my-pg; shows pending admission banner with withdraw) |
+| `/user` | `UserDashboardPage` (PG browse + keyword search; auto-redirects admitted users to /user/my-pg; shows pending admission banner with withdraw; shows install prompt when PWA installable) |
+| `/user/saved` | `user/SavedPGsPage` |
 | `/user/my-pg` | `user/MyPGPage` |
 | `/user/pgs/:id` | `user/PGDetailPage` |
 | `/user/pgs/:id/complaint` | `user/ComplaintFormPage` |
 | `/user/pgs/:id/apply` | `user/AdmissionFormPage` |
 
-**PG Owner area** — `RequireRole role="pg_owner"` → `OwnerLayout` (sidebar with pending badge)
+**PG Owner area** — `RequireRole role="pg_owner"` → `OwnerLayout` (sidebar with pending badge) — **PWA-enabled**
 
-| Route | Component |
-|---|---|
-| `/pgowner` | `pgowner/DashboardPage` |
-| `/pgowner/admissions` | `pgowner/AdmissionsPage` |
-| `/pgowner/residents` | `pgowner/StudentsPage` |
-| `/pgowner/complaints` | `pgowner/ComplaintsPage` (read-only) |
-| `/pgowner/testimonials` | `pgowner/TestimonialsPage` |
-| `/pgowner/photos` | `pgowner/PhotosPage` |
-| `/pgowner/location` | `pgowner/LocationPage` |
-| `/pgowner/capacity` | `pgowner/CapacityPage` |
-| `/pgowner/details` | `pgowner/DetailsPage` |
+Onboarding status gates the dashboard. All `pg_owner` accounts hit onboarding/status routes first; only `approved` or `legacy` owners reach the main dashboard via `RequireOwnerApproved`.
 
-**Auth guard:** `RequireRole` checks token presence AND `user.role` is in allowed roles. Role values must use the exact backend enum values: `user`, `admin`, `pg_owner` (underscore — not `pgowner`).
+| Route | Component | Auth |
+|---|---|---|
+| `/pgowner/onboarding` | `pgowner/OnboardingPage` | `RequireRole` only |
+| `/pgowner/waiting-approval` | `pgowner/WaitingApprovalPage` | `RequireRole` only |
+| `/pgowner/rejected` | `pgowner/RejectedPage` | `RequireRole` only |
+| `/pgowner` | `pgowner/DashboardPage` | `RequireOwnerApproved` |
+| `/pgowner/admissions` | `pgowner/AdmissionsPage` | `RequireOwnerApproved` |
+| `/pgowner/residents` | `pgowner/StudentsPage` | `RequireOwnerApproved` |
+| `/pgowner/complaints` | `pgowner/ComplaintsPage` (read-only) | `RequireOwnerApproved` |
+| `/pgowner/testimonials` | `pgowner/TestimonialsPage` | `RequireOwnerApproved` |
+| `/pgowner/photos` | `pgowner/PhotosPage` | `RequireOwnerApproved` |
+| `/pgowner/location` | `pgowner/LocationPage` | `RequireOwnerApproved` |
+| `/pgowner/details` | `pgowner/DetailsPage` | `RequireOwnerApproved` |
+| `/pgowner/visits` | `pgowner/VisitsPage` | `RequireOwnerApproved` |
+| `/pgowner/leads` | `pgowner/LeadsPage` | `RequireOwnerApproved` |
+| `/pgowner/capacity` | redirects → `/pgowner/details` | — |
+
+**Auth guard:** `RequireRole` checks token presence AND `user.role` is in allowed roles. `RequireOwnerApproved` additionally checks `user.onboardingStatus` — redirects `profile_incomplete` → `/pgowner/onboarding`, `pending_review` → `/pgowner/waiting-approval`, `rejected` → `/pgowner/rejected`. Role values must use the exact backend enum values: `user`, `admin`, `pg_owner` (underscore — not `pgowner`).
 
 ### Frontend — Student PWA (`frontend/`, `--mode student`, port 5173)
 
 Built from the same package as the unified app using `npm run dev:student` / `npm run build:student`.
 Entry: `src/platforms/student-pwa/App.jsx` — loaded by `src/main.jsx` when `MODE === 'student'`.
-Service worker registered only in student mode. Bundle is ~48% smaller than unified (tree-shaking removes all admin/owner/user-area code).
+Service worker auto-registered by VitePWA injection. Bundle is ~48% smaller than unified (tree-shaking removes all admin/owner/user-area code).
 
 ### Shared Code (`frontend/src/shared/`)
 
 All code shared between both platforms. Imported via the `@shared` alias.
 
 - **Auth**: Access token in `localStorage` (`pg_token`); refresh token in HttpOnly cookie. Axios interceptor attaches `Bearer` header; 401 response interceptor attempts silent refresh via `POST /api/auth/refresh`, then falls back to logout + redirect.
-- **API layer**: `@shared/api/client.js` (axios instance) + domain files (`auth.js`, `pgs.js`, `admissions.js`, `complaints.js`, `admin.js`, `owners.js`, `testimonials.js`, `imagekit.js`)
-- **Auth context**: `@shared/context/AuthContext.jsx` — `{ user, token, login, logout, currentAdmission, setCurrentAdmission, isAdmitted, admissionLoaded, savedPGIds, toggleSave }`. On mount, fetches `GET /admissions/mine` (admission state) and `GET /api/user/interactions` (saved PG IDs). `savedPGIds` is a `Set<string>` for O(1) lookup. `toggleSave` handles optimistic UI + atomic `$addToSet`/`$pull` via `POST /api/user/pgs/:id/save`.
+- **API layer**: `@shared/api/client.js` (axios instance) + domain files: `auth.js`, `pgs.js`, `admissions.js`, `complaints.js`, `admin.js`, `owners.js`, `testimonials.js`, `imagekit.js`, `leads.js`, `visits.js`, `terms.js`, `onboarding.js`, `user.js`
+- **Auth context**: `@shared/context/AuthContext.jsx` — `{ user, token, login, logout, updateUser, currentAdmission, setCurrentAdmission, isAdmitted, admissionLoaded, savedPGIds, toggleSave }`. On mount, fetches `GET /admissions/mine` (admission state) and `GET /api/user/interactions` (saved PG IDs). `savedPGIds` is a `Set<string>` for O(1) lookup. `toggleSave` handles optimistic UI + atomic `$addToSet`/`$pull` via `POST /api/user/pgs/:id/save`.
 - **Toast**: `@shared/components/Toast.jsx` — `ToastProvider` wraps app root; `useToast()` returns `toast(msg, type)` function; types: `success | error | info`
 - **PGCard**: `@shared/components/PGCard.jsx` — props: `{ pg, basePath, isSaved, onSave }`. `basePath` defaults to `/pgs` (student PWA) or `/user/pgs` (unified). Save button only renders when `onSave` provided. Amenity pills include Material Symbols icons via `AMENITY_ICONS` map. Hover applies `card-lift` class (defined in `index.css`).
 - **Error boundary**: `@shared/components/ErrorBoundary.jsx` — class component, wraps app root, shows "Try again" on render crash
+- **PWA install hook**: `@shared/hooks/usePWAInstall.js` — captures `beforeinstallprompt` event, exposes `{ canInstall, promptInstall }`. Clears on `appinstalled`. Only used in user and owner layouts — never in admin `Layout`.
 - **Tailwind**: `frontend/tailwind.config.js` — custom animations: `slide-in`, `fade-up`, `scale-in`, `pulse-dot`. Custom shadows: `card`, `card-hover`, `ambient`, `warm`, `float`, `glow`, `subtle`, `inner`. `index.css` adds elevation classes `.e1`/`.e2`/`.e3`, `.card-lift`, `.btn-glow`, surface layer helpers.
 
 ### Key Backend Patterns
@@ -174,8 +190,12 @@ See `.env.example` for all required vars. No fallback secrets — missing `JWT_A
 - [x] Helmet active
 - [x] Role self-assignment restricted on register
 - [x] JWT rotated access+refresh with HttpOnly cookie
+- [x] PWA enabled for user + owner; admin excluded via `navigateFallbackDenylist`
+- [x] Auth endpoints (`/api/auth/*`) set to `NetworkOnly` in both SW configs — never cached
 - [ ] Set real `JWT_ACCESS_SECRET` + `JWT_REFRESH_SECRET` in prod environment
 - [ ] Configure SMTP vars in prod (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM_EMAIL`)
+- [ ] Generate PWA icons — `public/icon-192.png` and `public/icon-512.png` missing (install criteria fail without them). Use `logo.png` or `logo2.png` as source.
+- [ ] Set `Cache-Control: no-store` on `sw.js` and `manifest.json` at the hosting layer (Vercel/nginx)
 
 ## Product Context
 

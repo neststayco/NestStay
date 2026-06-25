@@ -1,8 +1,9 @@
 {
   "name": "Nest Stay",
-  "short_name": "Nest Stay",
+  "short_name": "NestStay",
   "description": "Discover and review paying guest accommodations",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#f9fafb",
   "theme_color": "#FF5A1F",

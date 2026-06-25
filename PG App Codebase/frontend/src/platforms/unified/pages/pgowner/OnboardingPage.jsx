@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@shared/context/AuthContext'
 import { useToast } from '@shared/components/Toast'
@@ -26,7 +26,7 @@ const AMENITY_OPTIONS = [
 
 const ROOM_TYPE_OPTIONS = ['Single', 'Double', 'Triple', 'Dormitory']
 
-const GENDER_OPTIONS = ['Boys', 'Girls', 'Any']
+const GENDER_OPTIONS = ['male', 'female', 'other']
 
 const inputOk = 'w-full border border-[#E5E7EB] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#e98a76]/40 focus:border-[#e98a76] bg-white'
 const inputErr = 'w-full border border-red-400 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-300/50 focus:border-red-400 bg-white'
@@ -247,7 +247,7 @@ function Step4({ totalCapacity, setTotalCapacity, roomTypes, toggleRoomType, gen
                   : 'bg-[#f6f3f2] border-[#E5E7EB] text-[#434849] hover:border-[#e98a76]'
               }`}
             >
-              {g}
+              {g.charAt(0).toUpperCase() + g.slice(1)}
             </button>
           ))}
         </div>
@@ -259,12 +259,31 @@ function Step4({ totalCapacity, setTotalCapacity, roomTypes, toggleRoomType, gen
 // ─── Step 5: Amenities ────────────────────────────────────────────────────────
 
 function Step5({ amenities, toggleAmenity }) {
+  const [customInput, setCustomInput] = useState('')
+  const inputRef = useRef(null)
+
+  const customAmenities = amenities.filter(a => !AMENITY_OPTIONS.includes(a))
+
+  function handleAddCustom() {
+    const val = customInput.trim()
+    if (!val) return
+    const normalized = val.charAt(0).toUpperCase() + val.slice(1)
+    if (amenities.map(a => a.toLowerCase()).includes(normalized.toLowerCase())) {
+      setCustomInput('')
+      return
+    }
+    toggleAmenity(normalized)
+    setCustomInput('')
+    inputRef.current?.focus()
+  }
+
   return (
     <div className="space-y-5">
       <div className="mb-2">
         <h2 className="text-lg font-bold text-[#1b1c1c]">Amenities</h2>
-        <p className="text-sm text-[#73787a] mt-0.5">Select all amenities available at your PG</p>
+        <p className="text-sm text-[#73787a] mt-0.5">Select from common amenities or add your own</p>
       </div>
+
       <div className="flex flex-wrap gap-2">
         {AMENITY_OPTIONS.map(a => (
           <button
@@ -280,7 +299,50 @@ function Step5({ amenities, toggleAmenity }) {
             {a}
           </button>
         ))}
+        {customAmenities.map(a => (
+          <span
+            key={a}
+            className="inline-flex items-center gap-1.5 pl-3 pr-2 py-2 rounded-full text-xs font-semibold bg-[#1b1c1c] border border-[#1b1c1c] text-white"
+          >
+            {a}
+            <button
+              type="button"
+              onClick={() => toggleAmenity(a)}
+              className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-white/20 hover:bg-white/40 transition-colors"
+              aria-label={`Remove ${a}`}
+            >
+              <svg className="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </span>
+        ))}
       </div>
+
+      <div>
+        <p className="text-xs font-semibold text-[#1b1c1c] mb-2">Custom amenity</p>
+        <div className="flex gap-2">
+          <input
+            ref={inputRef}
+            type="text"
+            value={customInput}
+            onChange={e => setCustomInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustom() } }}
+            placeholder="e.g. Rooftop Access, Study Room…"
+            maxLength={40}
+            className={`${inputOk} flex-1`}
+          />
+          <button
+            type="button"
+            onClick={handleAddCustom}
+            disabled={!customInput.trim()}
+            className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-[#f6f3f2] border border-[#E5E7EB] text-[#434849] hover:border-[#1b1c1c] hover:text-[#1b1c1c] disabled:opacity-40 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+          >
+            + Add
+          </button>
+        </div>
+      </div>
+
       {amenities.length > 0 && (
         <p className="text-xs text-[#73787a]">{amenities.length} amenit{amenities.length === 1 ? 'y' : 'ies'} selected</p>
       )}
@@ -324,8 +386,8 @@ function Step6({ name, description, city, area, state, address, rent, deposit, m
       </div>
 
       <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
-        After submission, our team will review your listing within 1–2 business days.
-        You&apos;ll be notified once it&apos;s approved.
+        You&apos;re one step away from reaching students looking for their next stay.
+        We&apos;ll review your listing and publish it soon.
       </div>
     </div>
   )
@@ -340,21 +402,15 @@ function ProgressBar({ currentStep }) {
         {WIZARD_STEPS.map((s, i) => (
           <div key={s.n} className={`flex items-center ${i < WIZARD_STEPS.length - 1 ? 'flex-1' : ''}`}>
             <div className="flex flex-col items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                currentStep > s.n
-                  ? 'bg-[#e98a76] text-white'
-                  : currentStep === s.n
-                  ? 'bg-[#e98a76] text-white ring-4 ring-[#e98a76]/20'
-                  : 'bg-[#E5E7EB] text-[#73787a]'
-              }`}>
-                {currentStep > s.n ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : s.n}
-              </div>
-              <span className={`text-[10px] mt-1 font-medium whitespace-nowrap hidden sm:block ${
-                currentStep >= s.n ? 'text-[#e98a76]' : 'text-[#73787a]'
+              <div className={`transition-all ${
+                currentStep === s.n
+                  ? 'w-2.5 h-2.5 rounded-full bg-[#e98a76] ring-4 ring-[#e98a76]/20'
+                  : currentStep > s.n
+                  ? 'w-2 h-2 rounded-full bg-[#e98a76]'
+                  : 'w-2 h-2 rounded-full bg-[#E5E7EB]'
+              }`} />
+              <span className={`text-[10px] mt-1.5 font-semibold whitespace-nowrap hidden sm:block transition-colors ${
+                currentStep === s.n ? 'text-[#e98a76]' : currentStep > s.n ? 'text-[#e98a76]/60' : 'text-[#B0B5B7]'
               }`}>
                 {s.label}
               </span>
@@ -402,7 +458,7 @@ export default function OnboardingPage() {
   // Step 4
   const [totalCapacity, setTotalCapacity] = useState('')
   const [roomTypes, setRoomTypes] = useState([])
-  const [gender, setGender] = useState('Any')
+  const [gender, setGender] = useState('other')
 
   // Step 5
   const [amenities, setAmenities] = useState([])
@@ -434,7 +490,7 @@ export default function OnboardingPage() {
           setMaintenance(pg.pricing?.maintenance != null ? String(pg.pricing.maintenance) : '')
           setTotalCapacity(pg.accommodation?.totalCapacity != null ? String(pg.accommodation.totalCapacity) : '')
           setRoomTypes(pg.accommodation?.roomTypes || [])
-          setGender(pg.gender || 'Any')
+          setGender(pg.gender || 'other')
           setAmenities(pg.amenities || [])
         }
       })
@@ -542,6 +598,15 @@ export default function OnboardingPage() {
     }
   }
 
+  const STEP_MESSAGES = [
+    "Let's start with the basics",
+    "Nice — now pin your location",
+    "Almost halfway — set your pricing",
+    "Good progress — tell us about your rooms",
+    "Nearly done — what amenities do you offer?",
+    "One last look before you submit",
+  ]
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#fbf9f8] flex items-center justify-center">
@@ -564,7 +629,7 @@ export default function OnboardingPage() {
 
       <div className="max-w-2xl mx-auto mb-2 text-center">
         <h1 className="text-xl font-bold text-[#1b1c1c]">List Your PG</h1>
-        <p className="text-sm text-[#73787a] mt-1">Complete all steps to submit your listing for review</p>
+        <p className="text-sm text-[#73787a] mt-1">You&apos;re almost there — add a few details to get your PG ready for verified tenants.</p>
       </div>
 
       {/* Progress bar */}
@@ -630,8 +695,8 @@ export default function OnboardingPage() {
             ← Back
           </button>
 
-          <div className="text-xs text-[#73787a]">
-            Step {step} of {WIZARD_STEPS.length}
+          <div className="text-xs text-[#73787a] italic">
+            {STEP_MESSAGES[step - 1]}
           </div>
 
           {step < 6 ? (

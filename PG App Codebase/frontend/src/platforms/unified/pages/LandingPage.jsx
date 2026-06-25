@@ -109,7 +109,7 @@ function HeroSection() {
     if (c) params.set('college', c)
     if (area && area !== 'Select Area') params.set('area', area)
     if (b && parseInt(b) > 0) params.set('budget', b)
-    if (gender && gender !== 'Boys / Girls' && gender !== 'Any') params.set('gender', gender.toLowerCase())
+    if (gender) params.set('gender', gender)
     navigate(`/properties${params.toString() ? '?' + params.toString() : ''}`)
   }
 
@@ -169,7 +169,7 @@ function HeroSection() {
 
           {/* Supporting text */}
           <p className="text-sm sm:text-base lg:text-lg text-[#434849] mb-4 leading-relaxed max-w-[460px] lg:max-w-none">
-            Safe, Affordable &amp; Fully Verified Accommodation for Students and Working Professionals.
+            Browse PGs with real photos, transparent rent, and verified owner details — no broker needed.
           </p>
 
           {/* Social proof — above form to prime trust before action */}
@@ -246,10 +246,10 @@ function HeroSection() {
                   className="h-[48px] sm:h-[52px] px-3 pr-8 border border-[#d1d5db] rounded-xl text-sm outline-none focus:border-[#e98a76] focus:bg-[#fffaf9] bg-white text-[#434849] appearance-none transition-colors"
                   style={{ backgroundImage: SELECT_ARROW, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center' }}
                 >
-                  <option value="">Boys / Girls</option>
-                  <option value="Boys">Boys</option>
-                  <option value="Girls">Girls</option>
-                  <option value="Any">Any</option>
+                  <option value="">Any Gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
                 </select>
               </div>
             </div>
@@ -296,7 +296,7 @@ const TRUST_ITEMS = [
   {
     icon: 'groups',
     title: 'Students & Professionals',
-    desc: 'Serving both students and working professionals looking for accommodation.',
+    desc: 'Near Symbiosis, COEP, or an IT park in Hinjewadi — listings filtered for where you actually are.',
   },
   {
     icon: 'shield',
@@ -312,10 +312,10 @@ function TrustIndicators() {
         <div className="text-center mb-10">
           <span className="text-[#e98a76] text-xs font-bold uppercase tracking-wider mb-2 block">Why Nest Stay</span>
           <h2 className="text-[24px] lg:text-[32px] font-extrabold text-[#1b1c1c] leading-tight">
-            A Platform Built on Trust
+            Verified PGs in Pune — No Broker Fees
           </h2>
           <p className="text-sm text-[#73787a] mt-2 max-w-md mx-auto leading-relaxed">
-            Find accommodation that fits your life — whether you're a student or a working professional.
+            See who's verified, what's included, and exactly what you'll pay — before you visit.
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -634,18 +634,18 @@ function ValuePropSection() {
 
         <div className="order-1 lg:order-2">
           <span className="text-[#ffdbd0] text-xs font-bold tracking-widest uppercase mb-4 block">
-            Why Students Love NestStay
+            Built for Students in Pune
           </span>
           <h2 className="text-[28px] lg:text-[32px] font-bold mb-8 leading-tight">
-            Everything You Need, <br /> All in One Place
+            No Broker. No Surprises. <br /> Just PGs.
           </h2>
           <ul className="space-y-5">
             {[
-              { icon: 'verified',       title: 'Verified Properties',   desc: 'Every property is thoroughly verified for safety and quality' },
-              { icon: 'shield',         title: 'Safe Environment',       desc: 'Your security is our top priority' },
-              { icon: 'bolt',           title: 'Easy Booking',           desc: 'Simple and hassle-free booking process' },
-              { icon: 'payments',       title: 'Transparent Pricing',    desc: 'No hidden charges, all costs upfront' },
-              { icon: 'support_agent',  title: 'Student Support',        desc: '24/7 customer support for your needs' },
+              { icon: 'verified',       title: 'Reviewed Before Listing',  desc: 'Each PG is checked before going live — no ghost properties, no outdated photos' },
+              { icon: 'shield',         title: 'Owner Identity Verified',   desc: 'Owner contact and property details confirmed before any listing is published' },
+              { icon: 'bolt',           title: 'Apply Without Calling',     desc: 'Submit your interest online — the owner reviews it and responds' },
+              { icon: 'payments',       title: 'No Hidden Charges',         desc: 'Rent, deposit, and maintenance shown upfront. What you see is what you pay' },
+              { icon: 'support_agent',  title: 'In-app Complaints',         desc: "Already a resident? Raise issues directly through the platform — no awkward chasing" },
             ].map(({ icon, title, desc }) => (
               <li key={title} className="flex gap-4">
                 <span className="material-symbols-outlined text-[#e98a76] text-[22px] flex-shrink-0 mt-0.5">{icon}</span>
@@ -707,21 +707,21 @@ const FALLBACK_TESTIMONIALS = [
   {
     _id: 'f1',
     rating: 5,
-    content: 'NestStay made finding a PG super easy! The verification process gave me complete peace of mind about safety and quality.',
+    content: 'Found a PG in Hinjewadi within 2 days of registering. No broker calls, no surprise charges when I moved in.',
     createdBy: { name: 'Rohit Sharma' },
     pgSnapshot: { name: 'MIT-WPU' },
   },
   {
     _id: 'f2',
     rating: 5,
-    content: 'Excellent support team and transparent pricing. Found my perfect accommodation without any hassle or hidden charges!',
+    content: "Checked three places on Nest Stay before deciding. All had actual photos — the one I picked matched exactly what was listed.",
     createdBy: { name: 'Ananya Verma' },
     pgSnapshot: { name: 'Symbiosis' },
   },
   {
     _id: 'f3',
     rating: 5,
-    content: 'Best platform for student accommodation. Quick bookings and amazing customer service throughout the entire process!',
+    content: 'Raised a noise complaint through the app. Owner responded the same day. Didn\'t have to call anyone or follow up twice.',
     createdBy: { name: 'Pranav Joshi' },
     pgSnapshot: { name: 'COEP' },
   },

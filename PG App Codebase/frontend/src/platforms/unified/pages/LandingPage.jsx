@@ -286,12 +286,12 @@ const TRUST_ITEMS = [
   {
     icon: 'verified',
     title: 'Verified Listings',
-    desc: 'Every PG is reviewed and verified before going live on the platform.',
+    desc: 'Every listing is checked before it goes live. What you see is current.',
   },
   {
     icon: 'currency_rupee',
     title: 'Zero Brokerage',
-    desc: 'Connect directly with PG owners. No middlemen, no hidden fees.',
+    desc: 'Talk directly with owners. No brokers, no surprise charges on move-in day.',
   },
   {
     icon: 'groups',
@@ -301,7 +301,7 @@ const TRUST_ITEMS = [
   {
     icon: 'shield',
     title: 'Safe & Transparent',
-    desc: 'Verified owners, real photos, honest reviews from actual residents.',
+    desc: 'Owners verified, photos real, reviews from people who actually stayed.',
   },
 ]
 
@@ -423,7 +423,7 @@ function CollegesSection() {
       <div className="max-w-[1280px] mx-auto px-6 lg:px-16">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-[20px] font-bold text-[#1b1c1c]">
-            Find Accommodation Near Your College or Workplace
+            PGs Near Your College or Workplace
           </h2>
           <Link to="/login" className="text-[#e98a76] text-sm font-semibold flex items-center gap-1 hover:underline flex-shrink-0">
             View All Locations <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
@@ -642,9 +642,9 @@ function ValuePropSection() {
           <ul className="space-y-5">
             {[
               { icon: 'verified',       title: 'Reviewed Before Listing',  desc: 'Each PG is checked before going live. No ghost listings, no outdated photos.' },
-              { icon: 'shield',         title: 'Owner Identity Verified',   desc: 'Owner contact and property details confirmed before any listing is published' },
+              { icon: 'shield',         title: 'Owner Identity Verified',   desc: 'Owner details confirmed before the listing goes up. You know who you\'re dealing with.' },
               { icon: 'bolt',           title: 'Apply Without Calling',     desc: 'Submit your interest online — the owner reviews it and responds' },
-              { icon: 'payments',       title: 'No Hidden Charges',         desc: 'Rent, deposit, and maintenance shown upfront. What you see is what you pay' },
+              { icon: 'payments',       title: 'No Hidden Charges',         desc: 'Rent, deposit and maintenance shown upfront. No surprises on move-in day.' },
               { icon: 'support_agent',  title: 'In-app Complaints',         desc: "Already a resident? Raise issues directly through the platform. No back-and-forth needed." },
             ].map(({ icon, title, desc }) => (
               <li key={title} className="flex gap-4">
@@ -666,9 +666,9 @@ function ValuePropSection() {
 
 const STEPS = [
   { n: '1', title: 'Search',  desc: 'Browse verified properties near your college or workplace' },
-  { n: '2', title: 'Compare', desc: 'Compare prices, amenities and locations side by side'      },
+  { n: '2', title: 'Compare', desc: 'See rent, amenities and distance for each PG at a glance'  },
   { n: '3', title: 'Apply',   desc: 'Submit your interest online. The owner reviews and responds.'   },
-  { n: '4', title: 'Move In', desc: 'Get approved by the owner and move into your new home'      },
+  { n: '4', title: 'Move In', desc: 'Owner approves your request and you move in. That\'s it.'   },
 ]
 
 function HowItWorksSection() {
@@ -820,13 +820,13 @@ function OwnerSection() {
       <div className="max-w-[1280px] mx-auto px-6 lg:px-16 text-center">
         <h2 className="text-[32px] lg:text-[40px] font-bold mb-6 leading-tight">
           Own a PG?<br />
-          <span className="text-[#e98a76]">Get More Bookings Through NestStay</span>
+          <span className="text-[#e98a76]">Fill Your Rooms Faster with NestStay</span>
         </h2>
         <p className="text-[#bac9ce] text-lg mb-10 max-w-2xl mx-auto leading-relaxed">
           List your property once and manage everything from one dashboard. Admissions, complaints, residents and photos.
         </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-2xl mx-auto mb-12">
-          {['One-click admissions', 'Photo management', 'Complaint tracking', 'Resident analytics'].map(f => (
+          {['One-click admissions', 'Photo management', 'Complaint tracking', 'Occupancy overview'].map(f => (
             <div key={f} className="flex flex-col items-center gap-2 text-sm text-[#bac9ce]">
               <span className="material-symbols-outlined text-[#e98a76] text-[28px]">check_circle</span>
               {f}
@@ -844,7 +844,7 @@ function OwnerSection() {
             to="/login"
             className="bg-transparent border border-[#c3c7c9] text-white px-10 py-4 rounded-2xl text-sm font-semibold hover:bg-white/10 transition-all"
           >
-            Schedule Demo
+            See How It Works
           </Link>
         </div>
       </div>
@@ -863,7 +863,7 @@ function Footer() {
           <div className="col-span-2 md:col-span-1">
             <img src="/logo2.png" alt="Nest Stay" className="h-20 w-auto mb-4" />
             <p className="text-sm text-[#434849] leading-relaxed mb-4">
-              Your trusted platform for verified PGs and hostels near colleges.
+              Find PGs near your college, without the broker.
             </p>
             <div className="flex gap-3">
               {['public', 'share', 'mail'].map(icon => (

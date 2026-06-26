@@ -151,7 +151,7 @@ export default function OwnerSidebar({ onClose, pendingCount = 0, pgName = null 
       <div className="px-5 py-5 border-b border-white/10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
-            <img src="/logo.png" alt="Nest Stay" className="h-9 w-9 rounded-lg object-cover flex-shrink-0" />
+            <img src="/logo2.png" alt="Nest Stay" className="h-9 w-9 rounded-lg object-cover flex-shrink-0" />
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-widest leading-none mb-0.5" style={{ color: '#ffdbd0' }}>
                 Owner Portal

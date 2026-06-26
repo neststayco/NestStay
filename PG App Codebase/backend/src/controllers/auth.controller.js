@@ -8,6 +8,7 @@ import {
   generateResetToken,
   hashToken,
   getRefreshCookieOptions,
+  getClearCookieOptions,
 } from "../utils/tokenUtils.js";
 import { runInTransaction } from "../utils/transaction.js";
 import { generateOTP, hashOTP, verifyOTP } from "../utils/otpUtils.js";
@@ -299,12 +300,7 @@ export const logout = async (req, res) => {
       );
     }
 
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/",
-    });
+    res.clearCookie("refreshToken", getClearCookieOptions());
 
     return res.status(200).json({ success: true, message: "Logged out successfully" });
   } catch (error) {
@@ -559,12 +555,7 @@ export const resetPassword = async (req, res) => {
 
     Logger.event("user.password.reset", { userId: user._id });
 
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/",
-    });
+    res.clearCookie("refreshToken", getClearCookieOptions());
 
     return res.status(200).json({
       success: true,

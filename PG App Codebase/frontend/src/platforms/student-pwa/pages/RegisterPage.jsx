@@ -168,7 +168,7 @@ export default function RegisterPage() {
         <div className="w-full max-w-md">
 
           <div className="flex justify-center mb-8">
-            <img src="/logo.png" alt="Nest Stay" className="h-16 w-auto" />
+            <img src="/logo2.png" alt="Nest Stay" className="h-16 w-auto" />
           </div>
 
           <div className="bg-white rounded-2xl border border-[#E5E7EB] p-8 shadow-card">

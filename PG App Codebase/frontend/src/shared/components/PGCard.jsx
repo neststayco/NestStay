@@ -133,15 +133,15 @@ export default function PGCard({ pg, basePath = '/pgs', isSaved = false, onSave 
             {area ? `${area}, ` : ''}{city}
           </span>
           {mapsUrl && (
-            <a
-              href={mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={e => e.stopPropagation()}
-              className="flex-shrink-0 text-[10px] text-[#e98a76] hover:underline font-semibold ml-auto"
+            <span
+              role="link"
+              tabIndex={0}
+              onClick={e => { e.stopPropagation(); window.open(mapsUrl, '_blank', 'noopener,noreferrer') }}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); window.open(mapsUrl, '_blank', 'noopener,noreferrer') } }}
+              className="flex-shrink-0 text-[10px] text-[#e98a76] hover:underline font-semibold ml-auto cursor-pointer"
             >
               Map ↗
-            </a>
+            </span>
           )}
         </div>
 

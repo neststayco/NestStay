@@ -67,7 +67,7 @@ export default function UserNavbar() {
 
         {/* Logo */}
         <Link to="/user" className="flex-shrink-0">
-          <img src="/logo.png" alt="Nest Stay" className="h-12 w-auto" />
+          <img src="/logo2.png" alt="Nest Stay" className="h-12 w-auto" />
         </Link>
 
         {/* Desktop nav links */}

@@ -34,10 +34,21 @@ export const hashToken = (token) => {
   return crypto.createHash("sha256").update(token).digest("hex");
 };
 
+const isProd = () => process.env.NODE_ENV === "production";
+
 export const getRefreshCookieOptions = () => ({
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "strict",
+  secure: isProd(),
+  // SameSite=None required for cross-origin deployments (neststay.co → onrender.com).
+  // SameSite=None mandates Secure=true, which is already set above in production.
+  sameSite: isProd() ? "none" : "strict",
   path: "/",
   maxAge: 7 * 24 * 60 * 60 * 1000,
+});
+
+export const getClearCookieOptions = () => ({
+  httpOnly: true,
+  secure: isProd(),
+  sameSite: isProd() ? "none" : "strict",
+  path: "/",
 });

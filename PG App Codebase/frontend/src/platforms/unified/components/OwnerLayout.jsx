@@ -62,7 +62,7 @@ export default function OwnerLayout() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <img src="/logo.png" alt="Nest Stay" className="h-9 w-auto" />
+          <img src="/logo2.png" alt="Nest Stay" className="h-9 w-auto" />
           <span className="text-sm font-semibold text-[#1b1c1c] truncate flex-1">
             {pgName || 'Owner Portal'}
           </span>

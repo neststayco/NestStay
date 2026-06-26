@@ -123,7 +123,7 @@ export default function Sidebar({ onClose }) {
       <div className="px-5 py-5 border-b border-white/10">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="Nest Stay" className="h-9 w-9 rounded-lg object-cover flex-shrink-0" />
+            <img src="/logo2.png" alt="Nest Stay" className="h-9 w-9 rounded-lg object-cover flex-shrink-0" />
             <div>
               <p className="text-white text-sm font-bold leading-none">Nest Stay</p>
               <p className="text-[10px] mt-0.5 font-semibold uppercase tracking-widest" style={{ color: '#ffdbd0' }}>

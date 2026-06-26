@@ -11,7 +11,7 @@ export default function PublicNavbar() {
     >
       <div className="flex justify-between items-center w-full px-6 lg:px-16 max-w-[1280px] mx-auto h-14">
         <Link to="/">
-          <img src="/logo.png" alt="Nest Stay" className="h-9 w-auto" />
+          <img src="/logo2.png" alt="Nest Stay" className="h-9 w-auto" />
         </Link>
 
         <div className="flex items-center gap-2">

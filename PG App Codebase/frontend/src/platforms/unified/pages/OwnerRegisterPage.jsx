@@ -170,7 +170,7 @@ export default function OwnerRegisterPage() {
 
           <div className="flex justify-center mb-8">
             <Link to="/">
-              <img src="/logo.png" alt="Nest Stay" className="h-16 w-auto" />
+              <img src="/logo2.png" alt="Nest Stay" className="h-16 w-auto" />
             </Link>
           </div>
 

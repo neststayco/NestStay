@@ -150,7 +150,7 @@ function HeroSection() {
           {/* Headline */}
           <h1 className="text-[22px] sm:text-[34px] lg:text-[48px] font-extrabold text-[#1b1c1c] leading-[1.2] mb-2 sm:mb-6">
             Find Verified PGs{' '}
-            <span className="text-[#e98a76]">Near Your College</span>
+            <span className="text-[#e98a76]">Near Your College and Working Space</span>
           </h1>
 
           <p className="text-sm lg:text-lg text-[#434849] mb-6 sm:mb-8 leading-relaxed">
@@ -1051,7 +1051,7 @@ function Footer() {
         <div className="mb-8">
           <img src="/logo2.png" alt="Nest Stay" className="h-14 lg:h-20 w-auto mb-3" />
           <p className="text-sm text-[#434849] mb-4 max-w-xs">
-            Find PGs near your college, without the broker.
+            Find PGs near your college and working space, without the broker.
           </p>
           <div className="flex gap-3">
             {['public', 'share', 'mail'].map(icon => (
